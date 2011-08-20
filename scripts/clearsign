@@ -1,0 +1,159 @@
+#!/bin/bash
+#
+# clearsign - Signs a single file using GnuPG (gpg)
+# in clearsign mode (non-detached, ASCII-armored)
+# Uses zenity for GUI. Nautilus-scripts compatible.
+#
+#    Copyright (C) 2011 Rodrigo Silva - <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Huge thanks to all the gurus and friends in <irc://irc.freenet.org/#bash>
+# and the contributors of <http://mywiki.wooledge.org/>
+#
+# Usage: clearsign FILE
+#
+# TODO: add more output options:
+#        Detached binary (file.ext.sig) - "gpg --detach-sign"
+#        Detached text   (file.ext.asc) - "gpg --detach-sign --armor"
+#    Non-Detached binary (file.ext.gpg) - "gpg --sign"
+#    Non-Detached binary-to-text (file.ext.asc) - "gpg --sign --armor"
+#
+# TODO: add help, usage, verbose, debug, force, etc
+# TODO: test if zenity and gpg avaliable
+# TODO: allow multiple files and directories
+# TODO: update common lib and use it
+# TODO: read (and pre-select) default key from searhorse
+# TODO: use proper icon
+# FIXME: gnupg creates blank dir.asc if file is actually a dir
+
+
+# User input
+FILE="$1"            # globs not allowed.. for now
+OUTPUT="${FILE}.asc" # user may only change if already exists
+
+# Constants
+SELF="${0##*/}"
+SELF_GUI="Sign file"
+WIDTH_MAX=790
+WIDTH_BASE=250
+WIDTH_UNIT=8    #char
+
+HEIGHT_MAX=600
+HEIGHT_BASE=130
+HEIGHT_UNIT=25  #line
+
+# Variables
+max_chars=0
+window_width=0
+window_height=0
+
+
+# Functions
+
+fatal() { : ; }
+
+fatalgui()
+{
+	local message="$1"
+	local errorcode="${2:-1}"
+	local dump="$3"
+	
+	[[ -n "$dump"    ]] && echo "$dump" >&2
+	[[ -n "$message" ]] && echo "$SELF: ${message/%['!''.'':']/}" >&2
+
+	zenity --error --title="$SELF_GUI" \
+	       --text="${message:+$message\n\n}${dump:+$dump\n\n}" #"Exiting with error code ${errorcode}"
+	
+	exit $errorcode
+}
+
+min() { (( $1 < $2 )) && printf %d "$1" || printf %d "$2"; }
+max() { (( $1 > $2 )) && printf %d "$1" || printf %d "$2"; }
+
+
+# =========================================== MAIN
+
+# Check input file
+[[ -r "$FILE" ]] || fatalgui "File to sign is missing or is not readable."
+
+# Check more than 1 file
+[[ $# = 1 ]] || {
+	zenity --question --title="Multiple files" \
+		--text="Multiple files were selected, but only this will be signed:\n\n${FILE}\n\nProceed?" \
+	|| exit 0
+}
+
+# Grab the list of keys
+keys=$(
+	gpg --list-keys --with-colons --keyid-format short 2>&1
+) || fatalgui "Error when retrieving list of keys:" $? "$keys"
+
+# Empy array to hold the keys
+array=()
+
+# Loop the list
+while IFS=":" read -r -s keyType _ keySize _ keyId keyDate _ _ _ keyUser _ keyFlags _ ; do
+
+	# Check for (pub)lic keys that are able to (s)ign and are not (D)isabled
+	if [[ "$keyType" = "pub" && "$keyFlags" = *s* && ! "$keyFlags" = *D* ]] ; then
+	
+		# populate the array
+		array+=("$keyId" "$keyUser" "${keyId:(-8)}" "$keyDate" "$keySize")
+		
+		# Save the number of chars of the longest user string
+		(( ${#keyUser} > $max_chars )) && max_chars=${#keyUser}
+
+		#DEBUG echo "$keyType|$keySize|${keyId:(-8)}|$keyDate|${#keyUser}|$max_chars|$keyUser"
+	fi
+	
+done <<< "$keys"
+
+# Check if suitable keys were found
+[[ ${#array[@]} = 0 ]] && fatalgui "No suitable keys for signing were found."
+
+# Set window height and weight
+window_width=$(  min  $WIDTH_MAX $(( $WIDTH_BASE +  $WIDTH_UNIT * $max_chars    )) )
+window_height=$( min $HEIGHT_MAX $(($HEIGHT_BASE + $HEIGHT_UNIT * ${#array[@]}/5)) )
+
+# Choose key
+key=$(
+	zenity --list --title="Choose Signer" --text="Sign file as:" --hide-column=1        \
+	       --width=$window_width --height=$window_height                                \
+	       --window-icon="/usr/share/pixmaps/seahorse-plugins/22x22/seahorse-key.png"   \
+	       --column="id" --column="User" --column="Key" --column="Date" --column="Size" \
+	       "${array[@]}"
+) || exit 0
+
+
+# default output already exists?
+[[ -f "$OUTPUT" ]] && {
+	
+	# prompt for another output file
+	OUTPUT=$(
+		zenity --file-selection --save --filename="$OUTPUT"                               \
+		       --window-icon="/usr/share/pixmaps/seahorse-plugins/22x22/seahorse-key.png" \
+		       --title="Choose Signed File Name for ${FILE##*/}"                          \
+		       --confirm-overwrite --file-filter "*.asc"
+	) || exit 0
+}
+
+
+# Do it! :D
+dump=$(
+	gpg --clearsign --batch --yes --default-key="$key" --output="$OUTPUT" "$FILE" 2>&1
+) || fatalgui "Error when signing $FILE:" $? "$dump"
+
+
+exit 0

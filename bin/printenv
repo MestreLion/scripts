@@ -1,0 +1,5 @@
+#!/bin/bash
+exec > /home/rodrigo/env$1.txt
+echo "$PWD"
+env | sort
+

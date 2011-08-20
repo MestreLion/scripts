@@ -1,0 +1,110 @@
+#!/bin/bash
+
+# useful snippets for menus and user-interactive scripts. For reference only
+# All will loop until user chooses to quit (blank, menu choice, cancel)
+
+# Read
+while read -r -p "Tell me your city (ENTER to quit): " city && [[ $city ]]; do
+	echo "You live in $city"
+done
+
+# One-liner (for pasting in #bash)
+while read -r -p "Name (ENTER to quit): " name && [[ $name ]]; do { echo "Hello $name"; } done
+
+
+# Array of options for select. Globs can be used for files
+options=("AAA" "BBB" "CCC")
+
+
+# Select Method 1 (fancier): add a last entry for Quit
+
+# Only way to customoze select prompt is via PS3
+PS3="Choose an option: "
+
+# Select the with options, with an n+1 "Quit" entry added
+echo "Select exemple 1:"
+select entry in "${options[@]}" "Quit"; do
+
+	# Test for last entry (size of options +1) and exit select (break)
+	(( "$REPLY" != "${#options[@]}"+1 )) || { echo "Goodbye!" ; break; }
+
+	# Test invalid options ($entry="") and try again (continue)
+	[[ "$entry" ]] || { echo "Invalid option" ; continue; }
+
+	#do stuff
+	echo "You picked $entry which is option $REPLY"
+
+done
+
+
+# Method 2 (simpler): Non-existant entry 0 for quit
+echo "Select exemple 2:"
+PS3="Pick a choice (0 to quit): "
+select entry in "${options[@]}"; do
+
+	[[ ! "$REPLY" = "0" ]] || { echo "Goodbye!" ; break; }
+	[[ "$entry" ]] || { echo "Invalid option" ; continue; }
+
+	echo "You picked $entry which is option $REPLY"
+
+done
+
+
+# Method 1 with case
+
+title="Select example"
+prompt="Pick an option:"
+
+echo "$title"
+PS3="$prompt "
+select opt in "${options[@]}" "Quit"; do 
+
+	case "$REPLY" in
+
+	1 ) echo "You picked $opt which is option $REPLY";;
+	2 ) echo "You picked $opt which is option $REPLY";;
+	3 ) echo "You picked $opt which is option $REPLY";;
+
+	$(( ${#options[@]}+1 )) ) echo "Goodbye!"; break;;
+	*) echo "Invalid option. Try another one.";continue;;
+
+	esac
+
+done
+
+
+# Loop with zenity (GUI)
+
+while opt=$(zenity --title="$title" --text="$prompt" --list --column="Options" "${options[@]}"); do
+
+	case "$opt" in
+	"${options[0]}" ) zenity --info --text="You picked $opt which is option 1";;
+	"${options[1]}" ) zenity --info --text="You picked $opt which is option 2";;
+	"${options[2]}" ) zenity --info --text="You picked $opt which is option 3";;
+	*) zenity --error --text="Invalid option. Try another one.";;
+	esac
+
+done
+
+
+# Select with case (upon user request in #bash)
+
+list=("Christmas" "Independence Day" "Thanksgiving" "Easter" "Memorial Day")
+echo "Holliday selector"
+PS3="Pick your favorite holliday (0 to quit): "
+select entry in "${list[@]}"; do
+
+	case "$REPLY" in
+	0) echo "Bye sucker!"; break;;
+	1) echo "$entry: Merry Chri'mah, bitch!";;
+	2) echo "$entry: Party hard, nigga!";;
+	3) echo "$entry: Happy Turkey Day! (now go get fat)";;
+	4) echo "$entry: Jesus done come back to life, fools!!";;
+	5) echo "$entry: Summer's here, you wankers!! School's OUT!";;
+	*) echo "Sorry. The programmer was lazy and didn't list that many holidays. Try another one.";continue;;
+	esac
+
+done
+
+# For reference: last element of array=	echo "${arr[@]:(-1)}"
+

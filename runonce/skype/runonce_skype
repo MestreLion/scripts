@@ -1,0 +1,20 @@
+#! /bin/bash
+
+# Fix the following WARNING in ~/.xsession-errors
+# gnome-session[2035]: EggSMClient-WARNING: Desktop file '/home/rodrigosilva/.config/autostart/skype.desktop' has malformed Icon key 'skype.png'(should not include extension)
+
+file="$HOME/.config/autostart/skype.desktop"
+
+if [ -f "$file" ] ; then
+	if `cat "$file" | grep "Icon=" | grep -q ".png"` ; then
+		sed -i.bak '/^Icon=/s/\.png$//' "$file"
+		cp "$file" "$PWD"
+		cp "${file}.bak" "$PWD"		
+	else
+		echo "Nothing to fix! (maybe fixed already?)"
+		exit $CUSTOM_RUNONCE_ALREADY_DID
+	fi	
+else
+	echo "Skype not installed (yet...)"
+	exit $CUSTOM_RUNONCE_NOT_YET
+fi

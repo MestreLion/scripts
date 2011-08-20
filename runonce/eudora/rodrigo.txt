@@ -1,0 +1,24 @@
+- getopt for cp-deep
+OK - attach via mailto
+OK - detach terminal = wine start
+OK - maximized window: = wine start /MAX prog.exe or wine start prog.lnk
+- logrotate, 2>&3, /dev/null, wine errors
+- update-alternatives
+- font size
+- date format
+OK - eudora crash: look for .LOK and clean .ini - lack or files in spool
+
+command line options:
+http://www.eudora.com/developers/cmndline.html
+
+
+C:\Eudora\eudora.exe daily.msg
+
+'daily.msg' file that contains "To:", "From:", and "Subject:" headers, followed by a blank line then my message body.
+The file MUST have the suffix .msg for this to work.
+
+This queues the message up and sends it. Be aware that if Eudora is NOT running, it will start up and stay running.
+I originally got this info from:
+
+http://www.eudora.com/developers/cmndline.html
+http://www.uic.edu/depts/accc/software/eudora/eudorafaq.html

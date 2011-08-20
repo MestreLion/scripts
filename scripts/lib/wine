@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ -z "$WINEHOME" ]; then
+	echo "WINEHOME is not set! Please set it to your prefixes folder"
+	echo "Example: "
+	echo "	export WINEHOME=\"$HOME/.local/share/wineprefixes\""
+	exit 1
+fi
+

@@ -1,0 +1,106 @@
+#!/bin/bash
+#
+# Calculates the CRC-16 checksum of a string
+# like cksum does for CRC32
+#
+# Copyright (C) 2011 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+#
+# References:
+# 0x10 blog: <http://zeroxten.blogspot.com/search/label/crc16>
+# Wine's winemenubuilder: <http://source.winehq.org/git/wine.git>
+# The wise, friendly and helpful #bash gurus: <irc://irc.freenet.org/#bash>
+#
+# NOTE: Newlines are properly handled, but last newline is stripped off
+# NOTE: NUL chars are stripped off before computing
+# TODO: Test how non-ASCI chars are handled
+# FIXME: Decent usage explaining options and behaviour
+
+self="${0##*/}"
+
+error() {
+	local msg="$1"
+	printf "%s: %s\nTry '%s --help' for more information\n" \
+	       "$self" "$msg" "$self" >&2
+	exit 1
+}
+usage() {
+	printf "Print CRC-16 checksum (and optionally the byte count) of STRING\n\n"
+	printf "Usage: %s [--hex|--dec|--format FORMAT] [--count] [STRING]\n\n" "$self"
+	printf "Default format is decimal. If no string or -, reads from stdin\n"
+	printf "NULs and last newline are ignored. Use for texts, not binary data.\n"
+	exit
+}
+crc16()
+(
+	export LC_ALL=C
+	
+	local string="$1"
+	local format="${2:-"%d"}"
+	local crc=0
+	local i j xor_poly
+	
+	for ((i=0; i<${#string}; i++)); do
+		
+		c=$(printf "%d" "'${string:i:1}")
+		for ((j=0; j<8; c>>=1, j++)); do
+
+			(( xor_poly = (c ^ crc) & 1 ))
+			(( crc >>= 1 ))
+			(( xor_poly )) && (( crc ^= 0xA001 ))
+
+		done
+	done
+	printf "$format" "$crc"
+)
+
+while [[ $# -gt 0 ]]; do
+	arg="$1"; shift	
+	case "$arg" in
+	-h|--help  ) usage                              ;;
+	-x|--hex   ) format="%04X"                      ;;
+	-d|--dec   ) format="%d"                        ;;
+	-f|--format) format="$1"; shift                 ;;
+	-c|--count ) count=1                            ;;
+	--         ) string="$1"                ; break ;;
+	-          ) string=$( cat )   ; done=1 ; break ;;
+	-*         ) error "unrecognized option '$arg'" ;;
+	*          ) string="$arg"     ; done=1 ; break ;;
+	esac
+done
+
+[[ "$done" || "$string" ]] || string=$( cat )
+
+# Expected command-line behaviour table:
+# <none>    => str = stdin
+# -         => str = stdin
+# something => str = something
+# -- <none> => str = stdin
+# -- someth => str = something
+
+[[ "$string" ]] || error "missing string"
+
+crc16 "$string" "$format"
+[[ "$count" ]] && printf " %d" "${#string}"
+printf "\n"
+
+#Original function from winemenubuilder.c (for reference)
+#static unsigned short crc16(const char* string)
+#{
+#    unsigned short crc = 0;
+#    int i, j, xor_poly;
+# 
+#    for (i = 0; string[i] != 0; i++)
+#    {
+#        char c = string[i];
+#        for (j = 0; j < 8; c >>= 1, j++)
+#        {
+#            xor_poly = (c ^ crc) & 1;
+#            crc >>= 1;
+#            if (xor_poly)
+#                crc ^= 0xa001;
+#        }
+#    }
+#    return crc;
+#}
+

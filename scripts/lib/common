@@ -1,0 +1,128 @@
+#!/bin/bash
+#
+# lib/common - library of common functions used in my personal scripts
+#
+#    Copyright (C) 2011 Rodrigo Silva - <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+exec 3> /dev/null # to avoid harcoding /dev/null everywhere. For tools' stderr.
+
+SELF="${0##*/}" # buitin $(basename $0)
+
+
+# _TestRequirements() { #TODO }
+
+testroot()
+{
+	# simple root test
+	[[ "$(id -u)" -eq 0 ]] || fatal "You must run this as root"
+}
+
+confirm()
+{
+	# For both default parameter and user input,
+	# non-empty garbage will always evaluate to and behave as NO
+	local message="$1"
+	local default="${2:-y}"
+	local silentno="$3"
+	
+	local question="NO" ; [[ "$default" = "y" ]] && question="YES"
+	
+	if [[ -z "$FORCE" ]] ; then
+
+		read -p "$message (y/n, default $question): " confirm
+		confirm="${confirm:-$default}"
+		
+		case "$confirm" in
+		[Yy]*) ;;
+		*    ) [[ "$VERBOSE" && -z "$silentno" ]] && \
+		         printf "%s\n" "$SELF: ${COMMAND:+$COMMAND: }cancelled by user"
+		       return 2 ;;
+		esac
+
+	fi
+	
+	return 0
+}
+
+fatal()
+{
+	local message="$1"
+	local errorcode="${2:-1}"
+	local dump="$3"
+	
+	[[ "$dump"    ]] && printf "%s\n" "$dump" >&2
+	[[ "$message" ]] && printf "%s\n" "$SELF: ${COMMAND:+$COMMAND: }${message/%[[:punct:]]/}" >&2
+
+	exit $errorcode	
+}
+
+fatalgui()
+{
+	local message="$1"
+	local errorcode="${2:-1}"
+	local dump="$3"
+	
+	zenity --error --title="$SELF_GUI" \
+	       --text="${message:+$message\n\n}${dump:+$dump\n\n}"
+	             #"Exiting with error code ${errorcode}"
+	
+	fatal "$message" "$errorcode" "$dump"
+}
+
+min() { (( $1 < $2 )) && printf "%d" "$1" || printf "%d" "$2"; }
+max() { (( $1 > $2 )) && printf "%d" "$1" || printf "%d" "$2"; }
+
+trim() { read -r var <<< "$1"; printf "%s" "$var"; }
+
+debug()
+{
+	local var="$1"
+	declare -p var
+	exit
+}
+
+xdg-data-list()
+{
+	local path="$1"
+	local user
+	local system
+	local folder
+	local list=()
+
+	IFS=: read -ra system <<< "${XDG_DATA_DIRS:-/usr/local/share/:/usr/share/}"
+	
+	for folder in "${system[@]}" ; do
+		if [[ -e "$folder/$path" ]] ; then
+			list+=("${folder%/}/$path")
+		fi
+	done
+	
+	user="${XDG_DATA_HOME:-$HOME/.local/share}/$path"
+	[[ -e "$user" ]] && list+=("$user")
+	
+	xdg_data_list_RESULT=("${list[@]}")
+}
+
+xdg-data-cat()
+{
+	local path="$1"
+	
+	xdg-data-list "$path"
+	cat "${xdg_data_list_RESULT[@]}"
+	unset xdg_data_list_RESULT
+}
+

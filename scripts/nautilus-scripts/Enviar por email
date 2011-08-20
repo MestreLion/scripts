@@ -1,0 +1,69 @@
+#!/bin/bash
+
+#arguments+="PWD\n$PWD\n\n"
+#arguments+="NAUTILUS_SCRIPT_CURRENT_URI\n$NAUTILUS_SCRIPT_CURRENT_URI\n\n"
+#arguments+="NAUTILUS_SCRIPT_SELECTED_URIS\n$NAUTILUS_SCRIPT_SELECTED_URIS\n"
+#arguments+="NAUTILUS_SCRIPT_SELECTED_FILE_PATHS\n$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS\n"
+
+# wine cmd  switches: qksautc
+
+export WINEPREFIX="/home/rodrigo/.local/share/wineprefixes/eudora"
+
+# first, loop wine's user folder, for symlinks to filesystem
+# (so Desktop, Music, etc files are correctly translated by winepath
+# even if wine has no Z:\ => / mapping)
+declare -A profilelist=(  "$( winepath -u "$(wine cmd /c echo '%USERPROFILE%' | cut -d$'\r' -f1)" )"/*  )
+for profiledir in "${profilelist[@]}"; do
+	
+	
+
+declare -p profile
+
+exit
+
+#[Software\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList] 1312301794
+#"AllUsersProfile"=str(2):"Public"
+#"ProfilesDirectory"=str(2):"C:\\users"
+
+#wineuser=("$WINEPREFIX/$USER/drive_c/")
+
+#if [[ "$file" = "$HOME
+
+
+#for file; do
+
+
+#files=()
+
+#while read -r files; do files+=(: ; done < <()
+
+#list="$(env  winepath -w "$@")"
+
+
+#zenity --info --no-wrap --text="$(declare -p list)"
+
+
+##eudora "${files[@]}"
+#exit
+
+##xargs -x = if ARG_MAX, error (instead of multiple invocations)
+##man limits.h
+##winepath -0 | xargs -0 command2
+##while read -r; do args+=("$REPLY"); done < <(command1 "$@"); command2 "${args[@]}"
+##array=(); while IFS= read -r -d '' element; do array+=("$element"); done < <(winepath -0); command2 "${array[@]}"
+
+
+##!/bin/bash
+##set -x
+##thunderbird -compose attachment=file://$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS
+## attach multiple files thunderbird.sh
+##thunderbird -compose “attachment=’file:////home/will/newfile,file:////home/will/newfile2′”
+##-compose subject=Emailing %m,attachment=%u
+
+##if [ $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS = "" ] ;then echo “no files given” ; exit 1 ;fi &>/dev/null
+##Y=`echo file://$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS | sed ‘s/ \//,file:\/\/\//g’ | sed ‘s/ /^^/g’` #this sed replaces all spaces with a ^^.
+##X=`echo $Y | sed ‘s/\^^/ /g’` #this sed replaces all ^^’s with a space
+##Z=`echo $Y | sed ‘s/,file:\/\// /g’`
+##ii=1 #that sed (below)replaces all ^^’s with a space
+##BODY=$(for file in $Z ;do C=`basename “$(echo $file | sed ‘s/\^^/ /g’)”` ; echo ; echo -n “$ii) $C” ; ii=$(($ii+1)) ; done)
+##thunderbird -compose “attachment=’$X’”,body=”P.S. – Attached Files: $BODY”,subject=”attached files”

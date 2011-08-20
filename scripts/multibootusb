@@ -1,0 +1,347 @@
+#!/bin/bash
+
+SELF=`basename $0`
+
+LABEL="Multiboot"
+DRIVE="/dev/sdc"
+PARTITION="/dev/sdc2"
+ISOSOURCE="/dados/Install/Linux"
+ISOTARGET="/iso"
+
+MOUNT="/media/$LABEL"
+ISODEST="${MOUNT}${ISOTARGET}"
+
+# create filesystem on usb pen
+#sudo mkfs.vfat -n ${LABEL} ${PARTITION}
+
+#mount the partition
+# TODO: gvfs-mount -d $PARTITION maybe?
+
+#create ISO destination folder
+if [ -e "$ISODEST" ] ; then
+	if [ ! -d "$ISODEST" ] ; then
+		rm "$ISODEST"
+		mkdir "$ISODEST"
+	fi		
+else
+	mkdir "$ISODEST"
+fi
+
+#copy all isos (-n = do not overwrite)
+cp -n "${ISOSOURCE}/*.[iI][sS][oO" "$ISODEST"
+
+#install grub
+sudo grub-install --no-floppy --root-directory="$MOUNT" $DRIVE
+
+
+
+return 0
+
+
+VERBOSE=
+FORCE=
+TEST=
+DEBUG=
+
+usage ()
+{
+    cat <<EOF
+Usage: $SELF [OPTIONS] DEVICE
+EOF
+	if [ -z $1 ] ; then
+	    cat <<EOF
+Try '$SELF --help' for more information.
+EOF
+	else
+	    cat <<EOF
+
+Tools for reading, setting and generating UUIDs suitable for NTFS filesystems (8 bytes)
+
+Options:
+  -h, --help                  print this message and exit
+  -v, --verbose               verbose output (displays extra information)
+  -f, --force                 do not prompt before changes, assumes Yes for all questions
+  -t, --test                  simulation test, do not write any data on disk (affects --set and --copy only)
+  -d, --debug                 displays debug information on parsed options and arguments
+  -l, --label LABEL           use LABEL for volume name after formatting
+  -b, --binary                interprets UUID as 8-byte binary data (rather than hexadecimal string)
+                              --binary is only used with --uuid, otherwise it is ignored
+  -u, --uuid UUID             uses the specified UUID. Must be a 16 chars ASCII string, case-insensitive, [0-9,A-F]
+                              if --binary is used, UUID must be 8 bytes long
+                              --uuid is only used with --set, otherwise it is ignored
+  
+Commands:
+  --generate                  output a random UUID suitable for an NTFS device (8 bytes)
+  --read DEVICE               output the current UUID of the specified NTFS device
+  --set  DEVICE               sets the UUID for the specified NTFS device (uses a random one if --uuid is ommited)
+  --copy DEVICE_IN DEVICE_OUT copy (clone) the UUID from an NTFS device to another
+  
+Examples:
+  \$ $SELF --generate
+  \$ $SELF --read /dev/sdx1
+  \$ $SELF --set /dev/sdx1
+  \$ $SELF --set /dev/sdx1 --uuid 2AE2C85D31835048
+  \$ $SELF --set /dev/sdx1 --uuid rodrigo1 --binary
+  \$ $SELF --copy /dev/sdx1 /dev/sdx2
+
+Author: Rodrigo Silva (a.k.a. MestreLion) <linux@rodrigosilva.com>
+License: GPL v3 www.gnu.org
+EOF
+	fi
+}
+
+#######################################  Auxiliary Functions
+
+_RandomUuid()
+{
+	if [ -z "$LOWER" ] ; then local u="-u" ; fi
+	UUID=`xxd $u -plain -l 8 /dev/urandom`
+}
+
+_TestNTFS()
+{
+	local device="$1"
+	
+	if [ -n "$device" ] ; then
+		if [ -b "$device" ] ; then
+			if sudo blkid -p  "$device" | grep -q "TYPE=\"ntfs\"" ; then
+				return 0
+			else
+				echo "error: $device: permission denied or not an NTFS device"
+				return 13
+			fi
+		else
+			echo "error: $device: not found or not a device"
+			return 12 
+		fi
+	else
+		# Redundant, since all DEVICE arguments are mandatory and previously tested
+		echo "error: this operation requires a device"
+		return 11
+	fi
+}
+
+_Confirm()
+{
+	local message="$1"
+	
+	if [ -z "$FORCE" ] ; then
+		local confirm
+		read -p "$message (y/n, default YES): " confirm
+		case "x$confirm" in
+			x[Yy]*|x) ;;
+			*) if [ -n "$VERBOSE" ] ; then echo "$SELF: $COMMAND: cancelled by user" ; fi ; return 2 ;;
+		esac
+	fi
+	
+	return 0
+}
+
+_PrintFlags()
+{
+	# Echoing $DEBUG value is redundant, since this will only be printed if = 1
+    cat <<EOF
+Parsed Options  =$GETOPT
+Debug           = $DEBUG
+Verbose         = $VERBOSE
+Lower case      = $LOWER
+Non-Interactive = $FORCE
+Simulation Test = $TEST
+Binary          = $BINARY
+Command         = $COMMAND
+Device          = $DEVICE
+Uuid            = $UUID
+EOF
+}
+
+
+#######################################  Main Functions
+
+
+Uuid_Generate()
+{
+	_RandomUuid
+	
+	# All input data is set, print debug info
+	if [ -n "$DEBUG" ] ; then _PrintFlags ; fi
+
+	if [ -n "$VERBOSE" ] ; then
+		echo "Random UUID: $UUID"
+	else
+		echo "$UUID"
+	fi
+	
+	return 0
+}
+
+Uuid_Read()
+{
+	if _TestNTFS "$DEVICE" ; then
+
+		if [ -z "$LOWER" ] ; then local u="-u" ; fi
+		UUID=`sudo xxd $u -plain -s 72 -len 8 "$DEVICE"`
+
+		# All input data is set, print debug info
+		if [ -n "$DEBUG" ] ; then _PrintFlags ; fi
+
+		if [ -n "$VERBOSE" ] ; then
+			echo "UUID of "$DEVICE" is $UUID"
+		else
+			echo $UUID
+		fi
+		
+		return 0
+
+	else
+		return $?
+	fi
+}
+
+Uuid_Set()
+{
+	local binary_uuid
+	local result=0
+	
+	# Handle UUID: Calculate a random one if not given
+	if [ -z "$UUID" ] ; then 
+		_RandomUuid
+	else
+		if [ -z "$BINARY" ] ; then		
+			# Hexadecimal String format
+			if ! [[ "$UUID" =~ ^[0-9A-Fa-f]{16}$ ]] ; then
+				echo "error: $UUID: invalid UUID. Must be 16 hexadecimal characters [0-9,A-F]. Ex: 2AE2C85D31835048"
+				return 21
+			fi
+		else
+			# Binary format
+			if [ ${#UUID} -ne 8 ] ; then
+				echo "error: $UUID: invalid UUID. Binary format must be 8-bytes long"
+				return 22
+			fi
+			
+			# Save original UUID
+			binary_uuid="$UUID"
+			
+			# Convert to hexadecimal string
+			UUID="`echo -n "$UUID" | xxd -plain`" # "-n" in echo could be removed if "-len 8" was used in xxd
+		 fi
+	fi
+	# Adjust UUID case
+	if [ -n "$LOWER" ] ; then UUID="${UUID,,}" ; else UUID="${UUID^^}" ; fi
+
+	# All input data is set, print debug info
+	if [ -n "$DEBUG" ] ; then _PrintFlags ; fi
+	if [ -n "$binary_uuid" ] ; then echo "Binary UUID     = $binary_uuid" ; fi
+	
+	# Test device
+	if _TestNTFS "$DEVICE" ; then
+
+		# Confirm with user
+		_Confirm "Set $DEVICE UUID to $UUID?"
+		if [ $? -ne 0 ] ; then return $? ; fi
+		
+		# Set the UUID
+		if [ -z "$TEST" ] ; then
+			echo "$UUID" | xxd -r -plain | sudo dd of="$DEVICE" bs=8 count=1 seek=9 conv=notrunc status=noxfer 2> /dev/null
+			result=$?
+		fi
+
+		if [ $result -eq 0 ] ; then
+			# Verbose message
+			if [ -n "$VERBOSE" ] ; then echo "UUID of $DEVICE set to $UUID" ; fi 
+			return 0
+		else
+			echo "error: $COMMAND: $result (permission denied?)"
+			return $result
+		fi
+			
+	else
+		return $?
+	fi
+}
+
+Uuid_Copy()
+{
+	local input="$DEVICE"
+	local output="$1"
+	local result=0
+	
+	# Check DEVICE_OUTPUT (getopt only handle 1 mandatory argument per option)
+	if [ -z "$output" ] ; then
+		echo "error: output device not specified"
+		usage
+		exit 31
+	fi
+	
+	# Test Input and Output devices
+	if _TestNTFS "$input" && _TestNTFS "$output" ; then
+	
+		# Read input device's UUID
+		if [ -z "$LOWER" ] ; then local u="-u" ; fi
+		UUID=`sudo xxd $u -plain -s 72 -len 8 "$input"`
+	
+		# All input data is set, print debug info (with additional DEVICE_OUTPUT parameter)
+		if [ -n "$DEBUG" ] ; then _PrintFlags ; echo "Output          = $1" ; fi
+
+		# Confirm with user
+		_Confirm "Copy UUID $UUID from $input to $output ?"
+		if [ $? -ne 0 ] ; then return $? ; fi
+				
+		# Copy the UUID
+		if [ -z "$TEST" ] ; then
+			sudo dd if="$input" of="$output" bs=8 count=1 seek=9 skip=9 conv=notrunc status=noxfer 2> /dev/null
+			result=$?
+		fi 
+
+		if [ $result -eq 0 ] ; then
+			# Verbose message
+			if [ -n "$VERBOSE" ] ; then echo "UUID $UUID copied from $input to $output" ; fi 
+			return 0
+		else
+			echo "error: $COMMAND: $result (permission denied?)"
+			return $result
+		fi
+		
+	else
+		return $?
+	fi
+	
+}
+
+#######################################  Command Line parsing
+
+
+# Print usage if no parameter passed
+if [ $# -eq 0 ] ; then
+	usage
+	exit 1
+fi
+
+GETOPT=`getopt --alternative --options vdtl: --longoptions verbose,test,debug,label:,help --name "$SELF" -- "$@"`
+if [ $? -gt 0 ] ; then usage ; exit 1 ; fi # error in getopt
+eval set -- "$GETOPT"
+
+while true ; do
+	case "$1" in
+		-v|--verbose ) shift ; VERBOSE="1"                              ;; # Set verbose
+		-t|--test    ) shift ; TEST="1"                                 ;; # Set simulation test mode
+		-d|--debug   ) shift ; DEBUG="1"                                ;; # Set debug mode
+		--label      ) shift ; LABEL="$1"                       ; shift ;; # Set Label
+		--help       ) shift ; COMMAND="help"                           ;; # Help requested
+#		--read       ) shift ; COMMAND="read"     ; DEVICE="$1" ; shift ;; # Reads UUID from device
+#		--set        ) shift ; COMMAND="set"      ; DEVICE="$1" ; shift ;; # Sets UUID of device 
+#		--copy       ) shift ; COMMAND="copy"     ; DEVICE="$1" ; shift ;; # Copy UUID from device
+		--           ) shift ; break ;;
+		*            ) break ;;
+	esac
+done
+
+case "$COMMAND" in
+	help     ) usage "HELP"   ; exit 0  ;;
+	generate ) Uuid_Generate  ; exit $? ;; 
+	read     ) Uuid_Read      ; exit $? ;; 
+	set      ) Uuid_Set       ; exit $? ;; 
+#	copy     ) Uuid_Copy "$@" ; exit $? ;; 
+	*        ) usage          ; exit 1  ;; 
+esac
+

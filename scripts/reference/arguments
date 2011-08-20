@@ -1,0 +1,18 @@
+#!/bin/bash
+
+arguments="PWD\n$PWD\n\n"
+arguments="${arguments}NAUTILUS_SCRIPT_CURRENT_URI\n$NAUTILUS_SCRIPT_CURRENT_URI\n\n"
+arguments="${arguments}NAUTILUS_SCRIPT_SELECTED_URIS\n$NAUTILUS_SCRIPT_SELECTED_URIS\n"
+arguments="${arguments}NAUTILUS_SCRIPT_SELECTED_FILE_PATHS\n$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS\n"
+
+i=0
+while [ $# -gt 0 ]; do
+	((i++))
+	arguments="${arguments}\$$i: $1\n"
+	shift
+done
+
+[[ "$DEBUG" ]] && :
+printf "%b\n" "$arguments" >&2
+
+zenity --info --no-wrap --text "${arguments//&/&amp;}"

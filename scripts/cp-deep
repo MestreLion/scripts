@@ -1,0 +1,65 @@
+#!/bin/bash
+#
+# cp-deep - Copy file from SOURCE(s) to DESTINATION, creating path if needed
+#
+#    Copyright (C) 2011 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Huge thanks to all the gurus and friends in irc://irc.freenet.org/#bash
+# and the contributors of http://mywiki.wooledge.org/
+# Special thanks to dualbus, geirha and sn18.
+#
+# Description:
+#
+# cp-deep works like regular cp, copying files from SOURCE(S) to DESTINATION
+# But it also creates destination path if it does not exist - using mkdir
+# with --parent DEST - thus allowing copied files to be "deep" in the tree
+# 
+# 
+# USE WITH CAUTION! PAY ATTENTION TO TRAILLING "/" IN DEST!!!
+#
+#
+# Original cp allows optional use of trailing "/" in DEST,
+# as it checks if DEST is an existing dir to decide whether DEST means
+# "copy file to /foo/bar/" or "copy to /foo/ and rename file to bar"
+#
+# Since cpdeep allows DEST dir to be created, one must explicitly use
+# trailing "/" in DEST when dir is to be created and file not renamed. So:
+#
+# cp-deep file /foo/bar/ = create /foo/bar and copy file there = /foo/bar/file
+# cp-deep file /foo/bar  = create /foo and copy file as bar = /foo/bar
+#
+# To avoid common errors, explicit use of trailing "/" is not needed when:
+# -SOURCE are multiple files (DEST assumed to be dir regardless of trailing /)
+# -DEST exists and is a dir = copy SOURCE there, do not rename
+# -DEST exists and is a file = copy SOURCE over DEST (SOURCE must be single file)
+#
+# So be sure to properly include or not trailling "/" when SOURCE is single file
+# and DEST does not exist
+
+source "$CUSTOM_SCRIPTS/lib/common"
+
+(( $# >= 2 )) || fatal "missing parameters. usage: $SELF SOURCE... DEST\n"
+
+dest="${@:(-1)}" # Last argument
+
+# Special handling of DEST only needed when SOURCE is a single file
+# and there is at least one "/" in it. For same dir copies, no mkdir needed
+[[ $# = 2 ]] && { [[ "$dest" = */* ]] && dest="${dest%/*}/" || dest="" ; }
+
+[[ "$dest" ]] && { mkdir --parent -- "$dest" || exit ; }
+
+cp --no-preserve=mode,ownership "$@"
+

@@ -1,0 +1,605 @@
+#!/bin/bash
+#
+# wine-import-extensions - Register native file extensions in Wine
+#
+#    Copyright (C) 2011 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Huge thanks for all the gurus and friends in irc://irc.freenet.org/#bash
+# and the contributors of http://mywiki.wooledge.org/
+#
+# FIXME: inhibit winemenubuilder for exts that have multiple mime-types. It is a
+#  corner case where winemenubuilder might choose a different mime than I did.
+#  Currently I (must) sort and de-dupe user+sys globs, while wmb just picks the 
+#  first match in user+sys (no sort, no de-dupe)
+# FIXME: Only add extensions that have default app (defauts.list+mimeapps.list)
+#  Will be *really* hard considering there is user and system databases,
+#  [Removed Apps] section in mimeapps.list, and, most important, mimetypes have
+#  aliases and *parents* (example: *.xml files may be opened by plain/text app,
+#  *.deb by application/zip, and so on - how to deal with that?)
+# FIXME: Properly handle cases in exts and mime-types. Windows might be case-
+#  insensitive but winemenubuilder is not
+# TODO: restore option (from backup file)
+# TODO: undo option (from import file)
+# TODO: --include-only and --force-all options
+# TODO: update list with status for each extension (new, updated, skipped, etc)
+# TODO: handle URIs (mailto:, magnet:, irc://)
+
+
+#######################################  Definitions
+
+exec 3> /dev/null # to avoid harcoding /dev/null everywhere. For tools' stderr.
+SELF="${0##*/}" # buitin $(basename $0)
+
+#user input
+BOTTLE=
+REGFILE=
+BACKUP=
+RESTORE=
+LIST=
+OVERWRITE=
+SKIP=
+
+#parameters
+VERBOSE=
+TEST=
+DEBUG=
+GUI=
+
+#constants
+CLASSTAG="WineImportedExtension"
+REGEX='\.[[:alnum:]_+%~-]+'
+WINEBOTTLEHOME="$HOME/.local/share/wineprefixes"
+
+#global variables
+command=
+appname=
+icon=
+prefix="${WINEPREFIX:-"$HOME/.wine"}"
+output="REGEDIT4"$'\n'$'\n'
+native_ext=
+wine_ext=
+wine_class=
+classes=
+long=
+outputfile=
+savedlocale=
+prev_ext=
+n_ext=0
+n_cls=0
+n_dup=0
+n_ovr=0
+n_skp=0
+n_mim=0
+
+#######################################  Common functions (from lib, lowercase)
+
+fatal()
+{
+	local message="$1"
+	local errorcode="${2:-1}"
+	local dump="$3"
+	
+	[[ "$dump"    ]] && printf "%s\n" "$dump" >&2
+	[[ "$message" ]] && printf "%s\n" "$SELF: ${message/%[[:punct:]]/}" >&2
+
+	exit $errorcode	
+}
+
+xdg_data_cat()
+{
+	local path="$1"
+	local user
+	local sys
+	local folder
+	local list=()
+
+	user="${XDG_DATA_HOME:-$HOME/.local/share}/$path"
+	[[ -e "$user" ]] && list+=("$user")
+	
+	IFS=: read -ra sys <<< "${XDG_DATA_DIRS:-/usr/local/share/:/usr/share/}"
+	
+	for folder in "${sys[@]}" ; do
+		if [[ -e "$folder/$path" ]] ; then
+			list+=("${folder%/}/$path")
+		fi
+	done
+	
+	cat "${list[@]}"
+}
+
+crc16()
+(
+	export LC_ALL=C
+	local string="$1"
+	local crc=0
+	local i j xor_poly
+
+	for ((i=0; i<${#string}; i++)); do
+		c=$(printf "%d" "'${string:i:1}")
+		for ((j=0; j<8; c>>=1, j++)); do
+			(( xor_poly = (c ^ crc) & 1 ))
+			(( crc >>= 1 ))
+			(( xor_poly )) && (( crc ^= 0xA001 ))
+		done
+	done
+
+	printf "%04X\n" "$crc"
+)
+
+
+#######################################  Functions (this script only)
+
+Usage ()
+{
+	local explicit="$1"
+	
+	cat <<-_USAGE
+	Usage: $SELF [OPTIONS]
+	_USAGE
+	
+	if [[ -z "$explicit" ]] ; then
+		cat <<-_USAGE
+		Try '$SELF --help' for more information.
+		_USAGE
+		return
+	fi
+	
+	cat <<-_USAGE
+
+	Imports all native file extensions (globs in xdg mime database) into Wine
+	registry, setting file handler to winebrowser. This allows Wine applications
+	to launch files in default native Linux applications
+
+	Options:
+	 -h, --help     print this message and exit
+	 -v, --verbose  verbose output (displays extra information)
+	 -t, --test     simulation test, do not change wine registry
+	 -d, --debug    displays debug information on parsed options and arguments
+	  
+	 -k, --backup FILE
+	     Backup current Wine Registry (system.reg) to FILE (WineRegistry format)
+	     This is the backup file that must be provided for --restore option
+	     
+	 -c, --savechanges FILE
+	     Generates a registry file with all the applied changes (Windows format)
+	     This is the file that must be provided for --undo option
+	     
+	 -l, --list FILE
+	     Generates a tab-delimited file with current native extensions and mime-
+	     types and its associated wine classes and file handlers (if any)
+
+	 -b, --bottle NAME
+	     Sets the wine bottle to use. A bottle is a wine prefix currently
+	     located at $WINEBOTTLEHOME/NAME
+	     If used, enviroment variable WINEPREFIX is ignored
+			              
+	 -o, --overwrite EXT,...
+	     Import listed native extension(s) even if there is already a registered
+	     file handler in wine. Original class name will not be changed. If an
+	     extension is registered to a class that has several extensions (for
+	     example jpegfile for jpg and jpeg), all associated extensions will be
+	     affected. Listed extensions that do not exist in native environment
+	     will be silently ignored. List must be comma-delimited and EXT must be
+	     the extension without any dots or asterisks.Ex: --overwrite jpg,gif,txt
+	 
+	 -s, --skip EXT,...
+	     Do not import native extension even if there is no registered class or
+	     file handler in wine. Opposite of -o. List must be comma-delimited, EXT
+	     must be the extension without any dots or asterisks. Ex: --skip dll,cpl
+	 
+	 -g, --gui
+	     Instead of winebroswer, register an alternate handler, created
+	     on-the-fly, called winebrowser-gui. It uses GUI (zenity) for errors
+	     (file not found and default application not registered)
+	
+	 -r
+	
+	
+	Examples and suggested uses:
+	$SELF -vd --test --bottle test --backup  system.reg.bak --list ext.txt
+	$SELF -vd --test --bottle test --regfile import.reg --gui \
+	                 --overwrite gif,jpg,png,txt --skip cpl,dll,lnk,msi,msp,vbs
+
+	  
+	Author: Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	License: GPL3 or later, at your choice.See <http://www.gnu.org/licenses/gpl>
+	_USAGE
+}
+
+PrintFlags()
+{
+	cat <<-_PRINTFLAGS
+	Parsed Options  =$GETOPT
+	Debug           = $DEBUG
+	Verbose         = $VERBOSE
+	Simulation Test = $TEST
+	GUI handler     = $GUI
+	Wine Bottle     = $BOTTLE
+	Wine Prefix     = $prefix
+	Registry file   = $REGFILE
+	Backup file     = $BACKUP
+	List file       = $LIST
+	_PRINTFLAGS
+}
+
+SetupWinePrefix()
+{
+	[[ -f "$prefix/system.reg" ]] && return
+	
+	[[ "$VERBOSE" ]] && {
+		echo "Creating wine prefix $prefix"
+		echo "This may take a while..."
+	}
+	wine wineboot 2>&3 || fatal "Could not create wine prefix $prefix"
+	while [[ ! -f "$prefix/system.reg" ]] ; do : ; done ; sleep 3
+}
+
+SetupExecutable()
+{
+	local executable
+	local winexec
+
+	if [[ "$GUI" ]]; then
+		executable="$prefix/dosdevices/c:/windows/system32/winebrowser-gui.exe"
+	else
+		executable="$prefix/dosdevices/c:/windows/system32/winebrowser.exe"
+	fi
+	
+	winexec="$(wine winepath -w "$executable")"
+	command="${winexec//\\/\\\\} \\\"%1\\\""
+
+	appname="${executable##*/}"
+	appname="${appname%%\.*}"
+	
+	icon="$(crc16 "$winexec")_${appname}.0" # pray index will always be 0	
+	
+	[[ "$GUI" && ! "$TEST" ]] || return
+
+	cat > "$executable" <<-_WINEBROWSERGUI
+		#!/bin/bash
+		error=\$(xdg-open "\$(wine winepath -u "\$1")" 2>&1)
+		error=\${error##*:}
+		if [[ "\$error" ]] ; then 
+			zenity --error --no-wrap --text="\${error//&/&amp;}"
+			exit 1
+		fi
+	_WINEBROWSERGUI
+	[[ $? -eq 0 ]] || fatal "Could not create $executable"
+	chmod +x "$executable"
+	
+	[[ "$VERBOSE" ]] && echo "GUI launcher created in $winexec"
+}
+
+RegistryAddExt()
+{
+	local ext="$1"
+	local class="$2"
+	
+	output+="[HKEY_CLASSES_ROOT\.${ext}]"$'\n'
+	output+="@=\"${class}\""$'\n\n'
+}
+
+RegistryAddClass() 
+{
+	local class="$1"
+	local handler="$2"
+	local undo="$3"
+	
+	output+="[HKEY_CLASSES_ROOT\\${class}\shell\open\command]"$'\n'
+	output+="@=\"${handler}\""$'\n'
+	[[ "$undo" ]] && output+="\"${CLASSTAG}_undo\"=\"${undo}\""$'\n'
+	output+=$'\n'
+}
+
+# winemnubuilder inhibitor
+RegistryAddAssoc()
+{
+	local ext="$1"
+	local class="$2"
+	local mimetype="$3"
+	
+	output+="[HKEY_CURRENT_USER\\Software\\Wine\\FileOpenAssociations\\.${ext}]"$'\n'
+	output+="\"AppName\"=\"${appname}\""$'\n'
+	output+="\"MimeType\"=\"${mimetype}\""$'\n'
+	output+="\"OpenWithIcon\"=\"${icon}\""$'\n'
+	output+="\"ProgID\"=\"${class}\""$'\n\n'
+}
+
+CreateTempFile()
+{
+	tempfile=$(tempfile) || fatal "could not create temp file"
+	trap "rm -f -- '$tempfile'" EXIT
+	printf "%s\n" "$tempfile"
+}
+
+Restore()
+{
+	local backup="$1"
+	local temp=$(CreateTempFile)
+}
+
+#######################################  Command Line parsing
+
+long="help,verbose,test,debug,gui,bottle:,savechanges:,overwrite:,skip:,backup:,
+restore:,list:,undo:"
+GETOPT=$(getopt --alternative --name="$SELF" --options="vtdgb:k:c:"            \
+                --longoptions="$long" -- "$@"
+) || { Usage ; exit 1; } # error in getopt
+
+eval set -- "$GETOPT"
+
+while true ; do
+	arg="$1"
+	shift
+	case "$arg" in
+	-v|--verbose    ) VERBOSE=1              ;; # Set verbose
+	-t|--test       ) TEST=1                 ;; # Set simulation test
+	-d|--debug      ) DEBUG=1                ;; # Set debug mode
+	-g|--gui        ) GUI=1                  ;; # Set GUI flag
+	-e|--eudora     ) EUDORA=1               ;; # Undocumented, for now
+	-b|--bottle     ) BOTTLE="$1"   ; shift  ;; # Set Wine Bottle
+	-c|--savechanges) REGFILE="$1"  ; shift  ;; # Set Registry change file
+	-k|--backup     ) BACKUP="$1"   ; shift  ;; # Set Registry backup file
+	-l|--list       ) LIST="$1"     ; shift  ;; # Set list file
+	-r|--restore    ) RESTORE="$1"  ; shift  ;; # Set restore file
+	-o|--overwrite  ) OVERWRITE="$1"; shift  ;; # Set list of exts to overwrite
+	-s|--skip       ) SKIP="$1"     ; shift  ;; # Set list of exts to skip
+	-h|--help       ) Usage "HELP"  ; exit   ;; # Help requested
+	*               ) Usage         ; exit 1 ;;
+	esac
+done
+
+#######################################  Main Body
+
+[[ "$BOTTLE" ]] && prefix="$WINEBOTTLEHOME/$BOTTLE"
+
+[[ "$DEBUG" ]] && { PrintFlags ; exec 3>&2 ; }
+
+export WINEPREFIX="$prefix"
+
+[[ "$RESTORE" ]] && Restore "$RESTORE"
+
+SetupWinePrefix
+SetupExecutable
+
+# LC_ALL=C speed up processing and allow proper join
+# But should not be set for Wine commands, since locale is relevant
+savedlocale="$LC_ALL"
+export LC_ALL=C 
+
+# Native extensions (freedesktop.org xdg mime database globs)
+# Format: <NUMBER>:$mimetype:$glob
+native_ext=$( { awk -F: '$3~/^\*'"$REGEX"'$/ && !/^#/ {
+                            print tolower(substr($3,3)) "\t" tolower($2)
+                         }'                                                    \
+                    < <(xdg_data_cat "mime/globs2")                            \
+                || fatal "Could not access mime database globs list"
+              }                                                                \
+              | sort --unique
+) 2>&3
+
+[[ "$VERBOSE" ]] && printf "%4d %s\n" $(wc -l <<< "$native_ext")               \
+                           "native extensions found (A)"
+
+# Wine extensions that have associated classes (from registry)
+# Format:
+# [Software\\Classes\\.$ext]<BLANK><NUMBER>
+# @="$class"
+wine_ext=$( { awk -F= '
+                  tolower($0)~/^\[software\\\\classes\\\\'"$REGEX"'\]/ {
+                      split($0,a,/[].]/)
+                      ext=a[2]
+                      next
+                  }
+                  /^\[/ { ext="" }
+                  /^@="/ {
+                      if(ext) {
+                          gsub(/^@="|"$/,"")
+                          print tolower(ext) "\t" $0
+                          ext=""
+                      }
+                  }' "$prefix/system.reg"                                      \
+              || fatal "Could not read wine registry $prefix/system.reg"
+            }                                                                  \
+            | sort                                                             \
+) 2>&3
+
+[[ "$VERBOSE" ]] && printf "%4d %s\n" $(wc -l <<< "$wine_ext")                 \
+                           "wine extensions with classes found (B)"
+
+
+# Wine classes that have associated file handlers (from registry)
+# Format:
+# [Software\\Classes\\$class\\\\shell\\open\\command]<BLANK><NUMBER>
+# @="$handler"
+wine_class=$( { awk -F= '
+tolower($0)~/^\[software\\\\classes\\\\[^\\\]]+\\\\shell\\\\open\\\\command\]/{
+    split($0,a,/\\\\/)
+    class=a[3]
+    next
+}
+/^\[/ { class="" }
+/^@="/ {
+    if(class) {
+        gsub(/^@="|"$/,"")
+        print class "\t" $0
+        class=""
+    }
+}' "$prefix/system.reg"                                                        \
+                || fatal "Could not read wine registry $prefix/system.reg"
+              }                                                                \
+              | sort --ignore-case                                             \
+) 2>&3
+
+[[ "$VERBOSE" ]] && printf "%4d %s\n" $(wc -l <<< "$wine_class")               \
+                           "wine classes with file handlers found (C)"
+
+# Loop the combined list
+# (All native extensions with their corresponding wine class and file handler)
+[[ "$LIST" ]] && { printf "EXT\tMIMETYPE\tCLASS\tFILE HANDLER\n" > "$LIST"     \
+                   || fatal "could not create list file $LIST" ; }
+while IFS=$'\t' read -r -s ext mimetype class handler; do
+
+	[[ "$LIST" ]] && {
+		if [[ "${LIST##*\.}" = "ods" ]]; then
+			printf "\"%s\"\t\"%s\"\t\"%s\"\t\"%s\"\n"             \
+	               "$ext" "$mimetype" "$class" "$handler" >> "$LIST"
+		else
+			printf "%s\t%s\t%s\t%s\n"                             \
+	               "$ext" "$mimetype" "$class" "$handler" >> "$LIST"
+		fi
+	}
+	
+	# Skip undesirable extensions
+	[[ ",${SKIP}," = *",${ext},"* ]] && { (( n_skp++ )); continue; }
+
+	# Skip duplicate extensions (with different mime-types, like ogg)
+	if [[ "$prev_ext" = "$ext" ]]; then
+		(( n_mim++ )); continue;
+	else
+		prev_ext=$ext
+	fi
+	
+
+	# See if extension has no class
+	if [[ -z "$class" ]]; then
+		class="${CLASSTAG}.${ext}"
+		RegistryAddExt   "$ext"   "$class"  ; (( n_ext++ ))
+		RegistryAddClass "$class" "$command"; (( n_cls++ ))
+		RegistryAddAssoc "$ext"   "$class" "$mimetype"
+		output+=$'\n\n'
+	
+	# See if class has no handler or is a forced extension
+	elif [[ -z "$handler" || ",${OVERWRITE}," = *",${ext},"* ]]; then
+	
+		# avoid duplicate classes (eg, both mht and mhtml point to mhtmlfile)
+		if [[ "$'\t'$classes" = *"$'\t'${class}$'\t'"* ]]; then
+			(( n_dup++ ))
+		else
+			classes+="${class}$'\t'"
+			RegistryAddClass "$class" "$command" "$handler"
+			RegistryAddAssoc "$ext"   "$class"   "$mimetype"
+			output+=$'\n\n'
+			if [[ "$handler" ]]; then (( n_ovr++ )) ; else (( n_cls++ )) ; fi
+		fi
+	fi
+
+done < <(                                                                      \
+	join -a1 -t$'\t' -o2.2,0,1.2 <(echo "$native_ext") <(echo "$wine_ext") |   \
+	sort --ignore-case                                                     |   \
+	join -a1 -t$'\t' -i -o1.2,1.3,0,2.2 - <(echo "$wine_class")            |   \
+	sort
+) 2>&3
+
+[[ "$VERBOSE" ]] && {
+	printf "%4d %s\n" $n_ext "extensions lacking class will be added (A \ B)"
+	printf "%4d %s\n" $n_cls "classes lacking file handler will be added (A ∩ B) \ C"
+	
+	[[ "$n_ovr" -gt 0 ]] && printf "%4d %s\n" $n_ovr                       \
+	  "classes with file handler will be overwrited"
+
+	[[ "$n_skp" -gt 0 ]] && printf "%4d %s\n" $n_skp                       \
+	  "extensions were skipped by user request"
+
+	[[ "$n_mim" -gt 0 ]] && printf "%4d %s\n" $n_mim                       \
+	  "extensions were duplicate with multiple mime-types and were ignored"
+
+	[[ "$n_dup" -gt 0 ]] && printf "%4d %s\n     %s\n" $n_dup              \
+	  "classes were duplicate and thus ignored"                            \
+	  "(different extensions pointing to a class that was already processed)"
+}
+
+# Announce if list was created
+[[ "$LIST" && "$VERBOSE" ]] && printf "List file was generated to \"$LIST\"\n"
+
+# Backup current registry
+[[ "$BACKUP" ]] && {
+	cp "$prefix/system.reg" "$BACKUP" 2>&3 || fatal "Could not create backup file $BACKUP"
+	[[ "$VERBOSE" ]] && printf "Current Registry was backed up to \"$BACKUP\"\n"
+}
+
+# Dump the output
+[[ "$REGFILE" ]] && {
+	printf '%s' "$output" > "$REGFILE" || fatal "Could not create registry file $REGFILE"
+	[[ "$VERBOSE" ]] && printf "Registry file was generated to \"$REGFILE\"\n"
+}
+
+# Create temp file for regedit, or use the user generated
+if [[ "$REGFILE" ]]; then
+	outputfile="$REGFILE"
+else
+	outputfile=$( CreateTempFile )
+	printf '%s' "$output" > "$outputfile"
+fi
+
+# Merge the registry
+if [[ "$TEST" ]]; then
+	[[ "$VERBOSE" ]] && echo "Test run, registry was not changed"
+else
+	export LC_ALL="$savedlocale"
+	wine regedit "$outputfile" || fatal "Registry changes could not be merged into wine"
+	[[ "$VERBOSE" ]] && echo "Registry changes successfully merged into wine"
+fi
+
+exit 0
+
+
+# Sample outputs:
+
+#rodrigo@desktop ~ $ wine-import-extensions -vd --bottle test --backup system.reg.bak --list ext.txt
+#Parsed Options  = -v --debug --bottle 'test' --backup 'system.reg.bak' --list 'ext.txt' --
+#Debug           = 1
+#Verbose         = 1
+#Simulation Test = 
+#GUI handler     = 
+#Wine Bottle     = test
+#Wine Prefix     = /home/rodrigo/.local/share/wineprefixes/test
+#Registry file   = 
+#Backup file     = system.reg.bak
+#List file       = ext.txt
+# 758 native extensions found (A)
+#  29 wine extensions with classes found (B)
+#  21 wine classes with file handlers found (C)
+# 694 extensions lacking class will be added (A \ B)
+# 703 classes lacking file handler will be added (A ∩ B) \ C
+#  35 extensions were duplicate with multiple mime-types and were ignored
+#   1 classes were duplicate and thus ignored
+#     (different extensions pointing to a class that was already processed)
+#List file was generated to "ext.txt"
+#Current Registry was backed up to "system.reg.bak"
+#Registry changes successfully merged into wine
+
+
+#	rodrigo@desktop ~ $ /usr/bin/time -f'%E' wine-import -vdg -b teste -r reg.txt;echo $?
+#	Parsed Options  = -v -d --gui --bottle 'teste' --regfile 'regfile.txt' --
+#	Debug           = 1
+#	Verbose         = 1
+#	Non-Interactive = 
+#	Simulation Test = 
+#	GUI handler     = 1
+#	Wine Bottle     = teste
+#	Wine Prefix     = /home/rodrigo/.local/share/wineprefixes/teste
+#	Executable      = winebrowser-gui
+#	Registry file   = regfile.txt
+#	 718 native extensions found (A)
+#	  29 wine extensions with classes found (B)
+#	  19 wine classes with file handlers found (C)
+#	 689 extensions lacking class will be added (A \ B)
+#	 701 classes lacking file handlers will be added (A ∩ B) \ C
+#	Registry file "regfile.txt" was generated
+#	0:00.28
+#	0
+

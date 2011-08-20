@@ -1,0 +1,103 @@
+#!/bin/sh
+# 
+# Commands meant to run at every login
+#
+# To be sourced by ~/.profile
+#
+# To run, add these lines to ~/.profile:
+#
+#	export CUSTOM_ROOT="/path/to/custom"
+#	if [ -f "$CUSTOM_ROOT/.custom_profile" ] ; then
+#		. "$CUSTOM_ROOT/.custom_profile"
+#	fi
+#
+# And edit "/path/to/custom" to the proper path (usually /dados/progs/linux)
+# Dont forget to un-comment the lines too.
+#
+# Notes: 
+#
+#  #!/bin/sh is specified to enforce compliance with /etc/gdm/Xession,
+#  which sources ~/.profile at login. Thus, bashisms are not allowed here.
+#
+#  CUSTOM_ROOT variable must be set in ~/.profile, as this script rely on it
+# 
+##############################################################################
+
+if [ -z "$CUSTOM_ROOT" ] ; then
+	export CUSTOM_ROOT=/dados/progs/linux
+fi
+
+export CUSTOM_SCRIPTS=$CUSTOM_ROOT/scripts
+export CUSTOM_BIN=$CUSTOM_ROOT/bin
+
+##############################################################################
+
+# Append folders to $PATH, avoiding duplicates
+# Parameters: a single string, ':' separated, cointaining the folders to add
+# This function breaks the string and check each folder to avoid duplicates
+append_path()
+{
+	SAVED_IFS="$IFS"
+	IFS=:
+	for folder in $1 ; do
+		if ! $( echo "$PATH" | tr ":" "\n" | grep -qx "$folder" ) ; then
+			PATH=$PATH:$folder
+		fi
+	done
+	IFS="$SAVED_IFS"
+	unset folder
+}
+
+##############################################################################
+
+# Check (and fix) $HOME/bin -> $CUSTOM_ROOT/bin relation
+if [ -d "$HOME/bin" ] ; then
+	if [ -h "$HOME/bin" ] ; then
+		# ~/bin is already a symlink (hopefully, to $CUSTOM_BIN).
+		# So ill impersonate it, and its my job to maintain it.
+		# Make sure it is in PATH.
+		append_path "$HOME/bin"
+	else
+		# ~/bin is a physical, independent folder.
+		# not my bussiness to use it and/or add it to PATH.
+		# So, add $CUSTOM_BIN
+		append_path "$CUSTOM_BIN"
+	fi
+else
+	# ~/bin does not exist. Create Symlink and add it to PATH
+	ln -s "$CUSTOM_BIN" "$HOME/bin"
+	append_path "$HOME/bin"
+fi
+
+# Add scripts and current folder to PATH
+append_path "$CUSTOM_SCRIPTS:$HOME/.local/bin:."
+
+export PATH
+
+# Run-once definitions
+export CUSTOM_RUNONCE_OK=0
+export CUSTOM_RUNONCE_NOT_YET=10
+export CUSTOM_RUNONCE_ALREADY_DID=20
+
+# Wine Bottles
+export WINEBOTTLEHOME="$HOME/.local/share/wineprefixes"
+export WINEHOME="$WINEBOTTLEHOME" #deprecated
+
+# Locales
+export LANG="en_US.utf8"
+export LANGUAGE="en_US:en"
+export LC_NUMERIC="pt_BR.utf8"
+export LC_TIME="pt_BR.utf8"
+export LC_MONETARY="pt_BR.utf8"
+export LC_PAPER="pt_BR.utf8"
+export LC_MEASUREMENT="pt_BR.utf8"
+
+# if running bash (interactive login shell)
+if [ -n "$BASH_VERSION" ]; then
+	if [ -f "$CUSTOM_ROOT/.custom_bashrc" ] ; then
+		. "$CUSTOM_ROOT/.custom_bashrc"
+	fi
+fi
+
+
+

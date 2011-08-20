@@ -1,0 +1,2119 @@
+#!/usr/bin/python
+#
+# git-bz - git subcommand to integrate with bugzilla
+#
+# Copyright (C) 2008  Owen Taylor
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, If not, see
+# http://www.gnu.org/licenses/.
+#
+# Patches for git-bz
+# ==================
+# Send to Owen Taylor <otaylor@fishsoup.net>
+#
+# Installation
+# ============
+# Copy or symlink somewhere in your path.
+#
+# Documentation
+# =============
+# See http://git.fishsoup.net/man/git-bz.html
+# (generated from git-bz.txt in this directory.)
+#
+DEFAULT_CONFIG = \
+"""
+default-assigned-to =
+default-op-sys = All
+default-platform = All
+default-version = unspecified
+"""
+
+CONFIG = {}
+
+CONFIG['bugs.freedesktop.org'] = \
+"""
+https = true
+default-priority = medium
+"""
+
+CONFIG['bugzilla.gnome.org'] = \
+"""
+https = true
+default-priority = Normal
+"""
+
+CONFIG['bugzilla.mozilla.org'] = \
+"""
+https = true
+default-priority = ---
+"""
+
+################################################################################
+
+import base64
+import cPickle as pickle
+from ConfigParser import RawConfigParser, NoOptionError
+import httplib
+from optparse import OptionParser
+import os
+try:
+    from sqlite3 import dbapi2 as sqlite
+except ImportError:
+    from pysqlite2 import dbapi2 as sqlite
+import re
+from StringIO import StringIO
+from subprocess import Popen, CalledProcessError, PIPE
+import shutil
+import sys
+import tempfile
+import time
+import traceback
+import xmlrpclib
+import urlparse
+from xml.etree.cElementTree import ElementTree
+import base64
+
+# Globals
+# =======
+
+# options dictionary from optparse
+global_options = None
+
+# Utility functions for git
+# =========================
+
+# Run a git command
+#    Non-keyword arguments are passed verbatim as command line arguments
+#    Keyword arguments are turned into command line options
+#       <name>=True => --<name>
+#       <name>='<str>' => --<name>=<str>
+#    Special keyword arguments:
+#       _quiet: Discard all output even if an error occurs
+#       _interactive: Don't capture stdout and stderr
+#       _input=<str>: Feed <str> to stdinin of the command
+#       _return_error: Return tuple of captured (stdout,stderr)
+#
+def git_run(command, *args, **kwargs):
+    to_run = ['git', command.replace("_", "-")]
+
+    interactive = False
+    quiet = False
+    input = None
+    return_stderr = False
+    for (k,v) in kwargs.iteritems():
+        if k == '_quiet':
+            quiet = True
+        elif k == '_interactive':
+            interactive = True
+        elif k == '_return_stderr':
+            return_stderr = True
+        elif k == '_input':
+            input = v
+        elif v is True:
+            if len(k) == 1:
+                to_run.append("-" + k)
+            else:
+                to_run.append("--" + k.replace("_", "-"))
+        else:
+            to_run.append("--" + k.replace("_", "-") + "=" + v)
+
+    to_run.extend(args)
+
+    process = Popen(to_run,
+                    stdout=(None if interactive else PIPE),
+                    stderr=(None if interactive else PIPE),
+                    stdin=(PIPE if (input != None) else None))
+    output, error = process.communicate(input)
+    if process.returncode != 0:
+        if not quiet and not interactive:
+            # Using print here could result in Python adding a stray space
+            # before the next print
+            sys.stderr.write(error)
+            sys.stdout.write(output)
+        raise CalledProcessError(process.returncode, " ".join(to_run))
+
+    if interactive:
+        return None
+    elif return_stderr:
+        return output.strip(), error.strip()
+    else:
+        return output.strip()
+
+# Wrapper to allow us to do git.<command>(...) instead of git_run()
+class Git:
+    def __getattr__(self, command):
+        def f(*args, **kwargs):
+            return git_run(command, *args, **kwargs)
+        return f
+
+git = Git()
+
+class GitCommit:
+    def __init__(self, id, subject):
+        self.id = id
+        self.subject = subject
+
+def rev_list_commits(*args, **kwargs):
+    kwargs_copy = dict(kwargs)
+    kwargs_copy['pretty'] = 'format:%s'
+    output = git.rev_list(*args, **kwargs_copy)
+    if output == "":
+        lines = []
+    else:
+        lines = output.split("\n")
+    if (len(lines) % 2 != 0):
+        raise RuntimeException("git rev-list didn't return an even number of lines")
+
+    result = []
+    for i in xrange(0, len(lines), 2):
+        m = re.match("commit\s+([A-Fa-f0-9]+)", lines[i])
+        if not m:
+            raise RuntimeException("Can't parse commit it '%s'", lines[i])
+        commit_id = m.group(1)
+        subject = lines[i + 1]
+        result.append(GitCommit(commit_id, subject))
+
+    return result
+
+def get_commits(commit_or_revision_range):
+    # We take specifying a single revision to mean everything since that
+    # revision, while git-rev-list lists that revision and all ancestors
+    try:
+        # See if the argument identifies a single revision
+        rev = git.rev_parse(commit_or_revision_range, verify=True, _quiet=True)
+        commits = rev_list_commits(rev, max_count='1')
+    except CalledProcessError:
+        # If not, assume the argument is a range
+        commits = rev_list_commits(commit_or_revision_range)
+
+    if len(commits) == 0:
+        die("'%s' does not name any commits. Use HEAD to specify just the last commit" %
+            commit_or_revision_range)
+
+    return commits
+
+def get_patch(commit):
+    # We could pass through -M as an option, but I think you basically always
+    # want it; showing renames as renames rather than removes/adds greatly
+    # improves readability.
+    return git.format_patch(commit.id + "^.." + commit.id, stdout=True, M=True)
+
+def get_body(commit):
+    return git.log(commit.id + "^.." + commit.id, pretty="format:%b")
+
+def commit_is_merge(commit):
+    contents = git.cat_file("commit", commit.id)
+    parent_count = 0
+    for line in contents.split("\n"):
+        if line == "":
+            break
+        if line.startswith("parent "):
+            parent_count += 1
+
+    return parent_count > 1
+
+# Global configuration variables
+# ==============================
+
+def get_browser():
+    try:
+        return git.config('bz.browser', get=True)
+    except CalledProcessError:
+        return 'firefox3'
+
+def get_tracker():
+    if global_options.bugzilla != None:
+        return global_options.bugzilla
+
+    try:
+        return git.config('bz.default-tracker', get=True)
+    except CalledProcessError:
+        return 'bugzilla.gnome.org'
+
+def get_default_product():
+    try:
+        return git.config('bz.default-product', get=True)
+    except CalledProcessError:
+        return None
+
+def get_default_component():
+    try:
+        return git.config('bz.default-component', get=True)
+    except CalledProcessError:
+        return None
+
+def get_add_url():
+    try:
+        return git.config('bz.add-url', get=True) == 'true'
+    except CalledProcessError:
+        return True
+
+def get_add_url_method():
+    try:
+        return git.config('bz.add-url-method', get=True)
+    except CalledProcessError:
+        return "body-append:%u"
+
+# Per-tracker configuration variables
+# ===================================
+
+def resolve_host_alias(alias):
+    try:
+        return git.config('bz-tracker.' + alias + '.host', get=True)
+    except CalledProcessError:
+        return alias
+
+def split_local_config(config_text):
+    result = {}
+
+    for line in config_text.split("\n"):
+        line = re.sub("#.*", "", line)
+        line = line.strip()
+        if line == "":
+            continue
+        m = re.match("([a-zA-Z0-9-]+)\s*=\s*(.*)", line)
+        if not m:
+            die("Bad config line '%s'" % line)
+
+        param = m.group(1)
+        value = m.group(2)
+
+        result[param] = value
+
+    return result
+
+def get_git_config(name):
+    try:
+        name = name.replace(".", r"\.")
+        config_options = git.config(r'bz-tracker\.' + name + r'\..*', get_regexp=True)
+    except CalledProcessError:
+        return {}
+
+    result = {}
+    for line in config_options.split("\n"):
+        line = line.strip()
+        m = re.match("(\S+)\s+(.*)", line)
+        key = m.group(1)
+        value = m.group(2)
+
+        m = re.match(r'bz-tracker\.' + name + r'\.(.*)', key)
+        param = m.group(1)
+
+        result[param] = value
+
+    return result
+
+# We only ever should be the config for one tracker in the course of a single run
+cached_config = None
+cached_config_tracker = None
+
+def get_config(tracker):
+    global cached_config
+    global cached_config_tracker
+
+    if cached_config == None:
+        cached_config_tracker = tracker
+        host = resolve_host_alias(tracker)
+        cached_config = split_local_config(DEFAULT_CONFIG)
+        if host in CONFIG:
+            cached_config.update(split_local_config(CONFIG[host]))
+        cached_config.update(get_git_config(host))
+        if tracker != host:
+            cached_config.update(get_git_config(tracker))
+
+    assert cached_config_tracker == tracker
+
+    return cached_config
+
+def tracker_uses_https(tracker):
+    config = get_config(tracker)
+    return 'https' in config and config['https'] == 'true'
+
+def tracker_get_path(tracker):
+    config = get_config(tracker)
+    if 'path' in config:
+        return config['path']
+    return None
+
+def tracker_get_auth_user(tracker):
+    config = get_config(tracker)
+    if 'path' in config:
+        return config['auth-user']
+    return None
+
+def tracker_get_auth_password(tracker):
+    config = get_config(tracker)
+    if 'path' in config:
+        return config['auth-password']
+    return None
+
+def get_default_fields(tracker):
+    config = get_config(tracker)
+
+    default_fields = {}
+
+    for key, value in config.iteritems():
+        if key.startswith("default-"):
+            param = key[8:].replace("-", "_")
+            default_fields[param] = value
+
+    return default_fields
+
+# Utility functions for bugzilla
+# ==============================
+
+class BugParseError(Exception):
+    pass
+
+# A BugHandle is the parsed form of a bug reference string; it
+# uniquely identifies a bug on a server, though until we try
+# to load it (and create a Bug) we don't know if it actually exists.
+class BugHandle:
+    def __init__(self, host, path, https, id, auth_user=None, auth_password=None):
+        self.host = host
+        self.path = path
+        self.https = https
+        self.id = id
+        self.auth_user = auth_user
+        self.auth_password = auth_password
+
+        # ensure that the path to the bugzilla installation is an absolute path
+        # so that it will still work even if their config option specifies
+        # something like:
+        #   path = bugzilla
+        # instead of the proper form:
+        #   path = /bugzilla
+        if self.path and self.path[0] != '/':
+            self.path = '/' + self.path
+
+    def get_url(self):
+        return "%s://%s/show_bug.cgi?id=%s" % ("https" if self.https else "http",
+                                               self.host,
+                                               self.id)
+
+    def needs_auth(self):
+        return self.auth_user and self.auth_password
+
+    @staticmethod
+    def parse(bug_reference):
+        parseresult = urlparse.urlsplit (bug_reference)
+
+        if parseresult.scheme in ('http', 'https'):
+            # Catch http://www.gnome.org and the oddball http:relative/path and http:/path
+            if len(parseresult.path) == 0 or parseresult.path[0] != '/' or parseresult.hostname is None:
+                raise BugParseError("Invalid bug reference '%s'" % bug_reference)
+
+            user = parseresult.username
+            password = parseresult.password
+            # if the url did not specify http auth credentials in the form
+            # https://user:password@host.com, check to see whether the config file
+            # specifies any auth credentials for this host
+            if not user:
+                user = tracker_get_auth_user(parseresult.hostname)
+            if not password:
+                password = tracker_get_auth_password(parseresult.hostname)
+
+            # strip off everything after the last '/', so '/bugzilla/show_bug.cgi'
+            # will simply become '/bugzilla'
+            base_path = parseresult.path[:parseresult.path.rfind('/')]
+            m = re.match("id=([^&]+)", parseresult.query)
+
+            if m:
+                return BugHandle(host=parseresult.hostname,
+                                 path=base_path,
+                                 https=parseresult.scheme=="https",
+                                 id=m.group(1),
+                                 auth_user=user,
+                                 auth_password=password)
+
+        colon = bug_reference.find(":")
+        if colon > 0:
+            tracker = bug_reference[0:colon]
+            id = bug_reference[colon + 1:]
+        else:
+            tracker = get_tracker()
+            id = bug_reference
+
+        if not id.isdigit():
+            raise BugParseError("Invalid bug reference '%s'" % bug_reference)
+
+        host = resolve_host_alias(tracker)
+        https = tracker_uses_https(tracker)
+        path = tracker_get_path(tracker)
+        auth_user = tracker_get_auth_user(tracker)
+        auth_password = tracker_get_auth_password(tracker)
+
+        if not re.match(r"^.*\.[a-zA-Z]{2,}$", host):
+            raise BugParseError("'%s' doesn't look like a valid bugzilla host or alias" % host)
+
+        return BugHandle(host=host, path=path, https=https, id=id, auth_user=auth_user, auth_password=auth_password)
+
+    @staticmethod
+    def parse_or_die(str):
+        try:
+            return BugHandle.parse(str)
+        except BugParseError, e:
+            die(e.message)
+
+    def __hash__(self):
+        return hash((self.host, self.https, self.id))
+
+    def __eq__(self, other):
+        return ((self.host, self.https, self.id) ==
+                (other.host, other.https, other.id))
+
+class CookieError(Exception):
+    pass
+
+def do_get_cookies_from_sqlite(host, cookies_sqlite, browser, query, chromium_time):
+    result = {}
+    # We use a timeout of 0 since we expect to hit the browser holding
+    # the lock often and we need to fall back to making a copy without a delay
+    connection = sqlite.connect(cookies_sqlite, timeout=0)
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(query, { 'host': host })
+
+        now = time.time()
+        for name,value,path,expiry in cursor.fetchall():
+            # Excessive caution: toss out values that need to be quoted in a cookie header
+            expiry = float(expiry)
+            if chromium_time:
+                # Time stored in microseconds since epoch
+                expiry /= 1000000.
+                # Old chromium versions used to use the Unix epoch, but newer versions
+                # use the Windows epoch of January 1, 1601. Convert the latter to Unix epoch
+                if expiry > 11644473600:
+                    expiry -= 11644473600
+            if float(expiry) > now and not re.search(r'[()<>@,;:\\"/\[\]?={} \t]', value):
+                result[name] = value
+
+        return result
+    finally:
+        connection.close()
+
+# Firefox 3.5 keeps the cookies database permamently locked; as a workaround
+# hack, we make a copy, read from that, then delete the copy. Of course,
+# we may hit an inconsistent state of the database
+def get_cookies_from_sqlite_with_copy(host, cookies_sqlite, browser, *args, **kwargs):
+    db_copy = cookies_sqlite + ".git-bz-temp"
+    shutil.copyfile(cookies_sqlite, db_copy)
+    try:
+        return do_get_cookies_from_sqlite(host, db_copy, browser, *args, **kwargs)
+    except sqlite.OperationalError, e:
+        raise CookieError("Cookie database was locked; temporary copy didn't work")
+    finally:
+        os.remove(db_copy)
+
+def get_cookies_from_sqlite(host, cookies_sqlite, browser, query, chromium_time=False):
+    try:
+        result = do_get_cookies_from_sqlite(host, cookies_sqlite, browser, query,
+                                            chromium_time=chromium_time)
+    except sqlite.OperationalError, e:
+        if "database is locked" in str(e):
+            # Try making a temporary copy
+            result = get_cookies_from_sqlite_with_copy(host, cookies_sqlite, browser, query,
+                                                       chromium_time=chromium_time)
+        else:
+            raise
+
+    if not ('Bugzilla_login' in result and 'Bugzilla_logincookie' in result):
+        raise CookieError("You don't appear to be signed into %s; please log in with %s" % (host,
+                                                                                            browser))
+
+    return result
+
+def get_cookies_from_sqlite_xulrunner(host, cookies_sqlite, name):
+    return get_cookies_from_sqlite(host, cookies_sqlite, name,
+                                   "select name,value,path,expiry from moz_cookies where host = :host")
+
+def get_bugzilla_cookies_ff3(host):
+    profiles_dir = os.path.expanduser('~/.mozilla/firefox')
+    profile_path = None
+
+    cp = RawConfigParser()
+    cp.read(os.path.join(profiles_dir, "profiles.ini"))
+    for section in cp.sections():
+        if not cp.has_option(section, "Path"):
+            continue
+
+        if (not profile_path or
+            (cp.has_option(section, "Default") and cp.get(section, "Default").strip() == "1")):
+            profile_path = os.path.join(profiles_dir, cp.get(section, "Path").strip())
+
+    if not profile_path:
+        raise CookieError("Cannot find default Firefox profile")
+
+    cookies_sqlite = os.path.join(profile_path, "cookies.sqlite")
+    if not os.path.exists(cookies_sqlite):
+        raise CookieError("%s doesn't exist." % cookies_sqlite)
+
+    return get_cookies_from_sqlite_xulrunner(host, cookies_sqlite, "Firefox")
+
+def get_bugzilla_cookies_epy(host):
+    # epiphany-webkit migrated the cookie db to a different location, but the
+    # format is the same
+    profile_dir = os.path.expanduser('~/.gnome2/epiphany')
+    cookies_sqlite = os.path.join(profile_dir, "cookies.sqlite")
+    if not os.path.exists(cookies_sqlite):
+        # try the old location
+        cookies_sqlite = os.path.join(profile_dir, "mozilla/epiphany/cookies.sqlite")
+
+    if not os.path.exists(cookies_sqlite):
+        raise CookieError("%s doesn't exist" % cookies_sqlite)
+
+    return get_cookies_from_sqlite_xulrunner(host, cookies_sqlite, "Epiphany")
+
+# Shared for Chromium and Google Chrome
+def get_bugzilla_cookies_chr(host, browser, config_dir):
+    config_dir = os.path.expanduser(config_dir)
+    cookies_sqlite = os.path.join(config_dir, "Cookies")
+    if not os.path.exists(cookies_sqlite):
+        raise CookieError("%s doesn't exist" % cookies_sqlite)
+    return get_cookies_from_sqlite(host, cookies_sqlite, browser,
+                                   "select name,value,path,expires_utc from cookies where host_key = :host",
+                                   chromium_time=True)
+
+def get_bugzilla_cookies_chromium(host):
+    return get_bugzilla_cookies_chr(host,
+                                    "Chromium",
+                                    '~/.config/chromium/Default')
+
+def get_bugzilla_cookies_google_chrome(host):
+    return get_bugzilla_cookies_chr(host,
+                                    "Google Chrome",
+                                    '~/.config/google-chrome/Default')
+
+browsers = { 'firefox3'     : get_bugzilla_cookies_ff3,
+             'epiphany'     : get_bugzilla_cookies_epy,
+             'chromium'     : get_bugzilla_cookies_chromium,
+             'google-chrome': get_bugzilla_cookies_google_chrome }
+
+def browser_list():
+    return ", ".join(sorted(browsers.keys()))
+
+def get_bugzilla_cookies(host):
+    browser = get_browser()
+    if browser in browsers:
+        do_get_cookies = browsers[browser]
+    else:
+        die('Unsupported browser %s (we only support %s)' % (browser, browser_list()))
+
+    try:
+        return do_get_cookies(host)
+    except CookieError, e:
+        die("""Error getting login cookie from browser:
+   %s
+
+Configured browser: %s (change with 'git config --global bz.browser <value>')
+Possible browsers: %s""" %
+            (str(e), browser, browser_list()))
+
+# Based on http://code.activestate.com/recipes/146306/ - Wade Leftwich
+def encode_multipart_formdata(fields, files=None):
+    """
+    fields is a dictionary of { name : value } for regular form fields. if value is a list,
+      one form field is added for each item in the list
+    files is a dictionary of { name : ( filename, content_type, value) } for data to be uploaded as files
+    Return (content_type, body) ready for httplib.HTTPContent instance
+    """
+    BOUNDARY = '----------ThIs_Is_tHe_bouNdaRY_$'
+    CRLF = '\r\n'
+    L = []
+    for key in sorted(fields.keys()):
+        value = fields[key]
+        if isinstance(value, list):
+            for v in value:
+                L.append('--' + BOUNDARY)
+                L.append('Content-Disposition: form-data; name="%s"' % key)
+                L.append('')
+                L.append(v)
+        else:
+            L.append('--' + BOUNDARY)
+            L.append('Content-Disposition: form-data; name="%s"' % key)
+            L.append('')
+            L.append(value)
+    if files:
+        for key in sorted(files.keys()):
+            (filename, content_type, value) = files[key]
+            L.append('--' + BOUNDARY)
+            L.append('Content-Disposition: form-data; name="%s"; filename="%s"' % (key, filename))
+            L.append('Content-Type: %s' % content_type)
+            L.append('')
+            L.append(value)
+    L.append('--' + BOUNDARY + '--')
+    L.append('')
+    body = CRLF.join(L)
+    content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
+    return content_type, body
+
+# Cache of constant-responses per bugzilla server
+# ===============================================
+
+CACHE_EXPIRY_TIME = 3600 * 24 # one day
+
+class Cache(object):
+    def __init__(self):
+        self.cfp = None
+
+    def __ensure(self, host):
+        if self.cfp == None:
+            self.cfp = RawConfigParser()
+            self.cfp.read(os.path.expanduser("~/.git-bz-cache"))
+
+        if self.cfp.has_section(host):
+            if time.time() > self.cfp.getfloat(host, "expires"):
+                self.cfp.remove_section(host)
+
+        if not self.cfp.has_section(host):
+            self.cfp.add_section(host)
+            self.cfp.set(host, "expires", time.time() + CACHE_EXPIRY_TIME)
+
+    def get(self, host, key):
+        self.__ensure(host)
+        try:
+            return pickle.loads(self.cfp.get(host, key))
+        except NoOptionError:
+            raise IndexError()
+
+    def set(self, host, key, value):
+        self.__ensure(host)
+        self.cfp.set(host, key, pickle.dumps(value))
+        f = open(os.path.expanduser("~/.git-bz-cache"), "w")
+        self.cfp.write(f)
+        f.close()
+
+cache = Cache()
+
+# General Utility Functions
+# =========================
+
+def make_filename(description):
+    filename = re.sub(r"\s+", "-", description)
+    filename = re.sub(r"[^A-Za-z0-9-]+", "", filename)
+    filename = filename[0:50]
+
+    return filename
+
+def edit_file(filename):
+    editor = None
+    if 'GIT_EDITOR' in os.environ:
+        editor = os.environ['GIT_EDITOR']
+    if editor == None:
+        try:
+            editor = git.config('core.editor', get=True)
+        except CalledProcessError:
+            pass
+    if editor == None and 'EDITOR' in os.environ:
+        editor = os.environ['EDITOR']
+    if editor == None:
+        editor = "vi"
+
+    process = Popen(editor + " " + filename, shell=True)
+    process.wait()
+    if process.returncode != 0:
+        die("Editor exited with non-zero return code")
+
+def edit_template(template):
+    # Prompts the user to edit the text 'template' and returns list of
+    # lines with comments stripped
+
+    handle, filename = tempfile.mkstemp(".txt", "git-bz-")
+    f = os.fdopen(handle, "w")
+    f.write(template)
+    f.close()
+
+    edit_file(filename)
+
+    f = open(filename, "r")
+    lines = filter(lambda x: not x.startswith("#"), f.readlines())
+    f.close
+
+    return lines
+
+def split_subject_body(lines):
+    # Splits the first line (subject) from the subsequent lines (body)
+
+    i = 0
+    subject = ""
+    while i < len(lines):
+        subject = lines[i].strip()
+        if subject != "":
+            break
+        i += 1
+
+    return subject, "".join(lines[i + 1:]).strip()
+
+def _shortest_unique_abbreviation(full, l):
+    for i in xrange(1, len(full) + 1):
+        abbrev = full[0:i]
+        if not any((x != full and x.startswith(abbrev) for x in l)):
+            return abbrev
+    # Duplicate items or one item is a prefix of another
+    raise ValueError("%s has no unique abbreviation in %s" % (full, l))
+
+def _abbreviation_item_help(full, l):
+    abbrev = _shortest_unique_abbreviation(full, l)
+    return '[%s]%s' % (abbrev, full[len(abbrev):])
+
+# Return '[a]pple, [pe]ar, [po]tato'
+def abbreviation_help_string(l):
+    return ", ".join((_abbreviation_item_help(full, l) for full in l))
+
+# Find the unique element in l that starts with abbrev
+def expand_abbreviation(abbrev, l):
+    for full in l:
+        if full.startswith(abbrev) and len(abbrev) >= len(_shortest_unique_abbreviation(full, l)):
+            return full
+    raise ValueError("No unique abbreviation expansion")
+
+def prompt(message):
+    while True:
+        # Using print here could result in Python adding a stray space
+        # before the next print
+        sys.stdout.write(message + " [yn] ")
+        line = sys.stdin.readline().strip()
+        if line == 'y' or line == 'Y':
+            return True
+        elif line == 'n' or line == 'N':
+            return False
+
+def die(message):
+    print >>sys.stderr, message
+    sys.exit(1)
+
+def http_auth_header(user, password):
+    return 'Basic ' + base64.encodestring("%s:%s" % (user, password)).strip()
+
+# Classes for bug handling
+# ========================
+
+class BugPatch(object):
+    def __init__(self, attach_id):
+        self.attach_id = attach_id
+
+class NoXmlRpcError(Exception):
+    pass
+
+connections = {}
+
+def get_connection(host, https):
+    identifier = (host, https)
+    if not identifier in connections:
+        if https:
+            connection = httplib.HTTPSConnection(host, 443)
+        else:
+            connection = httplib.HTTPConnection(host, 80)
+
+        connections[identifier] = connection
+
+    return connections[identifier]
+
+class BugServer(object):
+    def __init__(self, host, path, https, auth_user=None, auth_password=None):
+        self.host = host
+        self.path = path
+        self.https = https
+        self.auth_user = auth_user
+        self.auth_password = auth_password
+
+        self.cookies = get_bugzilla_cookies(host)
+
+        self._xmlrpc_proxy = None
+
+    def get_cookie_string(self):
+        return ("Bugzilla_login=%s; Bugzilla_logincookie=%s" %
+                (self.cookies['Bugzilla_login'], self.cookies['Bugzilla_logincookie']))
+
+    def send_request(self, method, url, data=None, headers={}):
+        headers = dict(headers)
+        headers['Cookie'] = self.get_cookie_string()
+        headers['User-Agent'] = "git-bz"
+        if self.auth_user and self.auth_password:
+            headers['Authorization'] = http_auth_header(self.auth_user, self.auth_password)
+        if self.path:
+            url = self.path + url
+
+        seen_urls = []
+        connection = get_connection(self.host, self.https)
+        while True:
+            connection.request(method, url, data, headers)
+            response = connection.getresponse()
+            seen_urls.append(url)
+
+            # Redirect status codes:
+            #
+            # 301 (Moved Permanently): Redo with the new URL,
+            #   save the new location.
+            # 303 (See Other): Redo with the method changed to GET/HEAD.
+            # 307 (Temporary Redirect): Redo with the new URL, don't
+            #   save the new location.
+            #
+            # [ For 301/307, you are supposed to ask the user if the
+            #   method isn't GET/HEAD, but we're automating anyways... ]
+            #
+            # 302 (Found): The confusing one, and the one that
+            # Bugzilla uses, both to redirect to http to https and to
+            # redirect attachment.cgi&action=view to a different base URL
+            # for security. Specified like 307, traditionally treated as 301.
+            #
+            # See http://en.wikipedia.org/wiki/HTTP_302
+
+            if response.status in (301, 302, 303, 307):
+                new_url = response.getheader("location")
+                if new_url is None:
+                    die("Redirect received without a location to redirect to")
+                if new_url in seen_urls or len(seen_urls) >= 10:
+                    die("Circular redirect or too many redirects")
+
+                old_split = urlparse.urlsplit(url)
+                new_split = urlparse.urlsplit(new_url)
+
+                new_https = new_split.scheme == 'https'
+
+                if new_split.hostname != self.host or new_https != self.https:
+                    connection = get_connection(new_split.hostname, new_https != self.https)
+
+                    # This is a bit of a hack to avoid keeping on redirecting for every
+                    # request. If the server redirected show_bug.cgi we assume it's
+                    # really saying "hey, the bugzilla instance is really over here".
+                    #
+                    # We can't do this for old.split.path == new_split.path because of
+                    # attachment.cgi, though we alternatively could just exclude
+                    # attachment.cgi here.
+                    if (response.status in (301, 302) and
+                        method == 'GET' and
+                        old_split.path == '/show_bug.cgi' and new_split.path == '/show_bug.cgi'):
+
+                        self.host = new_split.hostname
+                        self.https = new_https
+
+                # We can't treat 302 like 303 because of the use of 302 for http
+                # to https, though the hack above will hopefully get us on https
+                # before we try to POST.
+                if response.status == 303:
+                    if method not in ('GET', 'HEAD'):
+                        method = 'GET'
+
+                # Get the relative component of the new URL
+                url = urlparse.urlunsplit((None, None, new_split.path, new_split.query, new_split.fragment))
+            else:
+                return response
+
+    def send_post(self, url, fields, files=None):
+        content_type, body = encode_multipart_formdata(fields, files)
+        return self.send_request("POST", url, data=body, headers={ 'Content-Type': content_type })
+
+    def get_xmlrpc_proxy(self):
+        if self._xmlrpc_proxy is None:
+            uri = "%s://%s/xmlrpc.cgi" % ("https" if self.https else "http",
+                                          self.host)
+            if self.https:
+                transport = SafeBugTransport(self)
+            else:
+                transport = BugTransport(self)
+            self._xmlrpc_proxy = xmlrpclib.ServerProxy(uri, transport)
+
+        return self._xmlrpc_proxy
+
+    # Query the server for the legal values of the given field; returns an
+    # array, or None if the query failed
+    def _legal_values(self, field):
+        try:
+            response = self.get_xmlrpc_proxy().Bug.legal_values({ 'field': field })
+            cache.set(self.host, 'legal_' + field, response['values'])
+            return response['values']
+        except xmlrpclib.Fault, e:
+            if e.faultCode == -32000: # https://bugzilla.mozilla.org/show_bug.cgi?id=513511
+                return None
+            raise
+        except xmlrpclib.ProtocolError, e:
+            if e.errcode == 500: # older bugzilla versions die this way
+                return None
+            elif e.errcode == 404: # really old bugzilla, no XML-RPC
+                return None
+            raise
+
+    def legal_values(self, field):
+        try:
+            return cache.get(self.host, 'legal_' + field)
+        except IndexError:
+            values = self._legal_values(field)
+            cache.set(self.host, 'legal_' + field, values)
+            return values
+
+# mixin for xmlrpclib.Transport classes to add cookies
+class CookieTransportMixin(object):
+    def send_request(self, connection, *args):
+        xmlrpclib.Transport.send_request(self, connection, *args)
+        connection.putheader("Cookie", self.server.get_cookie_string())
+        connection.putheader("Authorization", http_auth_header(self.server.auth_user, self.server.auth_password))
+
+class BugTransport(CookieTransportMixin, xmlrpclib.Transport):
+    def __init__(self, server):
+        xmlrpclib.Transport.__init__(self)
+        self.server = server
+
+class SafeBugTransport(CookieTransportMixin, xmlrpclib.SafeTransport):
+    def __init__(self, server):
+        xmlrpclib.SafeTransport.__init__(self)
+        self.server = server
+
+servers = {}
+
+# Note that if we detect that we are redirecting, we may rewrite the
+# host/https of the server to avoid doing too many redirections, and
+# so the host,https we connect to may be different than what we use
+# to look up the server.
+def get_bug_server(host, path, https, auth_user, auth_password):
+    identifier = (host, path, https)
+    if not identifier in servers:
+        servers[identifier] = BugServer(host, path, https, auth_user, auth_password)
+
+    return servers[identifier]
+
+# Unfortunately, Bugzilla doesn't set a useful status code for
+# form posts.  Because it's very confusing to claim we succeeded
+# but not, we look for text in the response indicating success,
+# and not text indicating failure.
+#
+# We generally look for specific <title> tags - these have been
+# quite stable across versions, though translations will throw
+# us off.
+#
+# *args are regular expressions to search for in response_data
+# that indicate success. Returns the matched regular expression
+# on success, None otherwise
+def check_for_success(response, response_data, *args):
+
+    if response.status != 200:
+        return False
+
+    for pattern in args:
+        m = re.search(pattern, response_data)
+        if m:
+            return m
+
+    return None
+
+class Bug(object):
+    def __init__(self, server):
+        self.server = server
+        self.id = None
+        self.product = None
+        self.component = None
+        self.short_desc = None
+        self.patches = []
+
+    def _load(self, id, attachmentdata=False):
+        url = "/show_bug.cgi?id=" + id + "&ctype=xml"
+        if not attachmentdata:
+            url += "&excludefield=attachmentdata"
+
+        response = self.server.send_request("GET", url)
+        if response.status != 200:
+            die ("Failed to retrieve bug information: %d" % response.status)
+
+        etree = ElementTree()
+        etree.parse(response)
+
+        bug = etree.find("bug")
+        error = bug.get("error")
+        if error != None:
+            die ("Failed to retrieve bug information: %s" % error)
+
+        self.id = int(bug.find("bug_id").text)
+        self.short_desc = bug.find("short_desc").text
+        self.bug_status = bug.find("bug_status").text
+        if self.bug_status == "RESOLVED":
+            self.resolution = bug.find("resolution").text
+        token = bug.find("token")
+        self.token = None if token is None else token.text
+
+        for attachment in bug.findall("attachment"):
+            if attachment.get("ispatch") == "1" and not attachment.get("isobsolete") == "1" :
+                attach_id = int(attachment.find("attachid").text)
+                patch = BugPatch(attach_id)
+                # We have to save fields we might not otherwise care about
+                # (like isprivate) so that we can pass them back when updating
+                # the attachment
+                patch.description = attachment.find("desc").text
+                patch.date = attachment.find("date").text
+                status = attachment.find("status")
+                patch.status = None if status is None else status.text
+                patch.filename = attachment.find("filename").text
+                patch.isprivate = attachment.get("isprivate") == "1"
+                token = attachment.find("token")
+                patch.token = None if token is None else token.text
+
+                if attachmentdata:
+                    data = attachment.find("data").text
+                    patch.data = base64.b64decode(data)
+                else:
+                    patch.data = None
+
+                self.patches.append(patch)
+
+    def _create_via_xmlrpc(self, product, component, short_desc, comment, default_fields):
+        params = dict()
+        params['product'] = product
+        params['component'] = component
+        params['summary'] = short_desc
+        params['description'] = comment
+        for (field, value) in default_fields.iteritems():
+            params[field] = value
+
+        try:
+            response = self.server.get_xmlrpc_proxy().Bug.create(params)
+            self.id = response['id']
+        except xmlrpclib.Fault, e:
+            die(e.faultString)
+        except xmlrpclib.ProtocolError, e:
+            if e.errcode == 404:
+                raise NoXmlRpcError(e.errmsg)
+            else:
+                print >>sys.stderr, "Problem filing bug via XML-RPC: %s (%d)\n" % (e.errmsg, e.errcode)
+                print >>sys.stderr, "falling back to form post\n"
+                raise NoXmlRpcError("Communication error")
+
+    def _create_with_form(self, product, component, short_desc, comment, default_fields):
+        fields = dict()
+        fields['product'] = product
+        fields['component'] = component
+        fields['short_desc'] = short_desc
+        fields['comment'] = comment
+
+        # post_bug.cgi wants some names that are less congenial than the names
+        # expected in XML-RPC.
+        for (field, value) in default_fields.iteritems():
+            if field == 'severity':
+                field = 'bug_severity'
+            elif field == 'platform':
+                field = 'rep_platform'
+            fields[field] = value
+
+        # Priority values vary wildly between different servers because the stock
+        # Bugzilla uses the awkward P1/../P5. It will be defaulted on the XML-RPC
+        # code path, but we need to take a wild guess here.
+        if not 'priority' in fields:
+            fields['priority'] = 'P5'
+        # Legal severity values are much more standardized, but not specifying it
+        # in the XML-RPC code path allows the server default to win. We need to
+        # specify something here.
+        if not 'severity' in fields:
+            fields['bug_severity'] = 'normal'
+        # Required, but a configured default doesn't make any sense
+        if not 'bug_file_loc' in fields:
+            fields['bug_file_loc'] = ''
+
+        response = self.server.send_post("/post_bug.cgi", fields)
+        response_data = response.read()
+        m = check_for_success(response, response_data,
+                              r"<title>\s*Bug\s+([0-9]+)")
+        if not m:
+            print response_data
+            die("Failed to create bug, status=%d" % response.status)
+
+        self.id = int(m.group(1))
+
+    def _create(self, product, component, short_desc, comment, default_fields):
+        try:
+            self._create_via_xmlrpc(product, component, short_desc, comment, default_fields)
+        except NoXmlRpcError:
+            self._create_with_form(product, component, short_desc, comment, default_fields)
+
+        print "Successfully created"
+        print "Bug %d - %s" % (self.id, short_desc)
+        print self.get_url()
+
+    def create_patch(self, description, comment, filename, data, obsoletes=[], status='none'):
+        fields = {}
+        fields['bugid'] = str(self.id)
+        fields['action'] = 'insert'
+        fields['ispatch'] = '1'
+        fields['attachments.status'] = status
+        fields['description'] = description
+        if comment:
+            fields['comment'] = comment
+        if obsoletes:
+            # this will produce multiple parts in the encoded data with the
+            # name 'obsolete' for each item in the list
+            fields['obsolete'] = map(str, obsoletes)
+
+        files = { 'data': (filename, 'text/plain', data) }
+
+        response = self.server.send_post("/attachment.cgi", fields, files)
+        response_data = response.read()
+        if not check_for_success(response, response_data,
+                                 # Older bugzilla's used this for successful attachments
+                                 r"<title>\s*Changes\s+Submitted",
+                                 # Newer bugzilla's, use, instead:
+                                 r"<title>\s*Attachment\s+\d+\s+added"):
+            print response_data
+            die ("Failed to attach patch to bug %d, status=%d" % (self.id, response.status))
+
+        print "Attached %s" % filename
+
+    # Update specified fields of a bug; keyword arguments are interpreted
+    # as field_name=value
+    def update(self, **changes):
+        changes['id'] = str(self.id)
+        if self.token:
+            changes['token'] = self.token
+        # Since we don't send delta_ts we'll never get a mid-air collision
+        # This is probably a good thing
+
+        response = self.server.send_post("/process_bug.cgi", changes)
+        response_data = response.read()
+        if not check_for_success(response, response_data,
+                                 r"<title>\s*Bug[\S\s]*processed\s*</title>"):
+
+            # Mid-air collisions would be indicated by
+            # "<title>Mid-air collision!</title>"
+
+            print response_data
+            die ("Failed to update bug %d, status=%d" % (self.id, response.status))
+
+    # Update specified fields of an attachment; keyword arguments are
+    # interpreted as field_name=value
+    def update_patch(self, patch, **changes):
+        # Unlike /process_bug.cgi, the attachment editing interface doesn't
+        # support defaulting missing fields to their existing values, so we
+        # have to pass everything back.
+        fields = {
+            'action': 'update',
+            'id': str(patch.attach_id),
+            'description': patch.description,
+            'filename': patch.filename,
+            'ispatch': "1",
+            'isobsolete': "0",
+            'isprivate': "1" if patch.isprivate else "0",
+        };
+
+        if patch.token:
+            fields['token'] = patch.token
+        if patch.status is not None:
+            fields['attachments.status'] = patch.status
+
+        for (field, value) in changes.iteritems():
+            if field == 'status': # encapsulate oddball form field name
+                field = 'attachments.status'
+            fields[field] = value
+
+        response = self.server.send_post("/attachment.cgi", fields)
+        response_data = response.read()
+        if not check_for_success(response, response_data,
+                                 r"<title>\s*Changes\s+Submitted"):
+            print response_data
+            die ("Failed to update attachment %d to bug %d, status=%d" % (patch.attach_id,
+                                                                          self.id,
+                                                                          response.status))
+
+    def get_url(self):
+        return "%s://%s/show_bug.cgi?id=%d" % ("https" if self.server.https else "http",
+                                               self.server.host,
+                                               self.id)
+
+    @staticmethod
+    def load(bug_reference, attachmentdata=False):
+        server = get_bug_server(bug_reference.host, bug_reference.path, bug_reference.https, bug_reference.auth_user, bug_reference.auth_password)
+        bug = Bug(server)
+        bug._load(bug_reference.id, attachmentdata)
+
+        return bug
+
+    @staticmethod
+    def create(tracker, product, component, short_desc, comment):
+        host = resolve_host_alias(tracker)
+        https = tracker_uses_https(tracker)
+        path = tracker_get_path(tracker)
+        auth_user = tracker_get_auth_user(tracker)
+        auth_password = tracker_get_auth_password(tracker)
+        default_fields = get_default_fields(tracker)
+
+        server = get_bug_server(host, path, https, auth_user, auth_password)
+        bug = Bug(server)
+        bug._create(product, component, short_desc, comment, default_fields)
+
+        return bug
+
+# The Commands
+# =============
+
+def commit_needs_url(commit, bug_id):
+        pat = re.compile(r"(?<!\d)%d(?!\d)" % bug_id)
+        return (pat.search(commit.subject) is None and
+                pat.search(get_body(commit)) is None)
+
+def check_add_url(commits, bug_id=None, is_add_url=False):
+    if bug_id != None:
+        # We only need to check the commits that we'll add the URL to
+        commits = [commit for commit in commits if commit_needs_url(commit, bug_id)]
+
+    if len(commits) == 0: # Nothing to do
+        return
+
+    try:
+        git.diff(exit_code=True, ignore_submodules=True, _quiet=True)
+        git.diff(exit_code=True, ignore_submodules=True, cached=True,  _quiet=True)
+    except CalledProcessError:
+        die("Cannot add bug reference to commit message(s); You must commit (or stash) all changes first")
+
+    for commit in commits:
+        # check that the commit is an ancestor of the current revision
+        base = git.merge_base("HEAD", commit.id)
+        if base != commit.id:
+            die("%s %s\nNot an ancestor of HEAD, can't add bug URL to it" % (commit.id[0:7], commit.subject))
+
+        # see if the commit is present in any remote branches
+        remote_branches = git.branch(contains=commit.id, r=True)
+        if remote_branches != "":
+            print commit.id[0:7], commit.subject
+            print "Commit is already in remote branch(es):", " ".join(remote_branches.split())
+            if not prompt("Rewrite the commit add the bug URL anyways?"):
+                if is_add_url:
+                    print "Aborting."
+                else:
+                    print "Aborting. You can use -n/--no-add-url to turn off adding the URL"
+                sys.exit(0)
+
+    # Check for merge commits
+    oldest_commit = commits[-1]
+    all_commits = rev_list_commits(commits[-1].id + "^..HEAD")
+    for commit in all_commits:
+        if commit_is_merge(commit):
+            print "Found merge commit:"
+            print commit.id[0:7], commit.subject
+            print "Can't rewrite this commit or an ancestor commit to add bug URL"
+            sys.exit(1)
+
+def bad_url_method(add_url_method):
+    die("""add-url-method '%s' is invalid
+Should be [subject-prepend|subject-append|body-prepend|body-append]:<format>""" %
+        add_url_method)
+
+def add_url_to_subject_body(subject, body, bug):
+    add_url_method = get_add_url_method()
+    if not ':' in add_url_method:
+        bad_url_method(add_url_method)
+
+    method, format = add_url_method.split(':', 1)
+
+    def sub_percent(m):
+        if m.group(1) == 'u':
+            return bug.get_url()
+        elif m.group(1) == 'd':
+            return str(bug.id)
+        elif m.group(1) == 'n':
+            return "\n"
+        elif m.group(1) == '%':
+            return "%"
+        else:
+            die("Bad add-url-method escape %%%s" % m.group(1))
+
+    formatted = re.sub("%(.)", sub_percent, format)
+
+    if method == 'subject-prepend':
+        subject = formatted + " " + subject
+    elif method == 'subject-append':
+        subject = subject + " " + formatted
+    elif method == 'body-prepend':
+        body = formatted + "\n\n" + body
+    elif method == 'body-append':
+        body = body + "\n\n" + formatted
+    else:
+        bad_url_method(add_url_method)
+
+    return subject, body
+
+def validate_add_url_method(bug):
+    # Dry run
+    add_url_to_subject_body("", "", bug)
+
+def add_url_to_head_commit(commit, bug):
+    subject = commit.subject
+    body = get_body(commit)
+
+    subject, body = add_url_to_subject_body(subject, body, bug)
+
+    input = subject + "\n\n" + body
+    git.commit(file="-", amend=True, _input=input)
+
+def add_url(bug, commits):
+    commit_map = {}
+    oldest_commit = None
+    for commit in commits:
+        commit_map[commit.id] = commit
+        if commit_needs_url(commit, bug.id):
+            oldest_commit = commit
+
+    if not oldest_commit:
+        return
+
+    # Check that the add-url method is valid before starting the rebase
+    validate_add_url_method(bug)
+
+    all_commits = rev_list_commits(oldest_commit.id + "^..HEAD")
+    orig_head = all_commits[0].id
+
+    try:
+        branch_name = git.symbolic_ref("HEAD", q=True)
+    except CalledProcessError:
+        branch_name = None
+    try:
+        # Detach HEAD from the branch; this gives a cleaner reflog for the branch
+        print "Moving to starting point"
+        git.checkout(oldest_commit.id + "^", q=True)
+
+        for commit in reversed(all_commits):
+            # Map back to the original commit object so we can update it
+            if commit.id in commit_map:
+                commit = commit_map[commit.id]
+
+            if commit.id in commit_map and commit_needs_url(commit, bug.id):
+                print "Adding bug reference  ", commit.id[0:7], commit.subject
+                git.cherry_pick(commit.id)
+                add_url_to_head_commit(commit, bug)
+            else:
+                if commit.id in commit_map:
+                    print "Recommitting", commit.id[0:7], commit.subject, "(already has bug #)"
+                else:
+                    print "Recommitting", commit.id[0:7], commit.subject
+                git.cherry_pick(commit.id)
+
+            # Get the commit ID; we update the commit with the new ID, so we in the case
+            # where we later format the patch, we format the patch with the added bug URL
+            new_head = commit.id = git.rev_parse("HEAD")
+
+        if branch_name is not None:
+            git.update_ref("-m", "bz add-url: adding references to %s" % bug.get_url(),
+                           branch_name, new_head)
+            git.symbolic_ref("HEAD", branch_name)
+    except:
+        print "Cleaning up back to original state on error"
+        git.reset(orig_head, hard=True)
+        if branch_name is not None:
+            git.symbolic_ref("HEAD", branch_name)
+        raise
+
+def do_add_url(bug_reference, commit_or_revision_range):
+    commits = get_commits(commit_or_revision_range)
+
+    bug = Bug.load(BugHandle.parse_or_die(bug_reference))
+
+    check_add_url(commits, bug.id, is_add_url=True)
+
+    print "Bug %d - %s" % (bug.id, bug.short_desc)
+    print bug.get_url()
+    print
+
+    found = False
+    for commit in commits:
+        if commit_needs_url(commit, bug.id):
+            print commit.id[0:7], commit.subject
+            found = True
+        else:
+            print "SKIPPING", commit.id[0:7], commit.subject
+    if not found:
+        sys.exit(0)
+
+    print
+    if not prompt("Add bug URL to above commits?"):
+        print "Aborting"
+        sys.exit(0)
+
+    print
+    add_url(bug, commits)
+
+def do_apply(bug_reference):
+    bug = Bug.load(BugHandle.parse_or_die(bug_reference),
+                   attachmentdata=True)
+
+    print "Bug %d - %s" % (bug.id, bug.short_desc)
+    print
+
+    for patch in bug.patches:
+        if patch.status == 'committed' or patch.status == 'rejected':
+            print "Skipping, %s: %s" % (patch.status, patch.description)
+            continue
+
+        print patch.description
+        if not prompt("Apply?"):
+            continue
+
+        print
+
+        handle, filename = tempfile.mkstemp(".patch", make_filename(patch.description) + "-")
+        f = os.fdopen(handle, "w")
+        f.write(patch.data)
+        f.close()
+
+        try:
+            process = git.am(filename, _interactive=True)
+        except CalledProcessError:
+            print "Patch left in %s" % filename
+            break
+
+        os.remove(filename)
+
+        if global_options.add_url:
+            # Slightly hacky, would be better to just commit right the first time
+            commits = rev_list_commits("HEAD^!")
+            add_url(bug, commits)
+
+def strip_bug_url(bug, commit_body):
+    # Strip off the trailing bug URLs we add with -u; we do this before
+    # using commit body in as a comment; doing it by stripping right before
+    # posting means that we are robust against someone running add-url first
+    # and attach second.
+    pattern = "\s*" + re.escape(bug.get_url()) + "\s*$"
+    return re.sub(pattern, "", commit_body)
+
+def edit_attachment_comment(bug, initial_description, initial_body):
+    template = StringIO()
+    template.write("# Attachment to Bug %d - %s\n\n" % (bug.id, bug.short_desc))
+    template.write(initial_description)
+    template.write("\n\n")
+    template.write(initial_body)
+    template.write("\n\n")
+    if len(bug.patches) > 0:
+        for patch in bug.patches:
+            template.write("#Obsoletes: %d - %s\n" % (patch.attach_id, patch.description))
+        template.write("\n")
+
+    template.write("""# Please edit the description (first line) and comment (other lines). Lines
+# starting with '#' will be ignored.  Delete everything to abort.
+""")
+    if len(bug.patches) > 0:
+        template.write("# To obsolete existing patches, uncomment the appropriate lines.\n")
+
+    lines = edit_template(template.getvalue())
+
+    obsoletes= []
+    def filter_obsolete(line):
+        m = re.match("^\s*Obsoletes\s*:\s*([\d]+)", line)
+        if m:
+            obsoletes.append(int(m.group(1)))
+            return False
+        else:
+            return True
+
+    lines = filter(filter_obsolete, lines)
+
+    description, comment = split_subject_body(lines)
+
+    if description == "":
+        die("Empty description, aborting")
+
+    return description, comment, obsoletes
+
+def attach_commits(bug, commits, include_comments=True, edit_comments=False, status='none'):
+    # We want to attach the patches in chronological order
+    commits = list(commits)
+    commits.reverse()
+
+    for commit in commits:
+        filename = make_filename(commit.subject) + ".patch"
+        patch = get_patch(commit)
+        if include_comments:
+            body = strip_bug_url(bug, get_body(commit))
+        else:
+            body = None
+        if edit_comments:
+            description, body, obsoletes = edit_attachment_comment(bug, commit.subject, body)
+        else:
+            description = commit.subject
+            obsoletes = []
+        bug.create_patch(description, body, filename, patch, obsoletes=obsoletes, status=status)
+
+def do_attach(*args):
+    if len(args) == 1:
+        commit_or_revision_range = args[0]
+        commits = get_commits(commit_or_revision_range)
+
+        extracted = list(extract_and_collate_bugs(commits))
+        if len(extracted) == 0:
+            die("No bug references found in specified commits")
+        elif len(extracted) > 1:
+            # This could be sensible in the case of "attach updated patches
+            # for all these commits", but for now, just make it an error
+            die("Found multiple bug references specified commits:\n  " +
+                "\n  ".join((handle.get_url() for handle, _ in extracted)))
+
+        # extract_and_collate_bugs returns a list of commits that reference
+        # the handle, but we ignore that - we want to attach all of the
+        # specified commits, even if only some of the reference the bug
+        handle, _ = extracted[0]
+    else:
+        bug_reference = args[0]
+        commit_or_revision_range = args[1]
+
+        commits = get_commits(commit_or_revision_range)
+        handle = BugHandle.parse_or_die(bug_reference)
+
+    bug = Bug.load(handle)
+
+    if global_options.add_url:
+        check_add_url(commits, bug.id, is_add_url=False)
+
+    # We always want to prompt if the user has specified multiple attachments.
+    # For the common case of one attachment don't prompt if we are going
+    # to give them a chance to edit and abort anyways.
+    if len(commits) > 1 or not global_options.edit:
+        print "Bug %d - %s" % (bug.id, bug.short_desc)
+        print
+
+        for commit in reversed(commits):
+            print commit.id[0:7], commit.subject
+
+        print
+        if not prompt("Attach?"):
+            print "Aborting"
+            sys.exit(0)
+
+    if global_options.add_url:
+        add_url(bug, commits)
+
+    attach_commits(bug, commits, edit_comments=global_options.edit)
+
+# Sort the patches in the bug into categories based on a set of Git
+# git commits that we're considering to be newly applied. Matching
+# is done on exact git subject <=> patch description matches.
+def filter_patches(bug, applied_commits):
+    newly_applied_patches = dict() # maps to the commit object where it was applied
+    obsoleted_patches = set()
+    unapplied_patches = set()
+
+    applied_subjects = dict(((commit.subject, commit) for commit in applied_commits))
+    seen_subjects = set()
+
+    # Work backwards so that the latest patch is considered applied, and older
+    # patches with the same subject obsoleted.
+    for patch in reversed(bug.patches):
+        # Previously committted or rejected patches are never a match
+        if patch.status == "committed" or patch.status == "rejected":
+            continue
+
+        if patch.description in seen_subjects:
+            obsoleted_patches.add(patch)
+        elif patch.description in applied_subjects:
+            newly_applied_patches[patch] = applied_subjects[patch.description]
+            seen_subjects.add(patch)
+        else:
+            unapplied_patches.add(patch)
+
+    return newly_applied_patches, obsoleted_patches, unapplied_patches
+
+def edit_bug(bug, applied_commits=None, fix_commits=None):
+    if applied_commits is not None:
+        newly_applied_patches, obsoleted_patches, unapplied_patches = filter_patches(bug, applied_commits)
+        mark_resolved = len(unapplied_patches) == 0 and bug.bug_status != "RESOLVED"
+    else:
+        newly_applied_patches = obsoleted_patches = set()
+        mark_resolved = fix_commits is not None
+
+    template = StringIO()
+    template.write("# Bug %d - %s - %s" % (bug.id, bug.short_desc, bug.bug_status))
+    if bug.bug_status == "RESOLVED":
+        template.write(" - %s" % bug.resolution)
+    template.write("\n")
+    template.write("# %s\n" % bug.get_url())
+    template.write("# Enter comment on following lines; delete everything to abort\n\n")
+
+    if fix_commits is not None:
+        if len(fix_commits) == 1:
+            template.write("The following fix has been pushed:\n")
+        else:
+            template.write("The following fixes have been pushed:\n")
+        for commit in reversed(fix_commits):
+            template.write(commit.id[0:7] + " " + commit.subject + "\n")
+        template.write("\n")
+
+    for patch in bug.patches:
+        if patch in newly_applied_patches:
+            commit = newly_applied_patches[patch]
+            template.write("Attachment %d pushed as %s - %s\n" % (patch.attach_id, commit.id[0:7], commit.subject))
+
+    if mark_resolved:
+        template.write("# Comment to keep bug open\n")
+    elif bug.bug_status == "RESOLVED":
+        template.write("# Uncommment and edit to change resolution\n")
+    else:
+        template.write("# Uncomment to resolve bug\n")
+    legal_resolutions = bug.server.legal_values('resolution')
+    if legal_resolutions:
+        # Require non-empty resolution. DUPLICATE, MOVED would need special support
+        legal_resolutions = [x for x in legal_resolutions if x not in ('', 'DUPLICATE', 'MOVED')]
+        template.write("# possible resolutions: %s\n" % abbreviation_help_string(legal_resolutions))
+    if not mark_resolved:
+        template.write("#")
+    template.write("Resolution: FIXED\n")
+
+    if len(bug.patches) > 0:
+        patches_have_status = any((patch.status is not None for patch in bug.patches))
+        if patches_have_status:
+            if len(newly_applied_patches) > 0 or len(obsoleted_patches) > 0:
+                template.write("\n# Lines below change patch status, unless commented out\n")
+            else:
+                template.write("\n# To change patch status, uncomment below, edit 'committed' as appropriate.\n")
+            legal_statuses = bug.server.legal_values('attachments.status')
+            if legal_statuses:
+                legal_statuses.append('obsolete')
+                template.write("# possible statuses: %s\n" % abbreviation_help_string(legal_statuses))
+
+            for patch in bug.patches:
+                if patch in newly_applied_patches:
+                    new_status = "committed"
+                elif patch in obsoleted_patches:
+                    new_status = "obsolete"
+                else:
+                    new_status = "#committed"
+                template.write("%s @%d - %s - %s\n" % (new_status, patch.attach_id, patch.description, patch.status))
+        else:
+            template.write("\n# To mark patches obsolete, uncomment below\n")
+            for patch in bug.patches:
+                template.write("#obsolete @%d - %s\n" % (patch.attach_id, patch.description))
+
+        template.write("\n")
+
+    lines = edit_template(template.getvalue())
+
+    def filter_line(line):
+        m = re.match("^\s*Resolution\s*:\s*(\S+)", line)
+        if m:
+            resolutions.append(m.group(1))
+            return False
+        m = re.match("^\s*(\S+)\s*@\s*(\d+)", line)
+        if m:
+            status = m.group(1)
+            changed_attachments[int(m.group(2))] = status
+            return False
+        return True
+
+    changed_attachments = {}
+    resolutions = []
+
+    lines = filter(filter_line, lines)
+
+    comment = "".join(lines).strip()
+    resolution = resolutions[0] if len(resolutions) > 0 else None
+
+    if resolution is None and len(changed_attachments) == 0 and comment == "":
+        print "No changes, not editing Bug %d - %s" % (bug.id, bug.short_desc)
+        return False
+
+    if fix_commits is not None:
+        if global_options.add_url:
+            # We don't want to add the URLs until the user has decided not to
+            # cancel the operation. But the comment that the user edited
+            # included commit IDs. If adding the URL changes the commit IDs
+            # we need to replace them in the comment.
+            old_ids = [(commit, commit.id[0:7]) for commit in fix_commits]
+            add_url(bug, fix_commits)
+            for commit, old_id in old_ids:
+                new_id = commit.id[0:7]
+                if new_id != old_id:
+                    comment = comment.replace(old_id, new_id)
+
+    bug_changes = {}
+    if resolution is not None:
+        if legal_resolutions:
+            try:
+                resolution = expand_abbreviation(resolution, legal_resolutions)
+            except ValueError:
+                die("Bad resolution: %s" % resolution)
+        bug_changes['bug_status'] = 'RESOLVED'
+        bug_changes['resolution'] = resolution
+
+    if comment != "":
+        if len(bug_changes) == 0 and len(changed_attachments) == 1:
+            # We can add the comment when we submit the attachment change.
+            # Bugzilla will add a helpful notation ad we'll only send out
+            # one set of email
+            pass # We'll put the comment with the attachment
+        else:
+            bug_changes['comment'] = comment
+
+    # If we did the attachment updates first, we'd have to fetch a new
+    # token hash for the bug, since they'll change it. But each attachment
+    # has an individual token hash for just that attachment, so we can
+    # do the attachment updates afterwards.
+    if len(bug_changes) > 0:
+        bug.update(**bug_changes)
+
+    for (attachment_id, status) in changed_attachments.iteritems():
+        patch = None
+        if patches_have_status:
+            if legal_statuses:
+                try:
+                    status = expand_abbreviation(status, legal_statuses)
+                except ValueError:
+                    die("Bad patch status: %s" % status)
+        else:
+            if status != "obsolete":
+                die("Can't mark patch as '%s'; only obsolete is supported on %s" % (status,
+                                                                                    bug.server.host))
+        for p in bug.patches:
+            if p.attach_id == attachment_id:
+                patch = p
+        if not patch:
+            die("%d is not a valid attachment ID for Bug %d" % (attachment_id, bug.id))
+        attachment_changes = {}
+        if comment != "" and not 'comment' in bug_changes: # See above
+            attachment_changes['comment'] = comment
+        if status == 'obsolete':
+            attachment_changes['isobsolete'] = "1"
+        else:
+            attachment_changes['status'] = status
+        bug.update_patch(patch, **attachment_changes)
+        if status == 'obsolete':
+            print "Marked attachment as obsolete: %s - %s " % (patch.attach_id, patch.description)
+        else:
+            print "Changed status of attachment to %s: %s - %s" % (status, patch.attach_id, patch.description)
+
+    if fix_commits is not None:
+        attach_commits(bug, fix_commits, status='committed')
+
+    if resolution is not None:
+        print "Resolved as %s bug %d - %s" % (resolution, bug.id, bug.short_desc)
+    elif len(changed_attachments) > 0:
+        print "Updated bug %d - %s" % (bug.id, bug.short_desc)
+    else:
+        print "Added comment to bug %d - %s" % (bug.id, bug.short_desc)
+    print bug.get_url()
+
+    return True
+
+LOG_BUG_REFERENCE = re.compile(r"""
+(\b[Ss]ee\s+(?:[^\s:/]+\s+){0,2})?
+(?:(https?://[^/]+/show_bug.cgi\?id=[^&\s]+)
+     |
+   [Bb]ug\s+\#?(\d+))
+""", re.VERBOSE | re.DOTALL)
+
+def extract_bugs_from_string(str):
+    refs = []
+    for m in LOG_BUG_REFERENCE.finditer(str):
+        bug_reference = None
+
+        # If something says "See http://bugzilla.gnome.org/..." or
+        # "See mozilla bug http://bugzilla.mozilla.org/..." or "see
+        # bug 12345" - anything like that - then it's probably talking
+        # about some peripherally related bug. So, if the word see
+        # occurs 0 to 2 words before the bug reference, we ignore it.
+        if m.group(1) is not None:
+            print "Skipping cross-reference '%s'" % m.group(0)
+            continue
+        if m.group(2) is not None:
+            bug_reference = m.group(2)
+        else:
+            bug_reference = m.group(3)
+
+        try:
+            yield BugHandle.parse(bug_reference)
+        except BugParseError, e:
+            print "WARNING: cannot resolve bug reference '%s'" % bug_reference
+
+def extract_bugs_from_commit(commit):
+    for handle in extract_bugs_from_string(commit.subject):
+        yield handle
+    for handle in extract_bugs_from_string(get_body(commit)):
+        yield handle
+
+# Yields bug, [<list of commits where it is referenced>] for each bug
+# referenced in the list of commits. The order of bugs is the same as the
+# order of their first reference in the list of commits
+def extract_and_collate_bugs(commits):
+    bugs = []
+    bug_to_commits = {}
+
+    for commit in commits:
+        for handle in extract_bugs_from_commit(commit):
+            if not handle in bug_to_commits:
+                bugs.append(handle)
+                bug_to_commits[handle] = []
+            bug_to_commits[handle].append(commit)
+
+    for bug in bugs:
+        yield bug, bug_to_commits[bug]
+
+def do_edit(bug_reference_or_revision_range):
+    try:
+        handle = BugHandle.parse(bug_reference_or_revision_range)
+        if global_options.pushed:
+            die("--pushed can't be used together with a bug reference")
+        if global_options.fix is not None:
+            die("--fix requires commits to be specified")
+        bug = Bug.load(handle)
+        edit_bug(bug)
+    except BugParseError, e:
+        try:
+            commits = get_commits(bug_reference_or_revision_range)
+        except CalledProcessError:
+            die("'%s' isn't a valid bug reference or revision range" % bug_reference_or_revision_range)
+
+        if global_options.fix is not None:
+            handle = BugHandle.parse_or_die(global_options.fix)
+            bug = Bug.load(handle)
+            edit_bug(bug, fix_commits=commits)
+        else:
+            # Process from oldest to newest
+            commits.reverse()
+            for handle, commits in extract_and_collate_bugs(commits):
+                bug = Bug.load(handle)
+                if global_options.pushed:
+                    edit_bug(bug, applied_commits=commits)
+                else:
+                    edit_bug(bug)
+
+PRODUCT_COMPONENT_HELP = """
+
+Use:
+
+  git config bz.default-product <product>
+  git config bz.default-component <component>
+
+to configure a default product and/or component for this module."""
+
+def do_file(*args):
+    if len(args) == 1:
+        product_component, commit_or_revision_range = None, args[0]
+    else:
+        product_component, commit_or_revision_range = args[0], args[1]
+
+    config = get_config(get_tracker())
+
+    if product_component:
+        m = re.match("(?:([^/]+)/)?([^/]+)", product_component)
+        if not m:
+            die("'%s' is not a valid [<product>/]<component>" % product_component)
+
+        product = m.group(1)
+        component = m.group(2)
+
+        if not product:
+            product = get_default_product()
+
+        if not product:
+            die("'%s' does not specify a product and no default product is configured" % product_component
+                + PRODUCT_COMPONENT_HELP)
+    else:
+        product = get_default_product()
+        component = get_default_component()
+
+        if not product:
+            die("[<product>/]<component> not specified and no default product is configured"
+                + PRODUCT_COMPONENT_HELP)
+        if not component:
+            die("[<product>/]<component> not specified and no default component is configured"
+                + PRODUCT_COMPONENT_HELP)
+
+    commits = get_commits(commit_or_revision_range)
+
+    if global_options.add_url:
+        check_add_url(commits, is_add_url=False)
+
+    template = StringIO()
+    if len(commits) == 1:
+        template.write(commits[0].subject)
+        template.write("\n")
+    template.write("""
+# Please enter the summary (first line) and description (other lines). Lines
+# starting with '#' will be ignored.  Delete everything to abort.
+#
+# Product: %(product)s
+# Component: %(component)s
+# Patches to be attached:
+""" % { 'product': product, 'component': component })
+    for commit in reversed(commits):
+        template.write("#   " + commit.id[0:7] + " " + commit.subject + "\n")
+
+    lines = edit_template(template.getvalue())
+
+    summary, description = split_subject_body(lines)
+
+    if summary == "":
+        die("Empty summary, aborting")
+
+    # If we have only one patch and no other description for the bug was
+    # specified, use the body of the commit as the the description for
+    # the bug rather than the descriptionfor the attachment
+    include_comments=True
+    if len(commits) == 1:
+        if description == "":
+            description = get_body(commits[0])
+            include_comments = False
+
+    bug = Bug.create(get_tracker(), product, component, summary, description)
+
+    if global_options.add_url:
+        add_url(bug, commits)
+
+    attach_commits(bug, commits, include_comments=include_comments)
+
+def run_push(*args, **kwargs):
+    # Predicting what 'git pushes' pushes based on the command line
+    # would be extraordinarily complex, but the interactive output goes
+    # to stderr and is somewhat ambiguous. We do the best we can parsing
+    # it. git 1.6.4 adds --porcelain to push, so we can use that eventually.
+    dry = kwargs['dry'] if 'dry' in kwargs else False
+    options = dict()
+    if dry:
+        options['dry'] = True
+    if global_options.force:
+        options['force'] = True
+    try:
+        options['_return_stderr']=True
+        out, err = git.push(*args, **options)
+    except CalledProcessError:
+        return
+    if not dry:
+        # Echo the output so the user gets feedback about what happened
+        print >>sys.stderr, err
+
+    commits = []
+    for line in err.strip().split("\n"):
+        #
+        # We only look for updates of existing branches; a much more complex
+        # handling would be look for all commits that weren't pushed to a
+        # remote branch. Hopefully the typical use of 'git bz push' is pushing
+        # a single commit to master.
+        #
+        #                 e5ad33e..febe0d4             master  ->   master
+        m = re.match(r"^\s*([a-f0-9]{6,}..[a-f0-9]{6,})\s+\S+\s*->\s*\S+\s*$", line)
+        if m:
+            branch_commits = get_commits(m.group(1))
+            # Process from oldest to newest
+            branch_commits.reverse()
+            commits += branch_commits
+
+    # Remove duplicate commits
+    seen_commit_ids = set()
+    unique_commits = []
+    for commit in commits:
+        if not commit.id in seen_commit_ids:
+            seen_commit_ids.add(commit.id)
+            unique_commits.append(commit)
+
+    return unique_commits
+
+def do_push(*args):
+    if global_options.fix:
+        handle = BugHandle.parse_or_die(global_options.fix)
+        bug = Bug.load(handle)
+
+        # We need the user to confirm before we add the URLs to the commits
+        # We need to add the URLs to the commits before we push
+        # We need to push in order to find out what commits we are pushing
+        # So, we push --dry first
+        options = { 'dry' : True }
+        commits = run_push(*args, **options)
+        if edit_bug(bug, fix_commits=commits):
+            run_push(*args)
+    else:
+        unique_commits = run_push(*args)
+        for handle, commits in extract_and_collate_bugs(unique_commits):
+            bug = Bug.load(handle)
+            edit_bug(bug, commits)
+
+################################################################################
+
+if len(sys.argv) > 1:
+    command = sys.argv[1]
+else:
+    command = ''
+
+sys.argv[1:2] = []
+
+parser = OptionParser()
+parser.add_option("-b", "--bugzilla", metavar="<host or alias>",
+                  help="bug tracker to use")
+
+def add_add_url_options():
+    parser.add_option("-u", "--add-url", action="store_true",
+                      help="rewrite commits to add the bug URL [default]")
+    parser.add_option("-n", "--no-add-url", action="store_false", dest="add_url",
+                      help="don't rewrite commits to add the bug URL")
+
+def add_edit_option():
+    parser.add_option("-e", "--edit", action="store_true",
+                      help="allow editing the bugzilla comment")
+
+def add_fix_option():
+    parser.add_option("", "--fix", metavar="<bug reference>",
+                      help="attach commits and close bug")
+
+if command == 'add-url':
+    parser.set_usage("git bz add-url [options] <bug reference> (<commit> | <revision range>)");
+    min_args = max_args = 2
+elif command == 'apply':
+    parser.set_usage("git bz apply [options] <bug reference>");
+    add_add_url_options()
+    min_args = max_args = 1
+elif command == 'attach':
+    parser.set_usage("git bz attach [options] [<bug reference>] (<commit> | <revision range>)");
+    add_add_url_options()
+    add_edit_option()
+    min_args = 1
+    max_args = 2
+elif command == 'edit':
+    parser.set_usage("git bz edit [options] (<bug reference> | <commit> | <revision range>)");
+    parser.add_option("", "--pushed", action="store_true",
+                      help="pre-fill edit form treating the commits as pushed")
+    add_add_url_options()
+    add_fix_option()
+    min_args = max_args = 1
+elif command == 'file':
+    parser.set_usage("git bz file [options] [[<product>]]/<component>] (<commit> | <revision range>)");
+    add_add_url_options()
+    min_args = 1
+    max_args = 2
+elif command == 'push':
+    parser.set_usage("git bz push [options] [<repository> <refspec>...]");
+    add_add_url_options()
+    add_fix_option()
+    parser.add_option("-f", "--force", action="store_true",
+                      help="allow non-fast-forward commits")
+    min_args = 0
+    max_args = 1000 # no max
+else:
+    print >>sys.stderr, "Usage: git bz [add-url|apply|attach|edit|file|push] [options]"
+    sys.exit(1)
+
+global_options, args = parser.parse_args()
+
+if hasattr(global_options, 'add_url') and global_options.add_url is None:
+    global_options.add_url = get_add_url()
+
+if len(args) < min_args or len(args) > max_args:
+    parser.print_usage()
+    sys.exit(1)
+
+if command == 'add-url':
+    do_add_url(*args)
+elif command == 'apply':
+    do_apply(*args)
+elif command == 'attach':
+    do_attach(*args)
+elif command == 'edit':
+    if global_options.pushed:
+        exit
+    do_edit(*args)
+elif command == 'file':
+    do_file(*args)
+elif command == 'push':
+    do_push(*args)
+
+sys.exit(0)

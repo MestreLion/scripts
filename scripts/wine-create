@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Creates a new Wine prefix and perform initial tasks:
+# 	- Remove z: symlink to /
+#	- Create d: symlink to /dados
+
+basedir=$(dirname $(readlink -f "${BASH_SOURCE[0]}"))
+[[ -r "$basedir/lib/common" ]] && source "$basedir/lib/common"
+[[ -r "$basedir/lib/wine"   ]] && source "$basedir/lib/wine"
+
+# input
+prefix="$1"
+
+# parameters
+VERBOSE=1
+FORCE=
+
+if [[ -z "$prefix" ]] ; then
+	echo "Usage: $SELF PREFIX"
+	echo ""
+	echo "$SELF: error: please specify the prefix to create"
+else
+
+	#check if prefix exists
+	[[ -e "$WINEHOME/$prefix" ]] && fatal "wine prefix $WINEHOME/$prefix already exists. Use wine-delete to remove." 3
+
+	# create the prefix
+	mkdir -p "$WINEBOTTLEHOME"
+	env WINEARCH=win32 WINEPREFIX="$WINEBOTTLEHOME/$prefix" wine wineboot 2>&3
+	while [[ ! -f "$WINEHOME/$prefix/system.reg" ]] ; do : ; done ; sleep 3
+
+	# add link to /dados
+	ln -s /dados "$WINEBOTTLEHOME/$prefix/dosdevices/d:"
+
+	[[ "$VERBOSE" ]] && echo "wine prefix $WINEBOTTLEHOME/$prefix was created."
+fi

@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+#       This program is free software; you can redistribute it and/or modify
+#       it under the terms of the GNU General Public License as published by
+#       the Free Software Foundation; either version 2 of the License, or
+#       (at your option) any later version.
+#       
+#       This program is distributed in the hope that it will be useful,
+#       but WITHOUT ANY WARRANTY; without even the implied warranty of
+#       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#       GNU General Public License for more details.
+#       
+#       You should have received a copy of the GNU General Public License
+#       along with this program; if not, write to the Free Software
+#       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#       MA 02110-1301, USA.
+#
+# Home Page: http://www.ubuntugames.org
+# Date: 13-03-2011
+# Created by Carlos Donizete [a.k.a Coringao]
+# E-mail: coringao@ubuntugames.org
+# Full Game: Wolfenstein - Enemy Territory
+#
+SELECT=`zenity --list --window-icon=/usr/local/games/enemy-territory/ET.xpm --width=300 --height=200 --radiolist --column "ACT" --column "SELECT" \
+       FALSE "Start: Enemy Territory (pulseaudio)"\
+       TRUE  "Start: Enemy Territory (alsa-audio)"\
+	   FALSE "PunkBuster Setup"\
+	   FALSE "Tip: How to enable the Bot"`
+if echo "$SELECT" | grep $"Start: Enemy Territory (pulseaudio)"; then
+	 cd "/usr/local/games/enemy-territory/"
+     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.
+     aoss ./et-pulse "$@"
+fi
+if echo "$SELECT" | grep $"Start: Enemy Territory (alsa-audio)"; then
+	 cd "/usr/local/games/enemy-territory/"
+     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.
+     aoss ./et-alsa "$@"
+fi
+if echo "$SELECT" | grep $"PunkBuster Setup"; then
+	 cd /usr/local/games/enemy-territory/
+     ./pbsetup.run
+fi
+if echo "$SELECT" | grep $"Tip: How to enable the Bot"; then
+   zenity --title="How to enable the Bot" --text-info --width=500 --height=400 --filename="/usr/local/games/enemy-territory/tipbot.txt"
+fi
+exit 0

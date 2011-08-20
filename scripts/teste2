@@ -1,0 +1,26 @@
+#!/bin/bash
+
+quit() { echo "$1" ; exit 1 ; }
+
+list="/etc/backup/backup-list.txt"
+backups="/home/backups"
+archive="$backups/$(hostname -s)_$(date +%Y%m%d).tar.gz"
+target="/mnt/backups"
+array=("dsi" "pass1" "DSI" "vip" "pass2" "VIP" "mysql" "pass3" "MYSQL")
+
+[[ -f "$list" ]] || quit "no backup list"
+
+while (( i<${#array[@]} )); do
+	file="$backups/db/${array[i++]}_tbls.sql"
+	pass="${array[i++]}"
+	name="${array[i++]}"
+	mysqldump -u backup --password="$pass" "$name" > "$file" || quit "could not dump database $name"
+done
+
+tar -pzcf "$archive" -T "$list" || quit "tar failed"
+mount -t cifs //192.168.0.5/c/WP_Data/Adam/backups -o rw,username='ServerWin7',password=easy "$target" || quit "mount failed"
+
+cp "$archive" "$target" || exit "copy failed"
+find "$target" -name "*" -type f -mtime +62 -delete
+find "$backups" -name "*" -type f -mtime +62 -delete
+umount "$target"

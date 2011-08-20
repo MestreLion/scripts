@@ -1,0 +1,350 @@
+#!/bin/bash
+#
+# ntfsuuid - Tools for manipulating UUIDs in NTFS filesystems
+#
+#    Copyright (C) 2011 Rodrigo Silva - <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Huge thanks to all the gurus and friends in irc://irc.freenet.org/#bash
+# and the contributors of http://mywiki.wooledge.org/
+#
+# TODO: Integrate with common/common lib (SELF, _Confirm, _TestRoot)
+# TODO: Test avaliability of tools (xxd,blkid)
+# TODO: Document error messages
+# TODO: Allow volume LABEL instead of /dev/sdxy
+# TODO: reconsider getopts http://mywiki.wooledge.org/BashFAQ/035
+# TODO: reconsider UPPER CASE variables (UUID conflict)
+# TODO: consider dropping the lame, redundant "return $?" (==return)
+# FIXME: Revert byte order in UUID
+
+exec 3> /dev/null # to avoid harcoding /dev/null everywhere. For tools' stderr.
+
+SELF="${0##*/}" # builin $(basename $0)
+
+COMMAND=
+VERBOSE=
+LOWER=
+FORCE=
+TEST=
+DEBUG=
+BINARY=
+DEVICE=
+NTFSUUID=
+
+usage ()
+{
+	local explicit="$1"
+	
+    cat <<EOF
+Usage: $SELF [OPTIONS] --generate
+       $SELF [OPTIONS] --read     DEVICE
+       $SELF [OPTIONS] --set      DEVICE [--uuid UUID] [--binary]
+       $SELF [OPTIONS] --copy     INPUT_DEVICE OUTPUT_DEVICE
+EOF
+	if [[ -z "$explicit" ]] ; then
+	    cat <<EOF
+Try '$SELF --help' for more information.
+EOF
+	else
+	    cat <<EOF
+
+Tools for reading, setting and generating UUIDs suitable for NTFS filesystems (8 bytes)
+
+Options:
+  -h, --help            print this message and exit
+  -v, --verbose         verbose output (displays extra information)
+  -l, --lower           use lower case for displaying UUIDs
+  -f, --force           do not prompt before changes, assumes Yes for all questions
+  -t, --test            simulation test, do not write any data on disk (affects --set and --copy only)
+  -d, --debug           displays debug information on parsed options and arguments
+  -b, --binary          interprets UUID as 8-byte binary data (rather than hexadecimal string)
+                        --binary is only used with --uuid, otherwise it is ignored
+  -u, --uuid UUID       uses the specified UUID. Must be a 16 chars ASCII string, case-insensitive, [0-9,A-F]
+                        if --binary is used, UUID must be 8 bytes long
+                        --uuid is only used with --set, otherwise it is ignored
+  
+Commands:
+  --generate            output a random UUID suitable for an NTFS device (8 bytes)
+  --read DEVICE         output the current UUID of the specified NTFS device
+  --set  DEVICE         sets the UUID for the specified NTFS device (uses a random one if --uuid is ommited)
+  --copy DEV_IN DEV_OUT copy (clone) the UUID from an NTFS device to another
+  
+Examples:
+  $SELF --generate
+  $SELF --read /dev/sdx1
+  $SELF --set  /dev/sdx1
+  $SELF --set  /dev/sdx1 --uuid 2AE2C85D31835048
+  $SELF --set  /dev/sdx1 --uuid rodrigo1 --binary
+  $SELF --copy /dev/sdx1 /dev/sdx2
+
+Author: Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+License: GPLv3 <http://www.gnu.org/licenses/>
+EOF
+	fi
+}
+
+#######################################  Auxiliary Functions
+
+_RandomUuid()
+{
+	local lower=""
+	
+	if [[ -z "$LOWER" ]] ; then lower="-u" ; fi
+	NTFSUUID=$(xxd "$lower" -plain -l 8 /dev/urandom)
+}
+
+_TestNTFS()
+{
+	local device="$1"
+	
+	if [[ -n "$device" ]] ; then
+		if [[ -b "$device" ]] ; then
+			if sudo blkid -p  "$device" | grep -q "TYPE=\"ntfs\"" ; then
+				return 0
+			else
+				echo "error: $device: permission denied or not an NTFS device"
+				return 13
+			fi
+		else
+			echo "error: $device: not found or not a device"
+			return 12 
+		fi
+	else
+		# Redundant, since DEVICE is mandatory, enforced by getopts
+		echo "error: this operation requires a device"
+		return 11
+	fi
+}
+
+_Confirm()
+{
+	local message="$1"
+	local confirm
+	
+	if [[ -z "$FORCE" ]] ; then
+		# can be improved with smarter setting of default value
+		read -p "$message (y/n, default YES): " confirm 
+		case "x$confirm" in
+			x[Yy]*|x) ;;
+			*) if [[ -n "$VERBOSE" ]] ; then echo "$SELF: $COMMAND: cancelled by user" ; fi ; return 2 ;;
+		esac
+	fi
+	
+	return 0
+}
+
+_PrintFlags()
+{
+	# Echoing $DEBUG value is redundant, since this will only be printed if = 1
+    cat <<EOF
+Parsed Options  =$GETOPT
+Debug           = $DEBUG
+Verbose         = $VERBOSE
+Lower case      = $LOWER
+Non-Interactive = $FORCE
+Simulation Test = $TEST
+Binary          = $BINARY
+Command         = $COMMAND
+Device          = $DEVICE
+Uuid            = $NTFSUUID
+EOF
+}
+
+
+#######################################  Main Functions
+
+
+Uuid_Generate()
+{
+	_RandomUuid
+	
+	# All input data is set, print debug info
+	if [[ -n "$DEBUG" ]] ; then _PrintFlags ; fi
+
+	if [[ -n "$VERBOSE" ]] ; then
+		echo "Random UUID: $NTFSUUID"
+	else
+		echo "$NTFSUUID"
+	fi
+	
+	return 0
+}
+
+Uuid_Read()
+{
+	local lower=""
+	
+	_TestNTFS "$DEVICE" || return $?
+
+	if [[ -z "$LOWER" ]] ; then lower="-u" ; fi
+	NTFSUUID=$(sudo xxd "$lower" -plain -s 72 -len 8 "$DEVICE")
+
+	# All input data is set, print debug info
+	if [[ -n "$DEBUG" ]] ; then _PrintFlags ; fi
+
+	if [[ -n "$VERBOSE" ]] ; then
+		echo "UUID of $DEVICE is $NTFSUUID"
+	else
+		echo "$NTFSUUID"
+	fi
+	
+	return 0
+}
+
+Uuid_Set()
+{
+	local binary_uuid
+	local result=0
+	
+	# Handle UUID: Calculate a random one if not given
+	if [[ -z "$NTFSUUID" ]] ; then 
+		_RandomUuid
+	else
+		if [[ -z "$BINARY" ]] ; then		
+			# Hexadecimal String format
+			if ! [[ "$NTFSUUID" =~ ^[0-9A-Fa-f]{16}$ ]] ; then
+				echo "error: $NTFSUUID: invalid UUID. Must be 16 hexadecimal characters [0-9,A-F]. Ex: 2AE2C85D31835048"
+				return 21
+			fi
+		else
+			# Binary format
+			if [[ ${#UUID} -ne 8 ]] ; then
+				echo "error: $NTFSUUID: invalid UUID. Binary format must be 8-bytes long"
+				return 22
+			fi
+			
+			# Save original UUID
+			binary_uuid="$NTFSUUID"
+			
+			# Convert to hexadecimal string
+			NTFSUUID=$(echo "$NTFSUUID" | xxd -len 8 -plain)
+		 fi
+	fi
+	
+	# Adjust UUID case
+	if [[ -n "$LOWER" ]] ; then NTFSUUID="${UUID,,}" ; else NTFSUUID="${UUID^^}" ; fi
+
+	# All input data is set, print debug info
+	if [[ -n "$DEBUG" ]] ; then _PrintFlags ; fi
+	if [[ -n "$binary_uuid" ]] ; then echo "Binary UUID     = $binary_uuid" ; fi
+	
+	# Test device
+	_TestNTFS "$DEVICE" || return $?
+
+	# Confirm with user
+	_Confirm "Set $DEVICE UUID to $NTFSUUID?" || return $?
+	
+	# Set the UUID
+	if [[ -z "$TEST" ]] ; then
+		echo "$NTFSUUID" | xxd -r -plain | sudo dd of="$DEVICE" bs=8 count=1 seek=9 \
+		                                       conv=notrunc status=noxfer 2>&3
+		result=$?
+	fi
+
+	if [[ $result -eq 0 ]] ; then
+		# Verbose message
+		if [[ -n "$VERBOSE" ]] ; then echo "UUID of $DEVICE set to $NTFSUUID" ; fi 
+		return 0
+	else
+		echo "error: $COMMAND: $result (permission denied?)"
+		return $result
+	fi
+}
+
+Uuid_Copy()
+{
+	local input="$DEVICE"
+	local output="$1"
+	local result=0
+	local lower
+	
+	# Check DEVICE_OUTPUT (getopt only handle 1 mandatory argument per option)
+	if [[ -z "$output" ]] ; then
+		echo "error: output device not specified"
+		usage
+		exit 31
+	fi
+	
+	# Test Input and Output devices
+	_TestNTFS "$input" && _TestNTFS "$output" || return $?
+
+	# Read input device's UUID
+	if [[ -z "$LOWER" ]] ; then lower="-u" ; fi
+	NTFSUUID=$(sudo xxd "$lower" -plain -s 72 -len 8 "$input")
+
+	# All input data is set, print debug info (with additional DEVICE_OUTPUT parameter)
+	if [[ -n "$DEBUG" ]] ; then _PrintFlags ; echo "Output          = $1" ; fi
+
+	# Confirm with user
+	_Confirm "Copy UUID $NTFSUUID from $input to $output ?" || return $?
+			
+	# Copy the UUID
+	if [[ -z "$TEST" ]] ; then
+		sudo dd if="$input" of="$output" bs=8 count=1 seek=9 skip=9 conv=notrunc /
+		        status=noxfer 2>&3
+		result=$?
+	fi 
+
+	if [[ $result -eq 0 ]] ; then
+		# Verbose message
+		if [[ -n "$VERBOSE" ]] ; then echo "UUID $NTFSUUID copied from $input to $output" ; fi 
+		return 0
+	else
+		echo "error: $COMMAND: $result (permission denied?)"
+		return $result
+	fi
+}
+
+#######################################  Command Line parsing
+
+
+# Print usage if no parameter passed
+if [[ $# -eq 0 ]] ; then
+	usage
+	exit 1
+fi
+
+GETOPT=$(getopt --alternative --options "vlftbd" --longoptions "verbose,lower,force,test,binary,debug,uuid:,help,generate,read:,set:,copy:" --name "$SELF" -- "$@")
+if [[ $? -gt 0 ]] ; then usage ; exit 1 ; fi # error in getopt
+eval set -- "$GETOPT"
+
+while true ; do
+	case "$1" in
+		-v|--verbose ) shift ; VERBOSE="1"                          ;; # Set verbose
+		-l|--lower   ) shift ; LOWER="1"                            ;; # Set lower case
+		-f|--force   ) shift ; FORCE="1"                            ;; # Set non-interactive
+		-t|--test    ) shift ; TEST="1"                             ;; # Set simulation test
+		-b|--binary  ) shift ; BINARY="1"                           ;; # Set binary mode
+		-d|--debug   ) shift ; DEBUG="1"                            ;; # Set debug mode
+		--uuid       ) shift ; NTFSUUID="$1"                ; shift ;; # Set UUID
+		--help       ) shift ; COMMAND="help"                       ;; # Help requested
+		--generate   ) shift ; COMMAND="generate"                   ;; # Prints random UUID
+		--read       ) shift ; COMMAND="read" ; DEVICE="$1" ; shift ;; # Reads UUID from dev
+		--set        ) shift ; COMMAND="set"  ; DEVICE="$1" ; shift ;; # Sets UUID of dev
+		--copy       ) shift ; COMMAND="copy" ; DEVICE="$1" ; shift ;; # Copy UUID from dev
+		--           ) shift ; break ;;
+		*            ) break ;;
+	esac
+done
+
+case "$COMMAND" in
+	help     ) usage "HELP"   ; exit 0  ;;
+	generate ) Uuid_Generate  ; exit $? ;; 
+	read     ) Uuid_Read      ; exit $? ;; 
+	set      ) Uuid_Set       ; exit $? ;; 
+	copy     ) Uuid_Copy "$@" ; exit $? ;; 
+	*        ) usage          ; exit 1  ;; 
+esac
+

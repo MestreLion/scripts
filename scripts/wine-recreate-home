@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Removes a wine prefix (cleanly, including user menus)
+
+basedir=$(dirname $(readlink -f "${BASH_SOURCE[0]}"))
+[[ -r "$basedir/lib/common" ]] && source "$basedir/lib/common"
+[[ -r "$basedir/lib/wine"   ]] && source "$basedir/lib/wine"
+
+# input
+# none
+
+#parameters
+VERBOSE=1
+FORCE=1
+prefix="$HOME/.wine"
+
+if [[ -d "$prefix" ]]; then
+	if [[ -n "$VERBOSE" ]] ; then
+		echo "$SELF will now launch wine's uninstaller. Please use it to uninstall all applications so menu entries will be cleaned before data is deleted."
+		[[ -z "$FORCE" ]] && read -n 1 -p "Press any key to continue" dummy
+	fi
+
+	# run unintaller
+	env WINEPREFIX="$prefix" wine uninstaller
+fi
+
+# confirm with user
+confirm "When re-creating wine's default prefix, ALL CURRENT DATA WILL BE PERMANENTELY REMOVED. Do you really want to continue?" \
+|| exit 0
+[[ -d "/$prefix" ]] && sleep 5 # wait for uninstaller to update registry
+
+# delete prefix
+rm -rf "$prefix"
+
+# check if there are no other prefixes
+shopt -s globstar extglob
+if ( shopt -s nullglob dotglob; f=("$WINEBOTTLEHOME"/*/); ((! ${#f[@]})) ); then
+	confirm "Apparently there are no other wine prefixes. Do you also want to remove wine's user data (icons, associations, etc)?" n &&
+	(
+		rm -f  "$HOME"/.config/menus/applications-merged/wine*
+		rm -rf "$HOME"/.local/share/applications/wine*
+		rm -f  "$HOME"/.local/share/desktop-directories/wine*
+		rm -r  "$HOME"/.local/share/mime/packages/x-wine-*
+		rm -f  "$HOME"/.local/share/icons/**/application-x-wine-+([^.]).@(png|xpm)
+		rm -f  "$HOME"/.local/share/icons/**/[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]]_+([^.]).+([[:digit:]]).@(png|xpm)
+		find "$HOME"/.local/share -type d -empty -delete
+		[[ -n "$VERBOSE" ]] && echo "User data was removed."
+	)
+fi
+
+# create the prefix
+env WINEARCH=win32 WINEPREFIX="$prefix" wine wineboot
+while [[ ! -f "$prefix/system.reg" ]] ; do : ; done ; sleep 3
+
+# add link to /dados
+ln -s /dados "$prefix/dosdevices/d:"
+
+[[ -n "$VERBOSE" ]] && echo "wine defaut prefix $prefix was re-created."
+

@@ -1,0 +1,65 @@
+#!/bin/bash
+#
+# A replacement for bash's "select" builtin command
+# (exercise only - not meant to be taken too seriously)
+#
+# Copyright (C) 2011 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+#
+
+
+PS3="Choose an option (0 to quit): " # custom prompt (or comment for default)
+
+
+# ----- PARAMETERS ---------------------------------------------------------
+
+# From help select:
+# select: select NAME [in WORDS ... ;] do COMMANDS; done
+#    Select words from a list and execute commands.
+
+unset WORDS NAME
+declare -a WORDS=("AAA" "BBB" "CCC") # place options inside (...), blank for "$@"
+declare    NAME="option"             # name your output var
+
+
+# ----- SELECT/IN/DO STATEMENT - DO NOT EDIT --------------------------------
+
+menu() {
+	for i in ${!WORDS[@]}; do 
+		printf "%*d) %s\n" $(((${#WORDS[@]}/10)+1)) $((i+1)) "${WORDS[i]}"
+	done;
+}
+(( ${#WORDS[@]} )) || WORDS=("$@")
+while menu && read -rp "$PS3" REPLY && NUMREPLY=""; do
+	[[ "$REPLY" != *[![:digit:]]* ]] && NUMREPLY=$((10#$REPLY)) # avoid 08 error
+	(( NUMREPLY )) && declare "$NAME"="${WORDS[NUMREPLY-1]}" || declare "$NAME"=""
+
+	
+# ---- INSIDE THE LOOP - EDITABLE -------------------------------------------
+
+# Run your COMMANDS
+
+# Do whatever you want, but of course, dont mess with WORDS, NAME or NUMREPLY
+# (remember those those are "inner" vars). But messing with REPLY
+# or with your named variable is allowed
+	
+	[[ ! "$REPLY" = "0" ]] || { echo "Goodbye!" ; break; }
+	echo "You picked $option which is option $REPLY"
+	
+
+# ---- END OF LOOP - DONE STATEMENT ----------------------------------------
+
+done
+
+# --------------------------------------------------------------------------
+
+exit
+
+# For comparison with original select builtin:
+select option in "${WORDS[@]}"; do
+
+	[[ ! "$REPLY" = "0" ]] || { echo "Goodbye!" ; break; }
+	echo "You picked $option which is option $REPLY"	
+
+done
+

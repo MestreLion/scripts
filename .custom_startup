@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# to be sourced by /etc/gdm/Init/Default
+
+#/usr/bin/synergyc --name desktop 192.168.0.102

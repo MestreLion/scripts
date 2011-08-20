@@ -1,0 +1,35 @@
+#!/bin/bash
+
+flag=0
+while IFS= read -r -n1 c; do
+	if [[ "$c" == '"' ]]; then
+        ((flag^=1))
+		printf "%c" "$c"
+	elif [[ "$c" == $'\0' ]]; then
+		echo
+	elif [[ "$c" == "/" ]]; then
+		printf "/"
+	elif ((flag)); then
+		printf "<U%04X>" "'$c"
+	else
+		printf "%c" "$c"
+	fi
+done < "$1"
+
+##!/bin/bash
+#while IFS= read -r -n1 c;do printf "<U%04X>" "'$c"; done < "$1"
+
+##!/bin/bash
+#c=$(cat); for((i=0;i<${#c};i++)); do printf "<U%04X>" "'${c:i:1}"; done; echo
+
+##!/usr/bin/env python
+#import sys
+#text = sys.argv[1]
+#encoded = "".join("<U{0:04X}>".format(ord(char)) for char in text)
+#print(encoded)
+
+##!/usr/bin/env python
+#text = input()
+#encoded = "".join("<U{0:04X}>".format(ord(char)) for char in text)
+#print(encoded)
+

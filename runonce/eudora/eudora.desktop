@@ -1,0 +1,21 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Eudora Mail
+Name[pt]=Eudora Mail
+Name[pt_BR]=Eudora Mail
+GenericName=Mail Client
+GenericName[pt]=Leitor de Emails
+GenericName[pt_BR]=Leitor de Emails
+Comment=Read and write email with Eudora
+Comment[pt]=Leia e escreva emails com Eudora
+Comment[pt_BR]=Leia e escreva emails com Eudora
+Categories=Network;Email;
+#Categories=Network;Email;Wine;Wine-Programs;
+Terminal=false
+StartupNotify=true
+MimeType=x-scheme-handler/mailto;
+#StartupWMClass=Wine
+Icon=eudora
+TryExec=wine
+Exec=eudora %u
