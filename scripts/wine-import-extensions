@@ -408,7 +408,6 @@ while true ; do
 	-t|--test       ) TEST=1                 ;; # Set simulation test
 	-d|--debug      ) DEBUG=1                ;; # Set debug mode
 	-g|--gui        ) GUI=1                  ;; # Set GUI flag
-	-e|--eudora     ) EUDORA=1               ;; # Undocumented, for now
 	-p|--prefix     ) PREFIX="$1"   ; shift  ;; # Set Wine prefix
 	-b|--bottle     ) BOTTLE="$1"   ; shift  ;; # Set Wine Bottle
 	-c|--savechanges) REGFILE="$1"  ; shift  ;; # Set Registry change file
