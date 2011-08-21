@@ -52,6 +52,7 @@ OVERWRITE=
 SKIP=
 PREFIX=
 UNDO=
+EUDORA=
 
 #parameters
 VERBOSE=
@@ -313,7 +314,7 @@ RegistryAddExt()
 	local ext="$1"
 	local class="$2"
 
-	output+="[HKEY_CLASSES_ROOT\.${ext}]"$'\n'
+	output+="[HKEY_CLASSES_ROOT\\.${ext}]"$'\n'
 	output+="@=\"${class}\""$'\n\n'
 }
 
@@ -322,8 +323,11 @@ RegistryAddClass()
 	local class="$1"
 	local handler="$2"
 	local undo="${3:-}"
+	local action="open"
 
-	output+="[HKEY_CLASSES_ROOT\\${class}\shell\open\command]"$'\n'
+	[[ "$EUDORA" ]] && action=""
+	
+	output+="[HKEY_CLASSES_ROOT\\${class}\shell\\${action}\\command]"$'\n'
 	output+="@=\"${handler}\""$'\n'
 	[[ "$undo" ]] && output+="\"${CLASSTAG}_undo\"=\"${undo}\""$'\n'
 	output+=$'\n'
@@ -341,6 +345,16 @@ RegistryAddAssoc()
 	output+="\"MimeType\"=\"${mimetype}\""$'\n'
 	output+="\"OpenWithIcon\"=\"${icon}\""$'\n'
 	output+="\"ProgID\"=\"${class}\""$'\n\n'
+}
+
+EudoraPatch()
+{
+	output+="[HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Hardware Profiles\\Current\\Software\\Fonts]"$'\n'
+	output+="\"LogPixels\"=dword:00000078"$'\n\n'
+	output+="[HKEY_CURRENT_USER\\Control Panel\\International]"$'\n'
+	output+="\"sShortDate\"=\"dd/MM/yyyy\""$'\n\n'
+
+	[[ "$VERBOSE" ]] && echo "Eudora patches added"
 }
 
 #Do NOT use in subshells!
@@ -390,10 +404,11 @@ Undo()
 	return
 }
 
+
 #######################################  Command Line parsing
 
 long="help,verbose,test,debug,gui,bottle:,prefix:,savechanges:,overwrite:,skip:,
-backup:,restore:,list:,undo:"
+backup:,restore:,list:,undo:,eudora"
 GETOPT=$(getopt --alternative --name="$SELF" --options="vtdgb:k:c:"            \
                 --longoptions="$long" -- "$@"
 ) || { Usage ; exit 1; } # error in getopt
@@ -596,6 +611,9 @@ done < <(                                                                      \
 	cp -- "$sysreg" "$BACKUP" || fatal "Could not create backup file $BACKUP"
 	[[ "$VERBOSE" ]] && printf "Current Registry was backed up to \"$BACKUP\"\n"
 }
+
+# Patch for eudora
+[[ "$EUDORA" ]] && EudoraPatch
 
 # Dump the output
 [[ "$REGFILE" ]] && {
