@@ -33,7 +33,7 @@
 
 manual()
 {
-cat << _MANUALPAGE
+cat << MANUALPAGE
 eudora - launcher for Qualcomm's Eudora Mail under wine
 
 Usage
@@ -255,12 +255,12 @@ and associated native files only! Eudora Mail itself is propietary software,
 copyright of Qualcomm Inc. Wine and its tools are free software under different
 copyright and license. See <http://www.eudora.com> and <http://www.winehq.org>
 
-_MANUALPAGE
+MANUALPAGE
 }
 
 usage()
 {
-cat << _USAGE
+cat << USAGE
 Usage: $SELF [OPTIONS] [ MAILTO-URI | ADDRESS(ES)... | FILE(S)... ]
        $SELF [OPTIONS] --raw [ARGUMENTS...]
        $SELF { --help | --manual | --version }
@@ -275,11 +275,11 @@ Options:
 --raw             Relay all command-line arguments unparsed to Eudora.exe
 
 Use "$SELF --manual" for additional info
-_USAGE
+USAGE
 }
 
 version() {
-cat << _VERSION
+cat << VERSION
 $SELF 1.0
 
 Copyright (C) 2011 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
@@ -291,7 +291,7 @@ Eudora Mail is a copyright of Qualcomm Inc. See <http://www.eudora.com>
 For wine copyright and license, see <http://www.winehq.com>
 
 Launcher written by Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
-_VERSION
+VERSION
 }
 
 debug() {
