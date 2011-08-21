@@ -40,10 +40,12 @@ if ( shopt -s nullglob dotglob; f=("$WINEBOTTLEHOME"/*/); ((! ${#f[@]})) ); then
 		rm -f  "$HOME"/.config/menus/applications-merged/wine*
 		rm -rf "$HOME"/.local/share/applications/wine*
 		rm -f  "$HOME"/.local/share/desktop-directories/wine*
-		rm -r  "$HOME"/.local/share/mime/packages/x-wine-*
+		rm -f  "$HOME"/.local/share/mime/packages/x-wine-*
 		rm -f  "$HOME"/.local/share/icons/**/application-x-wine-+([^.]).@(png|xpm)
 		rm -f  "$HOME"/.local/share/icons/**/[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]]_+([^.]).+([[:digit:]]).@(png|xpm)
 		find "$HOME"/.local/share -type d -empty -delete
+		update-mime-database "$HOME/.local/share/mime/"
+		update-desktop-database "$HOME/.local/share/applications/"
 		[[ -n "$VERBOSE" ]] && echo "User data was removed."
 	)
 fi
