@@ -30,7 +30,7 @@
 #  aliases and *parents* (example: *.xml files may be opened by plain/text app,
 #  *.deb by application/zip, and so on - how to deal with that?)
 # FIXME: Properly handle cases in exts and mime-types. Windows might be case-
-#  insensitive but winemenubuilder is not
+#  insensitive but winemenubuilder is not. And it is buggy about it.
 # TODO: undo option (from changes file)
 # TODO: --include-only and --force-all options
 # TODO: update list with status for each extension (new, updated, skipped, etc)
@@ -52,7 +52,6 @@ OVERWRITE=
 SKIP=
 PREFIX=
 UNDO=
-EUDORA=
 
 #parameters
 VERBOSE=
@@ -327,11 +326,8 @@ RegistryAddClass()
 	local class="$1"
 	local handler="$2"
 	local undo="${3:-}"
-	local action="open"
 
-	[[ "$EUDORA" ]] && action=""
-	
-	output+="[HKEY_CLASSES_ROOT\\${class}\shell\\${action}\\command]"$'\n'
+	output+="[HKEY_CLASSES_ROOT\\${class}\shell\\open\\command]"$'\n'
 	output+="@=\"${handler}\""$'\n'
 	[[ "$undo" ]] && output+="\"${CLASSTAG}_undo\"=\"${undo}\""$'\n'
 	output+=$'\n'
@@ -349,16 +345,6 @@ RegistryAddAssoc()
 	output+="\"MimeType\"=\"${mimetype}\""$'\n'
 	output+="\"OpenWithIcon\"=\"${icon}\""$'\n'
 	output+="\"ProgID\"=\"${class}\""$'\n\n'
-}
-
-EudoraPatch()
-{
-	output+="[HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Hardware Profiles\\Current\\Software\\Fonts]"$'\n'
-	output+="\"LogPixels\"=dword:00000078"$'\n\n'
-	output+="[HKEY_CURRENT_USER\\Control Panel\\International]"$'\n'
-	output+="\"sShortDate\"=\"dd/MM/yyyy\""$'\n\n'
-
-	[[ "$VERBOSE" ]] && echo "Eudora patches added"
 }
 
 #Do NOT use in subshells!
@@ -412,7 +398,7 @@ Undo()
 #######################################  Command Line parsing
 
 long="help,verbose,test,debug,gui,bottle:,prefix:,savechanges:,overwrite:,skip:,
-backup:,restore:,list:,undo:,eudora"
+backup:,restore:,list:,undo:"
 GETOPT=$(getopt --alternative --name="$SELF" --options="vtdgb:k:c:"            \
                 --longoptions="$long" -- "$@"
 ) || { Usage ; exit 1; } # error in getopt
@@ -618,9 +604,6 @@ done < <(                                                                      \
 	cp -- "$sysreg" "$BACKUP" || fatal "Could not create backup file $BACKUP"
 	[[ "$VERBOSE" ]] && printf "Current Registry was backed up to \"$BACKUP\"\n"
 }
-
-# Patch for eudora
-[[ "$EUDORA" ]] && EudoraPatch
 
 # Dump the output
 [[ "$REGFILE" ]] && {
