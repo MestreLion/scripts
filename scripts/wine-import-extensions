@@ -232,6 +232,10 @@ Usage ()
 	     the --restore option
 	     THIS IS A HIGHLY EXPERIMENTAL FEATURE! USE AT YOUR OWN RISK!
 
+	 -e, --eudora
+	     Pathes registry for Eudora Mail. Changes display date to dd/MM/yyyy,
+	     increases dpi to 120, and registers handlers to HKCR\class\shell\command
+	     instead of HKCR\class\shell\open\command (see winehq bug #13437)
 
 	Examples and suggested uses:
 	$SELF -vd --test --bottle test --backup system.reg.bak --list ext.txt
@@ -427,6 +431,7 @@ while true ; do
 	-t|--test       ) TEST=1                 ;; # Set simulation test
 	-d|--debug      ) DEBUG=1                ;; # Set debug mode
 	-g|--gui        ) GUI=1                  ;; # Set GUI flag
+	-e|--eudora     ) EUDORA=1               ;; # Set Patch for Eudora
 	-p|--prefix     ) PREFIX="$1"   ; shift  ;; # Set Wine prefix
 	-b|--bottle     ) BOTTLE="$1"   ; shift  ;; # Set Wine Bottle
 	-c|--savechanges) REGFILE="$1"  ; shift  ;; # Set Registry change file
