@@ -181,11 +181,11 @@ WINEPREFIX
     Path to wine's virtual windows environment where Eudora Mail is installed.
     See wine documentation for more details. Default is "\$HOME/.wine"
 
-EUDORA_EXEPATH
+EUDORA_EXEFOLDER
     The full (unix) path where Eudora is installed (where Eudora.exe is located)
     Default is "\$WINEPREFIX/dosdevices/c:/Program Files/Qualcomm/Eudora"
 
-EUDORA_DATAFILE
+EUDORA_DATAFOLDER
     The full (unix) path to Eudora's Data Folder, which stores user's mailboxes
     and settings. Default is:
     "\$WINEPREFIX/dosdevices/c:/users/\$USER/Application Data/Qualcomm/Eudora"
@@ -300,34 +300,52 @@ debug() {
 }
 
 fix_crash() {
+
+	local msg
+	case "$LANG" in
+	pt*)
+		msg+="Eudora parece ter falhado da última vez. "
+		msg+="Você gostaria de tentar consertar?\n\n"
+		msg+="(isso vai apenas fechar as janelas de caixas de correio. "
+		msg+="Nenhuma mensagem será apagada ou perdida.)"
+		;;
+	*  )
+		msg+="Looks like Eudora has crashed last time. "
+		msg+="Would you like me to try to fix that?\n\n"
+		msg+="(that will close all your currently opened mailboxes tough. "
+		msg+="No messages will be deleted or lost)"
+	;;
+	esac
+	
 	if [[ -e "$EUDORA_DATAFOLDER/OWNER.LOK" ]] && \
 	   ! { ps -A | grep -qi Eudora.exe ; }; then
-	
-		if zenity --question --no-wrap --title="Eudora crash fix" \
-		          --text="Looks like Eudora has crashed last time. Would you "\
-		                 "like me to try to fix that?\n\n(that will close all "\
-		                 "your opened mailboxes tough)"
+		if zenity --question --no-wrap --title="Eudora crash fix" --text="$msg"
 		then
-			: # awk -f $EUDORA_DATAFOLDER '[Open Windows]'
+			rm -f -- "$EUDORA_DATAFOLDER/OWNER.LOK"
+			# awk -f $EUDORA_DATAFOLDER '[Open Windows]'
 		fi
 	fi
 }
 
 
 read_settings() {
-	settings="$1"
-	if [[ ! -f "$settings" ]]; then
+	local settings="$1"
+	[[ -f "$settings" ]] && source "$settings"
+}
+
+write_settings() {
+	local settings="$1"
+	[[ -f "$settings" ]] || {
 		mkdir -p "${settings%/*}/"
-		cat > "$settings" <<- _READSETTINGS
+		cat > "$settings" <<- READSETTINGS
 		# Eudora settings file
 		WINEPREFIX="${WINEPREFIX:-"$HOME/.wine"}"
-		EUDORA_EXEPATH="${EUDORA_EXEPATH:-"$WINEPREFIX/dosdevices/c:/Program Files/Qualcomm/Eudora"}"
+		EUDORA_EXEFOLDER="${EUDORA_EXEFOLDER:-"$WINEPREFIX/dosdevices/c:/Program Files/Qualcomm/Eudora"}"
 		EUDORA_DATAFOLDER="${EUDORA_DATAFOLDER:-"$WINEPREFIX/dosdevices/c:/users/$USER/Application Data/Qualcomm/Eudora"}"
 		EUDORA_RAW="$EUDORA_RAW"
 		EUDORA_DEBUG="$EUDORA_DEBUG"
-		_READSETTINGS
-	fi
-	source "$settings"
+		READSETTINGS
+	}
 }
 
 
@@ -440,7 +458,9 @@ handle_mailto() {
 ####################################### Main
 
 
-read_settings "$HOME/.config/eudora/eudora.conf"
+config="${EUDORA_CONFIG:-$HOME/.config/eudora/eudora.conf}"
+
+[[ -r "$config" ]] && source "$config"
 
 unset profilemap; declare -A profilemap
 unset args      ; declare -a args
@@ -450,9 +470,7 @@ unset mailto    ; declare mailto
 unset options   ; declare options
 unset file      ; declare file
 
-
 export WINEPREFIX
-
 
 exec 3> /dev/null # to avoid harcoding /dev/null everywhere. For tools' stderr.
 
@@ -473,9 +491,9 @@ while [[ $# -gt 0 ]]; do
 	--raw    ) EUDORA_RAW=1   ;;
 	
 	--wineprefix) WINEPREFIX="$1"        ; shift ;;
-	--exepath   ) EUDORA_EXEPATH="$1"    ; shift ;;
+	--exepath   ) EUDORA_EXEFOLDER="$1"  ; shift ;;
 	--datafolder) EUDORA_DATAFOLDER="$1" ; shift ;;
-	
+	--config    ) EUDORA_CONFIG="$1"     ; shift ;;	
 	
 	mailto:*) args+=( "$arg" ); mailto="$arg";;
 	
@@ -488,16 +506,19 @@ while [[ $# -gt 0 ]]; do
         fi
         ;;
 
-	*) files+=( "$arg" ); args+=( "$arg" );;
+	*) args+=( "$arg" ); files+=( "$arg" ) ;;
 	
 	esac
 done
+
+[[ -e "$config" || "$EUDORA_CONFIG" ]] || write_config "$config"
 
 [[ "$EUDORA_DEBUG" ]] && debug
 
 if [[ "$EUDORA_RAW" ]]; then
 	output=( "${args[@]}" )
 else
+
 	[[ "$mailto" ]] && handle_mailto "$mailto"
 	
 	for file in "${files[@]}"; do
@@ -510,7 +531,9 @@ fi
 
 [[ "$EUDORA_DEBUG" ]] && declare -p output
 
-cd "$WINEPREFIX/dosdevices/c:/Program Files/Qualcomm/Eudora" || exit 1
+fix_crash
+
+cd "$EUDORA_EXEFOLDER" || exit 1
 
 wine "C:\\windows\\command\\start.exe" /MAX ./Eudora.exe "${output[@]}" 2>&3
 
