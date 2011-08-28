@@ -1,0 +1,11 @@
+#!/bin/bash
+#
+# Wrapper for matchsubtitles, suitable for Nautilus Scripts
+#
+# Copyright (C) 2011 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+
+error=$(matchsubtitles --undo ".matchsubtitles_undo.sh" --run -- "$@" 2>&1 >/dev/null)
+
+[[ "$error" ]] && zenity --error --title "Match subtitles" --no-wrap --text "${error//&/&amp;}"
+
