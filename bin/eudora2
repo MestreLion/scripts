@@ -1,9 +1,0 @@
-#!/bin/bash -x
-
-export WINEPREFIX="/home/rodrigo/.local/share/wineprefixes/eudora"
-
-cd "$WINEPREFIX/dosdevices/c:/Program Files/Qualcomm/Eudora" || exit 1
-
-wine "C:\\windows\\command\\start.exe" /MAX ./Eudora.exe "$@" 2>/dev/null
-
-#env WINEPREFIX="/home/rodrigo/.local/share/wineprefixes/eudora" wine "C:\\windows\\command\\start.exe" /Unix "/home/rodrigo/.local/share/wineprefixes/eudora/dosdevices/c:/users/Public/Desktop/Eudora.lnk" "$@"

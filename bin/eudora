@@ -314,15 +314,22 @@ fix_crash() {
 		msg+="Would you like me to try to fix that?\n\n"
 		msg+="(that will close all your currently opened mailboxes tough. "
 		msg+="No messages will be deleted or lost)"
-	;;
+		;;
 	esac
 	
 	if [[ -e "$EUDORA_DATAFOLDER/OWNER.LOK" ]] && \
 	   ! { ps -A | grep -qi Eudora.exe ; }; then
 		if zenity --question --no-wrap --title="Eudora crash fix" --text="$msg"
 		then
+			ini=$( awk '
+				BEGIN { RS="\r\n"; ORS=RS; ok=1 }
+				/^\[Open Windows\]/ { ok=0; next }
+				/^\[/ { ok=1 }
+				ok { print }
+				' "$EUDORA_DATAFOLDER/eudora.ini"
+			)
+			printf "%s\r\n" "$ini" > "$EUDORA_DATAFOLDER/eudora.ini"
 			rm -f -- "$EUDORA_DATAFOLDER/OWNER.LOK"
-			# awk -f $EUDORA_DATAFOLDER '[Open Windows]'
 		fi
 	fi
 }
