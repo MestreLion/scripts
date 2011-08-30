@@ -38,11 +38,11 @@ eudora - launcher for Qualcomm's Eudora Mail under wine
 
 Usage
 
-$SELF [OPTIONS] [ MAILTO-URI | ADDRESS(ES)... | FILE(S)... ]
+$self [OPTIONS] [ MAILTO-URI | ADDRESS(ES)... | FILE(S)... ]
 
-$SELF [OPTIONS] --raw [ARGUMENTS...]
+$self [OPTIONS] --raw [ARGUMENTS...]
 
-$SELF { --help | --manual | --version }
+$self { --help | --manual | --version }
 
 
 Description
@@ -225,17 +225,17 @@ failure. The following failure codes can be returned:
 
 Examples
 
-$SELF mailto:someone@somewhere.com
+$self mailto:someone@somewhere.com
 
-$SELF mailto:eudora@qualcomm.com?cc=a@b.c&subject=Eudora+Lives&body=..kind+of
+$self mailto:eudora@qualcomm.com?cc=a@b.c&subject=Eudora+Lives&body=..kind+of
 
-$SELF /tmp/somefile.txt
+$self /tmp/somefile.txt
 
-$SELF mailto:?attach=/tmp/AttachMe&attach=file:///tmp/AndMe' ../test/MeToo.txt
+$self mailto:?attach=/tmp/AttachMe&attach=file:///tmp/AndMe' ../test/MeToo.txt
 
-$SELF /tmp/OkToAttach.jpg "/tmp/no spaces allowed.mp3" /tmp/SorryNoDirsEither/
+$self /tmp/OkToAttach.jpg "/tmp/no spaces allowed.mp3" /tmp/SorryNoDirsEither/
 
-$SELF mailto:dontmix@withattaches.com?body=i+will+be+ignored&attach=/tmp/file
+$self mailto:dontmix@withattaches.com?body=i+will+be+ignored&attach=/tmp/file
 
 
 Written by
@@ -261,9 +261,9 @@ MANUALPAGE
 usage()
 {
 cat << USAGE
-Usage: $SELF [OPTIONS] [ MAILTO-URI | ADDRESS(ES)... | FILE(S)... ]
-       $SELF [OPTIONS] --raw [ARGUMENTS...]
-       $SELF { --help | --manual | --version }
+Usage: $self [OPTIONS] [ MAILTO-URI | ADDRESS(ES)... | FILE(S)... ]
+       $self [OPTIONS] --raw [ARGUMENTS...]
+       $self { --help | --manual | --version }
 
 Launches Eudora Mail under Wine
 
@@ -274,13 +274,13 @@ Options:
 --debug           Turns on debug mode
 --raw             Relay all command-line arguments unparsed to Eudora.exe
 
-Use "$SELF --manual" for additional info
+Use "$self --manual" for additional info
 USAGE
 }
 
 version() {
 cat << VERSION
-$SELF 1.0
+$self 1.0
 
 Copyright (C) 2011 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
@@ -318,41 +318,74 @@ fix_crash() {
 	esac
 	
 	if [[ -e "$EUDORA_DATAFOLDER/OWNER.LOK" ]] && \
-	   ! { ps -A | grep -qi Eudora.exe ; }; then
-		if zenity --question --no-wrap --title="Eudora crash fix" --text="$msg"
-		then
-			ini=$( awk '
-				BEGIN { RS="\r\n"; ORS=RS; ok=1 }
-				/^\[Open Windows\]/ { ok=0; next }
-				/^\[/ { ok=1 }
-				ok { print }
-				' "$EUDORA_DATAFOLDER/eudora.ini"
-			)
-			printf "%s\r\n" "$ini" > "$EUDORA_DATAFOLDER/eudora.ini"
-			rm -f -- "$EUDORA_DATAFOLDER/OWNER.LOK"
-		fi
+	   ! { ps -A | grep -qi Eudora.exe ; }     && \
+	   zenity --question --no-wrap --title="Eudora crash fix" --text="$msg"
+	then
+		ini=$( awk '
+			BEGIN { RS="\r\n"; ORS=RS; ok=1 }
+			/^\[Open Windows\]/ { ok=0; next }
+			/^\[/ { ok=1 }
+			ok { print }
+			' "$EUDORA_DATAFOLDER/eudora.ini"
+		)
+		printf "%s\r\n" "$ini" > "$EUDORA_DATAFOLDER/eudora.ini"
+		rm -f -- "$EUDORA_DATAFOLDER/OWNER.LOK"
 	fi
 }
 
 
-read_settings() {
-	local settings="$1"
-	[[ -f "$settings" ]] && source "$settings"
-}
+load_settings() {
 
-write_settings() {
-	local settings="$1"
-	[[ -f "$settings" ]] || {
-		mkdir -p "${settings%/*}/"
-		cat > "$settings" <<- READSETTINGS
+	# eudora_conf: fac, env, arg
+	# wineprefix: fac, conf, env, arg
+	# others: fac, conf, arg
+	local FAC_EUDORA_CONFIG="$HOME/.config/eudora/eudora.conf"
+
+	# Save wineprefix env
+	ENV_WINEPREFIX="$WINEPREFIX"
+
+	# load config file
+	config="${ARG_EUDORA_CONFIG:-"$EUDORA_CONFIG"}"
+	config="${config:-"$FAC_EUDORA_CONFIG"}"
+	[[ -r "$config" ]] && source "$config"
+	
+	# Load wineprefix
+	WINEPREFIX="${WINEPREFIX:-"$HOME"/.wine}"
+	[[ "$ENV_WINEPREFIX" ]] && WINEPREFIX="$ENV_WINEPREFIX" 
+	[[ "$ARG_WINEPREFIX" ]] && WINEPREFIX="$ARG_WINEPREFIX" 
+
+	# Load other variables factory values
+	EUDORA_EXEFOLDER="${EUDORA_EXEFOLDER:-"$WINEPREFIX/dosdevices/c:/Program Files/Qualcomm/Eudora"}"
+	EUDORA_DATAFOLDER="${EUDORA_DATAFOLDER:-"$WINEPREFIX/dosdevices/c:/users/$USER/Application Data/Qualcomm/Eudora"}"
+	EUDORA_WINDOW="${EUDORA_WINDOW:-restored}"
+	
+	# Other variables argument values
+	[[ "$ARG_EUDORA_EXEFOLDER"  ]] && EUDORA_EXEFOLDER="$ARG_EUDORA_EXEFOLDER"
+	[[ "$ARG_EUDORA_DATAFOLDER" ]] && EUDORA_DATAFOLDER="$ARG_EUDORA_DATAFOLDER"
+	[[ "$ARG_EUDORA_WINDOW"     ]] && EUDORA_WINDOW="$ARG_EUDORA_WINDOW"
+	[[ "$ARG_EUDORA_RAW"        ]] && EUDORA_RAW="$ARG_EUDORA_RAW"
+	[[ "$ARG_EUDORA_DEBUG"      ]] && EUDORA_DEBUG="$ARG_EUDORA_DEBUG"
+	
+	# Write settings
+	[[ -f "$FAC_EUDORA_CONFIG" ]] || {
+		mkdir -p "${FAC_EUDORA_CONFIG%/*}/"
+		cat > "$FAC_EUDORA_CONFIG" <<- LOADSETTINGS
 		# Eudora settings file
-		WINEPREFIX="${WINEPREFIX:-"$HOME/.wine"}"
-		EUDORA_EXEFOLDER="${EUDORA_EXEFOLDER:-"$WINEPREFIX/dosdevices/c:/Program Files/Qualcomm/Eudora"}"
-		EUDORA_DATAFOLDER="${EUDORA_DATAFOLDER:-"$WINEPREFIX/dosdevices/c:/users/$USER/Application Data/Qualcomm/Eudora"}"
+		WINEPREFIX="$WINEPREFIX"
+		EUDORA_EXEFOLDER="$EUDORA_EXEFOLDER"
+		EUDORA_DATAFOLDER="$EUDORA_DATAFOLDER"
+		EUDORA_WINDOW="$EUDORA_WINDOW"
 		EUDORA_RAW="$EUDORA_RAW"
 		EUDORA_DEBUG="$EUDORA_DEBUG"
-		READSETTINGS
+		LOADSETTINGS
 	}
+	
+	# translate window setting to real value
+	case "${EUDORA_WINDOW,,}" in
+	min*) EUDORA_WINDOW="/M"   ;;
+	max*) EUDORA_WINDOW="/MAX" ;;
+	*   ) EUDORA_WINDOW="/R"   ;;
+	esac
 }
 
 
@@ -464,24 +497,9 @@ handle_mailto() {
 
 ####################################### Main
 
+exec 3>/dev/null # to avoid harcoding /dev/null everywhere. For tools' stderr.
 
-config="${EUDORA_CONFIG:-$HOME/.config/eudora/eudora.conf}"
-
-[[ -r "$config" ]] && source "$config"
-
-unset profilemap; declare -A profilemap
-unset args      ; declare -a args
-unset output    ; declare -a output
-unset result    ; declare result
-unset mailto    ; declare mailto
-unset options   ; declare options
-unset file      ; declare file
-
-export WINEPREFIX
-
-exec 3> /dev/null # to avoid harcoding /dev/null everywhere. For tools' stderr.
-
-SELF="${0##*/}" # buitin $(basename $0)
+self="${0##*/}" # buitin $(basename $0)
 
 while [[ $# -gt 0 ]]; do
 	
@@ -494,13 +512,14 @@ while [[ $# -gt 0 ]]; do
 	--manual ) manual  ; exit ;;
 	--version) version ; exit ;;
 	
-	--debug  ) EUDORA_DEBUG=1 ;;
-	--raw    ) EUDORA_RAW=1   ;;
+	--debug  ) ARG_EUDORA_DEBUG=1 ;;
+	--raw    ) ARG_EUDORA_RAW=1   ;;
 	
-	--wineprefix) WINEPREFIX="$1"        ; shift ;;
-	--exepath   ) EUDORA_EXEFOLDER="$1"  ; shift ;;
-	--datafolder) EUDORA_DATAFOLDER="$1" ; shift ;;
-	--config    ) EUDORA_CONFIG="$1"     ; shift ;;	
+	--wineprefix) ARG_WINEPREFIX="$1"        ; shift ;;
+	--exepath   ) ARG_EUDORA_EXEFOLDER="$1"  ; shift ;;
+	--datafolder) ARG_EUDORA_DATAFOLDER="$1" ; shift ;;
+	--window    ) ARG_EUDORA_WINDOW="$1"     ; shift ;;
+	--config    ) ARG_EUDORA_CONFIG="$1"     ; shift ;;	
 	
 	mailto:*) args+=( "$arg" ); mailto="$arg";;
 	
@@ -518,9 +537,15 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-[[ -e "$config" || "$EUDORA_CONFIG" ]] || write_config "$config"
+load_settings
+
+export WINEPREFIX
 
 [[ "$EUDORA_DEBUG" ]] && debug
+
+unset profilemap; declare -A profilemap
+unset output    ; declare -a output
+unset result    ; declare result
 
 if [[ "$EUDORA_RAW" ]]; then
 	output=( "${args[@]}" )
@@ -542,5 +567,5 @@ fix_crash
 
 cd "$EUDORA_EXEFOLDER" || exit 1
 
-wine "C:\\windows\\command\\start.exe" /MAX ./Eudora.exe "${output[@]}" 2>&3
+wine "C:\\windows\\command\\start.exe" "$EUDORA_WINDOW" ./Eudora.exe "${output[@]}" 2>&3
 
