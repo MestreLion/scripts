@@ -83,6 +83,10 @@ export CUSTOM_RUNONCE_ALREADY_DID=20
 export WINEBOTTLEHOME="$HOME/.local/share/wineprefixes"
 export WINEHOME="$WINEBOTTLEHOME" #deprecated
 
+# Debian Development
+export DEBFULLNAME="Rodrigo Silva"
+export DEBEMAIL="linux@rodrigosilva.com"
+
 # Locales
 export LANG="en_US.utf8"
 export LANGUAGE="en_US:en"
