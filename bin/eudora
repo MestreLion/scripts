@@ -27,7 +27,9 @@
 # and the contributors of http://mywiki.wooledge.org/ - Best bash source ever!
 #
 # TODO: use Simple MAPI for attachments
-# TODO: window size (start /MAX, /M, /R)
+# FIXME: update manual
+# FIXME: variables uppercase names
+# FIXME: revamp debug
 
 #######################################  Functions
 
@@ -295,13 +297,20 @@ VERSION
 }
 
 debug() {
-	exec 3>>"$HOME/.config/eudora/eudora.log" 1>&3 2>&3 
+	exec 3>>"$HOME/.config/eudora/eudora.log" 1>&3 2>&3
+	printf '\n\n%s - Eudora starting\n' "$(date --rfc-3339 seconds)"
+	printf 'Arguments:' ; printf ' %q' "${args[@]}" ; printf '\n'
 	set -x
 }
 
 fix_crash() {
 
+	if [[ ! -e "$EUDORA_DATAFOLDER/OWNER.LOK" ]] || \
+	   { ps -A | grep -qi Eudora.exe ; }
+	then return ; fi
+	
 	local msg
+
 	case "$LANG" in
 	pt*)
 		msg+="Eudora parece ter falhado da última vez. "
@@ -317,20 +326,17 @@ fix_crash() {
 		;;
 	esac
 	
-	if [[ -e "$EUDORA_DATAFOLDER/OWNER.LOK" ]] && \
-	   ! { ps -A | grep -qi Eudora.exe ; }     && \
-	   zenity --question --no-wrap --title="Eudora crash fix" --text="$msg"
-	then
-		ini=$( awk '
-			BEGIN { RS="\r\n"; ORS=RS; ok=1 }
-			/^\[Open Windows\]/ { ok=0; next }
-			/^\[/ { ok=1 }
-			ok { print }
-			' "$EUDORA_DATAFOLDER/eudora.ini"
-		)
-		printf "%s\r\n" "$ini" > "$EUDORA_DATAFOLDER/eudora.ini"
-		rm -f -- "$EUDORA_DATAFOLDER/OWNER.LOK"
-	fi
+	zenity --question --no-wrap --title="Eudora" --text="$msg" || return
+	
+	ini=$( awk '
+		BEGIN { RS="\r\n"; ORS=RS; ok=1 }
+		/^\[Open Windows\]/ { ok=0; next }
+		/^\[/ { ok=1 }
+		ok { print }
+		' "$EUDORA_DATAFOLDER/eudora.ini"
+	)
+	printf "%s\r\n" "$ini" > "$EUDORA_DATAFOLDER/eudora.ini"
+	rm -f -- "$EUDORA_DATAFOLDER/OWNER.LOK"
 }
 
 
@@ -419,7 +425,7 @@ userprofile_search() {
 
 	# winepath with no options nicely convert from relative to absolute
 	# without canonicalizing it, but give weird results if file already absolute
-	[[ "$unixfile" = /* ]] || unixfile=$(winepath "$1")
+	[[ "$unixfile" = /* ]] || unixfile=$( wine winepath "$1" )
 	
 	# loop profile map and try to get a match
 	while IFS= read -rd '' dir; do
@@ -460,38 +466,41 @@ translate_file() {
 	result="$winfile"
 }
 
-handle_mailto() {
+# Look for attachments in mailto: url
+read_mailto_attachments() {
 	
 	local url="${1#mailto:}"
-	local address=""
-	local querystring=""
+	local querystring="${url#*\?}"
 	local field
 	local value
 	local userfile
-	local attach
+	
+	while IFS="=" read -r field value; do
+		if [[ "${field,,}" = "attach" ]]; then
+			userfile=$(echo "$value"|sed 's/^file:\/\///;s/+/ /g;s/%/\\x/g')
+			files+=( "$(echo -e "$userfile")" )
+		fi
+	done <<< "${querystring//&/$'\n'}"
+}
+
+# not used, for now...
+parse_mailto() {
+	
+	local url="${1#mailto:}"
+	local querystring="$url"
+	local to
+	local field
+	local value
 	local options
 	
 	if [[ "$url" = *\?* ]]; then
-		IFS="?" read -r address querystring <<< "$url"
-	else
-		address=""
-		querystring="$url"
+		IFS="?" read -r to querystring <<< "$url"
+		options=" --to $to"
 	fi
 	
 	while IFS="=" read -r field value; do
-		case "$field" in
-		attach)
-			userfile=$(echo "$value"|sed 's/^file:\/\///;s/+/ /g;s/%/\\x/g')
-			files+=( "$(echo -e "$userfile")" )
-			attach=1
-		;;
-		*) options+="&${field}=${value}" ;;
-		esac
+		options+=" --$field $value"
 	done <<< "${querystring//&/$'\n'}"
-	
-	# Eudora can handle either mailto: or attachments, but not both
-	if [[ "$attach" ]]; then result=""; else result="$1"; fi
-	
 }
 
 
@@ -525,8 +534,8 @@ while [[ $# -gt 0 ]]; do
 	
 	*@*)
 		args+=( "$arg" )
-        if [[ "${mailto}" ]] ; then
-            options="${options}to=${arg}&"
+        if [[ "$mailto" ]] ; then
+            recipients+="to=${arg}&"
         else
 			mailto="mailto:${arg}?"
         fi
@@ -541,31 +550,44 @@ load_settings
 
 export WINEPREFIX
 
-[[ "$EUDORA_DEBUG" ]] && debug
-
 unset profilemap; declare -A profilemap
 unset output    ; declare -a output
 unset result    ; declare result
+
+[[ "$EUDORA_DEBUG" ]] && debug
 
 if [[ "$EUDORA_RAW" ]]; then
 	output=( "${args[@]}" )
 else
 
-	[[ "$mailto" ]] && handle_mailto "$mailto"
+	# handle mailto args
+	if [[ "$mailto" ]]; then
 	
+		# add recipients
+		case "$mailto" in
+		*\? ) mailto="${mailto}${recipients}"  ;;
+		*\?*) mailto="${mailto}&${recipients}" ;;
+		*   ) mailto="${mailto}?${recipients}" ;;
+		esac
+
+		# Strip trailing ? and &
+		mailto="$(echo "${mailto}"| sed 's/[?&]$//')"
+		
+		read_mailto_attachments "$mailto"
+	fi
+	
+	# handle file args
 	for file in "${files[@]}"; do
 		translate_file "$file"
 		[[ "$result" ]] && output+=( "$result" )
 	done
 	
+	# Eudora can handle either mailto: or attachments, but not both
 	[[ "${#output[@]}" -gt 0 ]] || output=( "$mailto" )
 fi
-
-[[ "$EUDORA_DEBUG" ]] && declare -p output
 
 fix_crash
 
 cd "$EUDORA_EXEFOLDER" || exit 1
-
 wine "C:\\windows\\command\\start.exe" "$EUDORA_WINDOW" ./Eudora.exe "${output[@]}" 2>&3
 
