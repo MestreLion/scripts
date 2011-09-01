@@ -27,22 +27,24 @@
 # and the contributors of http://mywiki.wooledge.org/ - Best bash source ever!
 #
 # TODO: use Simple MAPI for attachments
-# TODO: window size (start /MAX, /M, /R)
+# FIXME: update manual
+# FIXME: variables uppercase names
+# FIXME: revamp debug
 
 #######################################  Functions
 
 manual()
 {
-cat << _MANUALPAGE
+cat << MANUALPAGE
 eudora - launcher for Qualcomm's Eudora Mail under wine
 
 Usage
 
-$SELF [OPTIONS] [ MAILTO-URI | ADDRESS(ES)... | FILE(S)... ]
+$self [OPTIONS] [ MAILTO-URI | ADDRESS(ES)... | FILE(S)... ]
 
-$SELF [OPTIONS] --raw [ARGUMENTS...]
+$self [OPTIONS] --raw [ARGUMENTS...]
 
-$SELF { --help | --manual | --version }
+$self { --help | --manual | --version }
 
 
 Description
@@ -181,11 +183,11 @@ WINEPREFIX
     Path to wine's virtual windows environment where Eudora Mail is installed.
     See wine documentation for more details. Default is "\$HOME/.wine"
 
-EUDORA_EXEPATH
+EUDORA_EXEFOLDER
     The full (unix) path where Eudora is installed (where Eudora.exe is located)
     Default is "\$WINEPREFIX/dosdevices/c:/Program Files/Qualcomm/Eudora"
 
-EUDORA_DATAFILE
+EUDORA_DATAFOLDER
     The full (unix) path to Eudora's Data Folder, which stores user's mailboxes
     and settings. Default is:
     "\$WINEPREFIX/dosdevices/c:/users/\$USER/Application Data/Qualcomm/Eudora"
@@ -225,17 +227,17 @@ failure. The following failure codes can be returned:
 
 Examples
 
-$SELF mailto:someone@somewhere.com
+$self mailto:someone@somewhere.com
 
-$SELF mailto:eudora@qualcomm.com?cc=a@b.c&subject=Eudora+Lives&body=..kind+of
+$self mailto:eudora@qualcomm.com?cc=a@b.c&subject=Eudora+Lives&body=..kind+of
 
-$SELF /tmp/somefile.txt
+$self /tmp/somefile.txt
 
-$SELF mailto:?attach=/tmp/AttachMe&attach=file:///tmp/AndMe' ../test/MeToo.txt
+$self mailto:?attach=/tmp/AttachMe&attach=file:///tmp/AndMe' ../test/MeToo.txt
 
-$SELF /tmp/OkToAttach.jpg "/tmp/no spaces allowed.mp3" /tmp/SorryNoDirsEither/
+$self /tmp/OkToAttach.jpg "/tmp/no spaces allowed.mp3" /tmp/SorryNoDirsEither/
 
-$SELF mailto:dontmix@withattaches.com?body=i+will+be+ignored&attach=/tmp/file
+$self mailto:dontmix@withattaches.com?body=i+will+be+ignored&attach=/tmp/file
 
 
 Written by
@@ -255,15 +257,15 @@ and associated native files only! Eudora Mail itself is propietary software,
 copyright of Qualcomm Inc. Wine and its tools are free software under different
 copyright and license. See <http://www.eudora.com> and <http://www.winehq.org>
 
-_MANUALPAGE
+MANUALPAGE
 }
 
 usage()
 {
-cat << _USAGE
-Usage: $SELF [OPTIONS] [ MAILTO-URI | ADDRESS(ES)... | FILE(S)... ]
-       $SELF [OPTIONS] --raw [ARGUMENTS...]
-       $SELF { --help | --manual | --version }
+cat << USAGE
+Usage: $self [OPTIONS] [ MAILTO-URI | ADDRESS(ES)... | FILE(S)... ]
+       $self [OPTIONS] --raw [ARGUMENTS...]
+       $self { --help | --manual | --version }
 
 Launches Eudora Mail under Wine
 
@@ -274,13 +276,13 @@ Options:
 --debug           Turns on debug mode
 --raw             Relay all command-line arguments unparsed to Eudora.exe
 
-Use "$SELF --manual" for additional info
-_USAGE
+Use "$self --manual" for additional info
+USAGE
 }
 
 version() {
-cat << _VERSION
-$SELF 1.0
+cat << VERSION
+$self 1.0
 
 Copyright (C) 2011 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
@@ -291,43 +293,107 @@ Eudora Mail is a copyright of Qualcomm Inc. See <http://www.eudora.com>
 For wine copyright and license, see <http://www.winehq.com>
 
 Launcher written by Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
-_VERSION
+VERSION
 }
 
 debug() {
-	exec 3>>"$HOME/.config/eudora/eudora.log" 1>&3 2>&3 
+	exec 3>>"$HOME/.config/eudora/eudora.log" 1>&3 2>&3
+	printf '\n\n%s - Eudora starting\n' "$(date --rfc-3339 seconds)"
+	printf 'Arguments:' ; printf ' %q' "${args[@]}" ; printf '\n'
 	set -x
 }
 
 fix_crash() {
-	if [[ -e "$EUDORA_DATAFOLDER/OWNER.LOK" ]] && \
-	   ! { ps -A | grep -qi Eudora.exe ; }; then
+
+	if [[ ! -e "$EUDORA_DATAFOLDER/OWNER.LOK" ]] || \
+	   { ps -A | grep -qi Eudora.exe ; }
+	then return ; fi
 	
-		if zenity --question --no-wrap --title="Eudora crash fix" \
-		          --text="Looks like Eudora has crashed last time. Would you "\
-		                 "like me to try to fix that?\n\n(that will close all "\
-		                 "your opened mailboxes tough)"
-		then
-			: # awk -f $EUDORA_DATAFOLDER '[Open Windows]'
-		fi
-	fi
+	local msg
+
+	case "$LANG" in
+	pt*)
+		msg+="Eudora parece ter falhado da última vez. "
+		msg+="Você gostaria de tentar consertar?\n\n"
+		msg+="(isso vai apenas fechar as janelas de caixas de correio. "
+		msg+="Nenhuma mensagem será apagada ou perdida.)"
+		;;
+	*  )
+		msg+="Looks like Eudora has crashed last time. "
+		msg+="Would you like me to try to fix that?\n\n"
+		msg+="(that will close all your currently opened mailboxes tough. "
+		msg+="No messages will be deleted or lost)"
+		;;
+	esac
+	
+	zenity --question --no-wrap --title="Eudora" --text="$msg" || return
+	
+	ini=$( awk '
+		BEGIN { RS="\r\n"; ORS=RS; ok=1 }
+		/^\[Open Windows\]/ { ok=0; next }
+		/^\[/ { ok=1 }
+		ok { print }
+		' "$EUDORA_DATAFOLDER/eudora.ini"
+	)
+	printf "%s\r\n" "$ini" > "$EUDORA_DATAFOLDER/eudora.ini"
+	rm -f -- "$EUDORA_DATAFOLDER/OWNER.LOK"
 }
 
 
-read_settings() {
-	settings="$1"
-	if [[ ! -f "$settings" ]]; then
-		mkdir -p "${settings%/*}/"
-		cat > "$settings" <<- _READSETTINGS
+load_settings() {
+
+	# eudora_conf: fac, env, arg
+	# wineprefix: fac, conf, env, arg
+	# others: fac, conf, arg
+	local FAC_EUDORA_CONFIG="$HOME/.config/eudora/eudora.conf"
+
+	# Save wineprefix env
+	ENV_WINEPREFIX="$WINEPREFIX"
+
+	# load config file
+	config="${ARG_EUDORA_CONFIG:-"$EUDORA_CONFIG"}"
+	config="${config:-"$FAC_EUDORA_CONFIG"}"
+	[[ -r "$config" ]] && source "$config"
+	
+	# Load wineprefix
+	WINEPREFIX="${WINEPREFIX:-"$HOME"/.wine}"
+	[[ "$ENV_WINEPREFIX" ]] && WINEPREFIX="$ENV_WINEPREFIX" 
+	[[ "$ARG_WINEPREFIX" ]] && WINEPREFIX="$ARG_WINEPREFIX" 
+
+	# Load other variables factory values
+	EUDORA_EXEFOLDER="${EUDORA_EXEFOLDER:-"$WINEPREFIX/dosdevices/c:/Program Files/Qualcomm/Eudora"}"
+	EUDORA_DATAFOLDER="${EUDORA_DATAFOLDER:-"$WINEPREFIX/dosdevices/c:/users/$USER/Application Data/Qualcomm/Eudora"}"
+	EUDORA_WINDOW="${EUDORA_WINDOW:-restored}"
+	
+	# Other variables argument values
+	[[ "$ARG_EUDORA_EXEFOLDER"  ]] && EUDORA_EXEFOLDER="$ARG_EUDORA_EXEFOLDER"
+	[[ "$ARG_EUDORA_DATAFOLDER" ]] && EUDORA_DATAFOLDER="$ARG_EUDORA_DATAFOLDER"
+	[[ "$ARG_EUDORA_WINDOW"     ]] && EUDORA_WINDOW="$ARG_EUDORA_WINDOW"
+	[[ "$ARG_EUDORA_RAW"        ]] && EUDORA_RAW="$ARG_EUDORA_RAW"
+	[[ "$ARG_EUDORA_DEBUG"      ]] && EUDORA_DEBUG="$ARG_EUDORA_DEBUG"
+	
+	# Write settings
+	[[ -f "$FAC_EUDORA_CONFIG" ]] || {
+		mkdir -p "${FAC_EUDORA_CONFIG%/*}/"
+		cat > "$FAC_EUDORA_CONFIG" <<- LOADSETTINGS
 		# Eudora settings file
-		WINEPREFIX="${WINEPREFIX:-"$HOME/.wine"}"
-		EUDORA_EXEPATH="${EUDORA_EXEPATH:-"$WINEPREFIX/dosdevices/c:/Program Files/Qualcomm/Eudora"}"
-		EUDORA_DATAFOLDER="${EUDORA_DATAFOLDER:-"$WINEPREFIX/dosdevices/c:/users/$USER/Application Data/Qualcomm/Eudora"}"
+		# Use shell syntax only
+		# For additional info, see "$self --manual"
+		WINEPREFIX="$WINEPREFIX"
+		EUDORA_EXEFOLDER="${EUDORA_EXEFOLDER/"$WINEPREFIX"/\$WINEPREFIX}"
+		EUDORA_DATAFOLDER="${EUDORA_DATAFOLDER/"$WINEPREFIX"/\$WINEPREFIX}"
+		EUDORA_WINDOW="$EUDORA_WINDOW"
 		EUDORA_RAW="$EUDORA_RAW"
 		EUDORA_DEBUG="$EUDORA_DEBUG"
-		_READSETTINGS
-	fi
-	source "$settings"
+		LOADSETTINGS
+	}
+	
+	# translate window setting to real value
+	case "${EUDORA_WINDOW,,}" in
+	min*) EUDORA_WINDOW="/M"   ;;
+	max*) EUDORA_WINDOW="/MAX" ;;
+	*   ) EUDORA_WINDOW="/R"   ;;
+	esac
 }
 
 
@@ -361,7 +427,7 @@ userprofile_search() {
 
 	# winepath with no options nicely convert from relative to absolute
 	# without canonicalizing it, but give weird results if file already absolute
-	[[ "$unixfile" = /* ]] || unixfile=$(winepath "$1")
+	[[ "$unixfile" = /* ]] || unixfile=$( wine winepath "$1" )
 	
 	# loop profile map and try to get a match
 	while IFS= read -rd '' dir; do
@@ -402,244 +468,128 @@ translate_file() {
 	result="$winfile"
 }
 
-handle_mailto() {
+# Look for attachments in mailto: url
+read_mailto_attachments() {
 	
 	local url="${1#mailto:}"
-	local address=""
-	local querystring=""
+	local querystring="${url#*\?}"
 	local field
 	local value
 	local userfile
-	local attach
+	
+	while IFS="=" read -r field value; do
+		if [[ "${field,,}" = "attach" ]]; then
+			userfile=$(echo "$value"|sed 's/^file:\/\///;s/+/ /g;s/%/\\x/g')
+			files+=( "$(echo -e "$userfile")" )
+		fi
+	done <<< "${querystring//&/$'\n'}"
+}
+
+# not used, for now...
+parse_mailto() {
+	
+	local url="${1#mailto:}"
+	local querystring="$url"
+	local to
+	local field
+	local value
 	local options
 	
 	if [[ "$url" = *\?* ]]; then
-		IFS="?" read -r address querystring <<< "$url"
-	else
-		address=""
-		querystring="$url"
-	fi
-	
-	while IFS="=" read -r field value; do
-		case "$field" in
-		attach)
-			userfile=$(echo "$value"|sed 's/^file:\/\///;s/+/ /g;s/%/\\x/g')
-			files+=( "$(echo -e "$userfile")" )
-			attach=1
-		;;
-		*) options+="&${field}=${value}" ;;
-		esac
-	done <<< "${querystring//&/$'\n'}"
-	
-	# Eudora can handle either mailto: or attachments, but not both
-	if [[ "$attach" ]]; then result=""; else result="$1"; fi
-	
-}
-
-new_main() {
-	####################################### Main
-
-
-	read_settings "$HOME/.config/eudora/eudora.conf"
-
-	unset profilemap; declare -A profilemap
-	unset args      ; declare -a args
-	unset output    ; declare -a output
-	unset result    ; declare result
-	unset mailto    ; declare mailto
-	unset options   ; declare options
-	unset file      ; declare file
-
-
-	export WINEPREFIX
-
-
-	exec 3> /dev/null # to avoid harcoding /dev/null everywhere. For tools' stderr.
-
-	SELF="${0##*/}" # buitin $(basename $0)
-
-	while [[ $# -gt 0 ]]; do
-	
-		arg="$1"
-		shift
-	
-		case "$arg" in
-	
-		--help   ) usage   ; exit ;;
-		--manual ) manual  ; exit ;;
-		--version) version ; exit ;;
-	
-		--debug  ) EUDORA_DEBUG=1 ;;
-		--raw    ) EUDORA_RAW=1   ;;
-	
-		--wineprefix) WINEPREFIX="$1"        ; shift ;;
-		--exepath   ) EUDORA_EXEPATH="$1"    ; shift ;;
-		--datafolder) EUDORA_DATAFOLDER="$1" ; shift ;;
-	
-	
-		mailto:*) args+=( "$arg" ); mailto="$arg";;
-	
-		*@*)
-			args+=( "$arg" )
-		    if [[ "${mailto}" ]] ; then
-		        options="${options}to=${arg}&"
-		    else
-				mailto="mailto:${arg}?"
-		    fi
-		    ;;
-
-		*) files+=( "$arg" ); args+=( "$arg" );;
-	
-		esac
-	done
-
-	[[ "$EUDORA_DEBUG" ]] && debug
-
-	if [[ "$EUDORA_RAW" ]]; then
-		output=( "${args[@]}" )
-	else
-		[[ "$mailto" ]] && handle_mailto "$mailto"
-	
-		for file in "${files[@]}"; do
-			translate_file "$file"
-			[[ "$result" ]] && output+=( "$result" )
-		done
-	
-		[[ "${#output[@]}" -gt 0 ]] || output=( "$mailto" )
-	fi
-
-	[[ "$EUDORA_DEBUG" ]] && declare -p output
-
-	cd "$WINEPREFIX/dosdevices/c:/Program Files/Qualcomm/Eudora" || exit 1
-
-	wine "C:\\windows\\command\\start.exe" /MAX ./Eudora.exe "${output[@]}" 2>&3
-}
-
-
-export WINEPREFIX="/home/rodrigo/.local/share/wineprefixes/eudora"
-
-declare -A profilemap=()
-declare -a output=()
-declare result=""
-
-# search for an alternate path for a unix file,
-# based on wine's user profile dirs (Desktop, My Pictures, etc)
-userprofile_search() {
-
-	local unixfile="$1"
-	local dir
-	local key
-	local list
-
-	# create profile map only once	
-	if [[ ${#profilemap[@]} = 0 ]]; then
-
-		# Loop wine's user folder, for symlinks to filesystem dirs
-		# (so files in ~/Desktop, ~/Music, etc are correctly translated by winepath 
-		#  even if wine has no "Z:\ => /" mapping) (for reference: cmd switches qksautc)
-		dir=$(wine winepath -u "$(wine cmd /c echo '%USERPROFILE%'|cut -d$'\r' -f1)")
-		if [[ -d "$dir" ]]; then
-			list=("$dir"/*)
-			for dir in "${list[@]}"; do
-				key=$(readlink -s "$dir")
-				[[ -h "$dir" ]] && profilemap[${key%/}]="${dir%/}"
-			done
-		fi
-	fi
-
-	# winepath with no options nicely convert from relative to absolute
-	# without canonicalizing it, but give weird results if file already absolute
-	[[ "$unixfile" = /* ]] || unixfile=$(winepath "$1")
-	
-	# loop profile map and try to get a match
-	while IFS= read -rd '' dir; do
-		if [[ "${unixfile%/*}/" = "$dir"/* ]]; then
-			
-			result="${profilemap[$dir]}${unixfile#$dir}"
-			return
-		fi
-	done < <(printf '%s\0' "${!profilemap[@]}" | sort -z --reverse)
-	
-	result=""
-}
-
-# Translate file from unix path to windows path
-translate_file() {
-
-	local unixfile="$1"
-	local winfile=""
-
-	# File must exist and not be a directory
-	if [[ -e "$unixfile" && ! -d "$unixfile" ]]; then
-	
-		# Get the windows path
-		winfile=$(wine winepath -w "$unixfile")
-		
-		# Check if file was not succesfully mapped
-		if [[ "$winfile" = \\\\\?\\unix\\* ]]; then
-			
-			# Try to map to a user folder
-			userprofile_search "$unixfile"
-			[[ "$result" ]] && winfile=$(wine winepath -w "$result")			
-		fi
-		
-		# Lame eudora does not support filenames with espaces (not even quoted)
-		[[ "$winfile" = *[[:blank:]]* ]] && winfile=""		
-	fi
-	
-	result="$winfile"
-}
-
-handle_mailto() {
-	
-	local url="${1#mailto:}"
-	local to=""
-	local querystring=""
-	local field
-	local value
-	local attach
-	
-	if [[ "$url" = *\?* ]]; then
 		IFS="?" read -r to querystring <<< "$url"
-	else
-		querystring="$url"
+		options=" --to $to"
 	fi
 	
 	while IFS="=" read -r field value; do
-		case "$field" in
-		attach)
-			translate_file "${value#file://}"
-			[[ "$result" ]] && { output+=( "$result" ) ; attach=1 ; }
-		;;
-		esac
+		options+=" --$field $value"
 	done <<< "${querystring//&/$'\n'}"
-	
-	#Eudora can handle either mailto: or attachments, but not both
-	[[ "$attach" ]] || output=( "$1" )
-	
 }
 
-for arg; do
+
+####################################### Main
+
+exec 3>/dev/null # to avoid harcoding /dev/null everywhere. For tools' stderr.
+
+self="${0##*/}" # buitin $(basename $0)
+
+while [[ $# -gt 0 ]]; do
+	
+	arg="$1"
+	shift
+	
 	case "$arg" in
-	mailto:*) 
-		handle_mailto "$arg"
-		break
-	;;
-	*)
-		translate_file "$arg"
-		[[ "$result" ]] && output+=( "$result" )
-	;;
+	
+	--help   ) usage   ; exit ;;
+	--manual ) manual  ; exit ;;
+	--version) version ; exit ;;
+	
+	--debug  ) ARG_EUDORA_DEBUG=1 ;;
+	--raw    ) ARG_EUDORA_RAW=1   ;;
+	
+	--wineprefix) ARG_WINEPREFIX="$1"        ; shift ;;
+	--exepath   ) ARG_EUDORA_EXEFOLDER="$1"  ; shift ;;
+	--datafolder) ARG_EUDORA_DATAFOLDER="$1" ; shift ;;
+	--window    ) ARG_EUDORA_WINDOW="$1"     ; shift ;;
+	--config    ) ARG_EUDORA_CONFIG="$1"     ; shift ;;	
+	
+	mailto:*) args+=( "$arg" ); mailto="$arg";;
+	
+	*@*)
+		args+=( "$arg" )
+        if [[ "$mailto" ]] ; then
+            recipients+="to=${arg}&"
+        else
+			mailto="mailto:${arg}?"
+        fi
+        ;;
+
+	*) args+=( "$arg" ); files+=( "$arg" ) ;;
+	
 	esac
 done
 
-#declare -p profilemap
-#declare -p output
-#exit
+load_settings
 
-cd "$WINEPREFIX/dosdevices/c:/Program Files/Qualcomm/Eudora" || exit 1
+export WINEPREFIX
 
-wine "C:\\windows\\command\\start.exe" /MAX ./Eudora.exe "${output[@]}" 2>/dev/null
+unset profilemap; declare -A profilemap
+unset output    ; declare -a output
+unset result    ; declare result
 
+[[ "$EUDORA_DEBUG" ]] && debug
 
-#env WINEPREFIX="/home/rodrigo/.local/share/wineprefixes/eudora" wine "C:\\windows\\command\\start.exe" /MAX "/home/rodrigo/.local/share/wineprefixes/eudora/dosdevices/c:/Program Files/Qualcomm/Eudora/Eudora.exe"
+if [[ "$EUDORA_RAW" ]]; then
+	output=( "${args[@]}" )
+else
+
+	# handle mailto args
+	if [[ "$mailto" ]]; then
+	
+		# add recipients
+		case "$mailto" in
+		*\? ) mailto="${mailto}${recipients}"  ;;
+		*\?*) mailto="${mailto}&${recipients}" ;;
+		*   ) mailto="${mailto}?${recipients}" ;;
+		esac
+
+		# Strip trailing ? and &
+		mailto="$(echo "${mailto}"| sed 's/[?&]$//')"
+		
+		read_mailto_attachments "$mailto"
+	fi
+	
+	# handle file args
+	for file in "${files[@]}"; do
+		translate_file "$file"
+		[[ "$result" ]] && output+=( "$result" )
+	done
+	
+	# Eudora can handle either mailto: or attachments, but not both
+	[[ "${#output[@]}" -gt 0 ]] || output=( "$mailto" )
+fi
+
+fix_crash
+
+cd "$EUDORA_EXEFOLDER" || exit 1
+wine "C:\\windows\\command\\start.exe" "$EUDORA_WINDOW" ./Eudora.exe "${output[@]}" 2>&3
 
