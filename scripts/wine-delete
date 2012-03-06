@@ -19,27 +19,27 @@ if [[ -z "$prefix" ]] ; then
 	echo "$SELF: error: please specify the prefix to delete"
 else
 	#check if prefix exists
-	[[ -e "$WINEHOME/$prefix" ]] || fatal "wine prefix $WINEHOME/$prefix does not exist. Use wine-create to create" 3
+	[[ -e "$WINEBOTTLEHOME/$prefix" ]] || fatal "wine prefix $WINEBOTTLEHOME/$prefix does not exist. Use wine-create to create" 3
 
 	# check if its a directory
-	if [[ -d "$WINEHOME/$prefix" ]]; then
+	if [[ -d "$WINEBOTTLEHOME/$prefix" ]]; then
 		if [[ -n "$VERBOSE" ]] ; then
 			echo "$SELF will now launch wine's uninstaller. Please use it to uninstall all applications so menu entries will be cleaned before data is deleted."
 			[[ -z "$FORCE" ]] && read -n 1 -p "Press any key to continue" dummy
 		fi
 	
 		# run unintaller
-		env WINEPREFIX="$WINEHOME/$prefix" wine uninstaller
+		env WINEPREFIX="$WINEBOTTLEHOME/$prefix" wine uninstaller
 	fi
 
 	# confirm with user
-	confirm "Do you really want to PERMANENTELY DELETE wine prefix $WINEHOME/$prefix ?" || exit 0
+	confirm "Do you really want to PERMANENTELY DELETE wine prefix $WINEBOTTLEHOME/$prefix ?" || exit 0
 	[[ "$VERBOSE" ]] && echo "Deleting, please wait..."
-	[[ -d "$WINEHOME/$prefix" ]] && sleep 7 # wait for uninstaller to update registry
+	[[ -d "$WINEBOTTLEHOME/$prefix" ]] && sleep 7 # wait for uninstaller to update registry
 
 	# delete prefix
-	#rm -rf "$WINEHOME/$prefix"/* #delete content even if bottle is symlink to dir
-	rm -rf "$WINEHOME/$prefix"
-	[[ -n "$VERBOSE" ]] && echo "wine prefix $WINEHOME/$prefix was removed."
+	#rm -rf "$WINEBOTTLEHOME/$prefix"/* #delete content even if bottle is symlink to dir
+	rm -rf "$WINEBOTTLEHOME/$prefix"
+	[[ -n "$VERBOSE" ]] && echo "wine prefix $WINEBOTTLEHOME/$prefix was removed."
 fi
 

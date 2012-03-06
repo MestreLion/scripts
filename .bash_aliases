@@ -13,6 +13,7 @@ alias ....="cd ../../.."
 alias .....="cd ../../../.."
 alias path="echo \$PATH"
 alias fstab="gksudo gedit /etc/fstab &"
-alias which="type -P"
 
 cdl() { cd "$@" && ll ; }
+md() { mkdir "$@" ; cd "${@: -1}" ; }
+

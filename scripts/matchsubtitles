@@ -27,7 +27,7 @@ Options:
 --undo FILE - Create an undo script to revert the renaming. Run ./FILE to revert
 --run       - If not used, will not actually rename subtitles, only show what will be done
 
-Video files are *.avi, *.mkv, *.mpg and *.mpeg. All other files are ignored
+Video files are *.avi, *.mkv, *.mpg, *.mpeg and *.ogv. All other files are ignored
 Files that already have a matching subtitle and subtitles that already have a matching video will be ignored
 For desired results, files in same dir must be given in alphabetical order (use globs for that).
 Example: $self ~/Videos/Lost /shared/csi/miami_s1* '/movies/star wars'
@@ -93,7 +93,7 @@ for video in "${files[@]}"; do
 	dir="${dir:-./}"
 
 	# Is it a video?
-	case "${ext,,}" in avi|mpg|mpeg|mkv|mp4) ;; *) continue ;; esac
+	case "${ext,,}" in avi|mpg|mpeg|mkv|mp4|ogv) ;; *) continue ;; esac
 
 	# Has a matching subtitle already?
 	subtitle="${video%."$ext"}.srt"
@@ -108,7 +108,7 @@ for video in "${files[@]}"; do
 		for sub in "${allsubs[@]}"; do
 			if [[ -f "$sub" ]]; then
 				matchsub=""
-				for f in "${sub%.[Ss][Rr][Tt]}".{avi,mpg,mpeg,mkv,mp4}; do
+				for f in "${sub%.[Ss][Rr][Tt]}".{avi,mpg,mpeg,mkv,mp4,ogv}; do
 					if [[ -f "$f" ]]; then matchsub=1; break; fi
 				done
 				[[ "$matchsub" ]] || subtitles+=( "$sub" )

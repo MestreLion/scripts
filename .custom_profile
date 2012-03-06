@@ -74,6 +74,10 @@ append_path "$CUSTOM_SCRIPTS:$HOME/.local/bin:."
 
 export PATH
 
+# Thousand separator in ls filesizes
+# could also use ls -l --block-size="'1" as alias
+export LS_BLOCK_SIZE="'1"
+
 # Run-once definitions
 export CUSTOM_RUNONCE_OK=0
 export CUSTOM_RUNONCE_NOT_YET=10
@@ -81,7 +85,6 @@ export CUSTOM_RUNONCE_ALREADY_DID=20
 
 # Wine Bottles
 export WINEBOTTLEHOME="$HOME/.local/share/wineprefixes"
-export WINEHOME="$WINEBOTTLEHOME" #deprecated
 
 # Debian Development
 export DEBFULLNAME="Rodrigo Silva"
@@ -90,7 +93,7 @@ export DEBEMAIL="linux@rodrigosilva.com"
 # Locales
 export LANG="en_US.utf8"
 export LANGUAGE="en_US:en"
-export LC_NUMERIC="pt_BR.utf8"
+#export LC_NUMERIC="pt_BR.utf8" # qt4 (and maybe others) unfortunately use this
 export LC_TIME="pt_BR.utf8"
 export LC_MONETARY="pt_BR.utf8"
 export LC_PAPER="pt_BR.utf8"

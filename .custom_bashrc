@@ -15,17 +15,12 @@ if [ -f "$CUSTOM_ROOT/.bash_aliases" ] ; then
 	source "$CUSTOM_ROOT/.bash_aliases"
 fi
 
-# Thousand separator in ls filesizes
-# could also use ls -l --block-size="'1" as alias
-export LS_BLOCK_SIZE="'1"
-
 # Disable the dreaded history expansion for interactive sessions
 # A.K.A 'why echo "Hello World!" do not work?'
 set +o histexpand # same as set +H
 
-# Ubuntu Development
-DEBFULLNAME="MestreLion" 
-DEBEMAIL="launchpad@rodrigosilva.com"
+which() { builtin type -P "$@" ; }
+sudo() { cmd=$(type -p "$1"); shift; command sudo "$cmd" "$@" ; }
 
 wine-cd() {
 	local prefix="$1"
@@ -33,12 +28,12 @@ wine-cd() {
 		# default prefix
 		cd "$HOME/.wine/drive_c"
 	else
-		cd "$WINEHOME/$prefix/drive_c"
+		cd "$WINEBOTTLEHOME/$prefix/drive_c"
 	fi
 }
 
 wine-list() {
-	ls "$@" "$WINEHOME"
+	ls "$@" "$WINEBOTTLEHOME"
 }
 
 wine-cmd() {
@@ -51,7 +46,7 @@ wine-cmd() {
 		echo "wine-cmd: error: please specify the command to run"
 	else
 		shift; shift
-		env WINEPREFIX="$WINEHOME/$prefix" wine $cmd "$@"
+		env WINEPREFIX="$WINEBOTTLEHOME/$prefix" wine $cmd "$@"
 	fi
 }
 
@@ -68,12 +63,13 @@ wine-run() {
 		echo ""
 		echo "wine-run: error: please specify the application to run"
 	else
-		if [ ! -d "$WINEHOME/$app" ] ; then
+		if [ ! -d "$WINEBOTTLEHOME/$app" ] ; then
 			# default prefix
 			prefix="$HOME/.wine"
 		else
-			prefix="$WINEHOME/$app"
+			prefix="$WINEBOTTLEHOME/$app"
 		fi
 		env WINEPREFIX="$prefix" wine cmd /c c:\run-$app.bat
 	fi
 }
+

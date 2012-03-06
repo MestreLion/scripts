@@ -1,0 +1,102 @@
+#!/bin/bash
+#
+# hostlist - Scans LAN and lists hostnames from live hosts, saving to file
+#
+#    Copyright (C) 2011 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+#
+# Quick-and-dirty script to feed bash completion for known hosts, using the
+# currently-unused-and-soon-to-be-deprecated ~/ssh/known_hosts2 file. It uses
+# smbtree, avahi-browse and ping to generate the list of live hosts
+
+exec 3> /dev/null
+self="${0##*/}"
+
+# default settings
+config="${HOME}/ssh/known_hosts2"
+
+usage()
+{
+cat <<- USAGE
+	Usage: $self [--verbose] [--purge] [--config FILE]
+USAGE
+if [[ "$1" ]] ; then
+	cat <<- USAGE
+		Try '$self --help' for more information.
+	USAGE
+	exit 1
+fi
+cat <<-USAGE
+	Generates a list of live hostnames on LAN, adding new results to a file
+	
+	Options:
+	-v|--verbose     - print more details about what is being done
+	-p|--purge       - deletes all entries and re-creates the list with current scan results
+	-c|--config FILE - use FILE for storing results instead of the default file
+	                   NOTE: -cFILE or --config=FILE syntax is NOT supported
+
+	If used without any options, default behavior is to add new hostnames to
+	$config . Only the first "hosts" entry (if any) is read and changed.
+	All other settings in the file are ignored.
+USAGE
+exit 0
+}
+invalid()
+{
+	echo "$self: unrecognized option '$1'"
+	usage 1
+}
+
+while [[ $# -gt 0 ]]; do
+	arg="$1"; shift
+	case "$arg" in
+	-h|--help   ) usage               ;;
+	-v|--verbose) verbose=1           ;;
+	-p|--purge  ) purge=1             ;;
+	-c|--config ) config="$1" ; shift ;;
+	*           ) invalid "$arg"      ;;
+	esac
+done
+
+myip=$(ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | cut -d' ' -f1)
+subnet=${myip%.*}
+
+hosts=$(
+	{
+		for ip in {1..254} ; do
+			{ ping -n -c 1 -W 1 "${subnet}.${ip}" >&3 && { getent hosts "${subnet}.${ip}" | awk '{print $2}' ; } ; } &
+		done
+		smbtree -NS | awk -F '\t' '$2{ gsub(/^\\\\| +/,"",$2); print tolower($2) }'
+		avahi-browse --terminate --parsable --no-db-lookup --resolve _workstation._tcp | awk -F ';' '$1=="="{ print $(NF-3) }'
+	} | sort -u | awk '$0 != prev".local" { print ; prev=$0 }'
+)
+
+echo "$hosts"
+
+# References
+#avahi-browse --terminate --parsable --no-db-lookup _workstation._tcp | awk -F ';' '$3=="IPv4"{ gsub(/\\.*/,"",$4) ; print $4"."$(NF) }'
+#perl -ne 'print "$1 " if /^Host (.+)$/' ~/.ssh/config ; complete -W "$(_ssh_completion)" ssh
+#complete -W "$(echo `cat ~/.ssh/known_hosts | cut -f 1 -d ' ' | sed -e s/,.*//g | uniq | grep -v "\["`;)" ssh
+#complete -W "$(echo $(grep '^ssh ' .bash_history | sort -u | sed 's/^ssh //'))" ssh
+#reverse netbios: nmblookup
+#reverse avahi: avahi-resolve -a ipaddress
+
+#desktop
+#helena
+#vb-debian604.local
+#vb-fedora16.local
+#vb-lfs-build
+#vb-xp
+#vb-win7

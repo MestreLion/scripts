@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Wrapper for apt-get, adding some features only present in newer versions of apt
+
+# For reference:
+# lucid   : 0.7.25.3
+# maverick: 0.8.03
+# natty   : 0.8.13.2
+# oneiric : 0.8.16
+
+declare -a options=()
+
+while [[ "$1" ]]; do
+	
+	case "$1" in
+	
+	# Added in apt 0.8.11.2
+	--install-suggests|--suggests) options+=( "-o" "APT::Install-Suggests=true" ) ;;
+	
+	# Added in apt 0.8.11
+	download)
+		if [[ $(type -p aptitude) ]] ; then
+			aptitude "${options[@]}" "$@"
+			exit
+		else
+			echo "apt-get download requires aptitude to be installed."
+			echo "You can install it using sudo apt-get install aptitude"
+			exit 1
+		fi
+		;;
+
+	# Other options
+	*) options+=( "$1" ) ;;
+	
+	esac
+	
+	shift
+done
+
+/usr/bin/apt-get "${options[@]}"
+

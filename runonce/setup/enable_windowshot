@@ -1,0 +1,46 @@
+#!/bin/bash -x
+
+# Kernel in Maverick had a patch that made sysrq bypass evdev,
+# so Alt+PrnScr can no longer be used for screenshots of active window
+
+# https://bugs.launchpad.net/ubuntu/+source/metacity/+bug/642792
+
+# One solution: disable sysrq
+# check with "cat /proc/sys/kernel/sysrq" or "sysctl kernel.sysrq" (both broken, shows 0 even when it is enabled)
+# change with sudo sysctl -w kernel.sysrq=0 && sudo echo "kernel.sysrq=0" >> /etc/sysctl.conf
+
+
+# Another solution: change gnome keyboard shortcut for windowshots to Ctrl+PrnScr
+dir="apps/metacity/global_keybindings"
+
+# Global default
+# http://library.gnome.org/admin/system-admin-guide/stable/gconf-24.html.en
+# Reference file: /etc/gconf/2/path
+gconftool-2 --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.defaults --type string --set /desktop/gnome/interface/icon_theme Mint-X
+
+/var/lib/gconf/defaults/%gconf-tree.xml 
+<entry name="run_command_window_screenshot" mtime="1322106668" type="schema" stype="string" owner="metacity" gettext_domain="metacity">
+<stringvalue>&lt;Alt&gt;Print</stringvalue>
+</entry>
+
+
+# For current user:
+
+gconftool-2 --type string --set
+gconftool-2 --type string --set "${dir}/run_command_window_screenshot" "<Control>Print"
+
+# For new users:
+# http://ubuntuforums.org/showthread.php?t=975914
+target="/etc/skel/.gconf/${dir}"
+sudo mkdir -p "${target}" && sudo cp --no-preserve=all "${HOME}/.gconf/${dir}/%gconf.xml" "${target}"
+
+# Reference:
+#<?xml version="1.0"?>
+#<gconf>
+#	<entry name="run_command_window_screenshot" mtime="1322116875" type="string">
+#		<stringvalue>&lt;Control&gt;Print</stringvalue>
+#	</entry>
+#</gconf>
+
+
+

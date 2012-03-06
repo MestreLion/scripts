@@ -1,0 +1,20 @@
+#!/bin/bash -x
+
+dir="apps/metacity/global_keybindings"
+gconftool-2 --type string --set "${dir}/run_command_window_screenshot" "<Alt>Print"
+
+# For new users:
+# http://ubuntuforums.org/showthread.php?t=975914
+target="/etc/skel/.gconf/${dir}"
+sudo mkdir -p "${target}" && sudo cp --no-preserve=all "${HOME}/.gconf/${dir}/%gconf.xml" "${target}"
+
+# Reference:
+#<?xml version="1.0"?>
+#<gconf>
+#	<entry name="run_command_window_screenshot" mtime="1322116875" type="string">
+#		<stringvalue>&lt;Control&gt;Print</stringvalue>
+#	</entry>
+#</gconf>
+
+
+

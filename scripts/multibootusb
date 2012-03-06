@@ -1,347 +1,218 @@
 #!/bin/bash
+#
+# multibootusb - Create a MutiBoot USB drive with several distro ISOs
+#
+#    Copyright (C) 2011 Rodrigo Silva - <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Huge thanks to all the gurus and friends in irc://irc.freenet.org/#bash
+# and the contributors of http://mywiki.wooledge.org/
+#
+# TODO: command line arguments instead of hardcoded ones
+# TODO: --help
 
-SELF=`basename $0`
+################# User adjustable global constants - feel free to edit
+LABEL="MultiBoot"
+DEVICE="/dev/sdc"
+PARTITION="${DEVICE}1"
+MOUNTDIR="/media/${LABEL}"
+ISOUSB="/distros" # Relative to USB root
+ISOSOURCE="/dados/Install/Linux/distros/multiboot"
+ISOTARGET="${MOUNTDIR}${ISOUSB}"
+VERBOSE=1
 
-LABEL="Multiboot"
-DRIVE="/dev/sdc"
-PARTITION="/dev/sdc2"
-ISOSOURCE="/dados/Install/Linux"
-ISOTARGET="/iso"
+################# Script constants - DO NOT EDIT!
+grubcfg="${MOUNTDIR}/boot/grub/grub.cfg"
+grubtest="${MOUNTDIR}/boot/grub/core.img"
+isos=( "${ISOSOURCE}"/*.[iI][sS][oO] )
+maxwidth=0
+for iso in "${isos[@]}"; do (( ${#iso} > $maxwidth )) && maxwidth=${#iso} ; done
+maxwidth=$(( $maxwidth - ${#ISOSOURCE} - 5 )) # 5 = account for trailing "/" and ".iso"
 
-MOUNT="/media/$LABEL"
-ISODEST="${MOUNT}${ISOTARGET}"
+################# Helper functions
 
-# create filesystem on usb pen
-#sudo mkfs.vfat -n ${LABEL} ${PARTITION}
-
-#mount the partition
-# TODO: gvfs-mount -d $PARTITION maybe?
-
-#create ISO destination folder
-if [ -e "$ISODEST" ] ; then
-	if [ ! -d "$ISODEST" ] ; then
-		rm "$ISODEST"
-		mkdir "$ISODEST"
-	fi		
-else
-	mkdir "$ISODEST"
-fi
-
-#copy all isos (-n = do not overwrite)
-cp -n "${ISOSOURCE}/*.[iI][sS][oO" "$ISODEST"
-
-#install grub
-sudo grub-install --no-floppy --root-directory="$MOUNT" $DRIVE
-
-
-
-return 0
-
-
-VERBOSE=
-FORCE=
-TEST=
-DEBUG=
-
-usage ()
-{
-    cat <<EOF
-Usage: $SELF [OPTIONS] DEVICE
-EOF
-	if [ -z $1 ] ; then
-	    cat <<EOF
-Try '$SELF --help' for more information.
-EOF
-	else
-	    cat <<EOF
-
-Tools for reading, setting and generating UUIDs suitable for NTFS filesystems (8 bytes)
-
-Options:
-  -h, --help                  print this message and exit
-  -v, --verbose               verbose output (displays extra information)
-  -f, --force                 do not prompt before changes, assumes Yes for all questions
-  -t, --test                  simulation test, do not write any data on disk (affects --set and --copy only)
-  -d, --debug                 displays debug information on parsed options and arguments
-  -l, --label LABEL           use LABEL for volume name after formatting
-  -b, --binary                interprets UUID as 8-byte binary data (rather than hexadecimal string)
-                              --binary is only used with --uuid, otherwise it is ignored
-  -u, --uuid UUID             uses the specified UUID. Must be a 16 chars ASCII string, case-insensitive, [0-9,A-F]
-                              if --binary is used, UUID must be 8 bytes long
-                              --uuid is only used with --set, otherwise it is ignored
-  
-Commands:
-  --generate                  output a random UUID suitable for an NTFS device (8 bytes)
-  --read DEVICE               output the current UUID of the specified NTFS device
-  --set  DEVICE               sets the UUID for the specified NTFS device (uses a random one if --uuid is ommited)
-  --copy DEVICE_IN DEVICE_OUT copy (clone) the UUID from an NTFS device to another
-  
-Examples:
-  \$ $SELF --generate
-  \$ $SELF --read /dev/sdx1
-  \$ $SELF --set /dev/sdx1
-  \$ $SELF --set /dev/sdx1 --uuid 2AE2C85D31835048
-  \$ $SELF --set /dev/sdx1 --uuid rodrigo1 --binary
-  \$ $SELF --copy /dev/sdx1 /dev/sdx2
-
-Author: Rodrigo Silva (a.k.a. MestreLion) <linux@rodrigosilva.com>
-License: GPL v3 www.gnu.org
-EOF
-	fi
-}
-
-#######################################  Auxiliary Functions
-
-_RandomUuid()
-{
-	if [ -z "$LOWER" ] ; then local u="-u" ; fi
-	UUID=`xxd $u -plain -l 8 /dev/urandom`
-}
-
-_TestNTFS()
-{
-	local device="$1"
-	
-	if [ -n "$device" ] ; then
-		if [ -b "$device" ] ; then
-			if sudo blkid -p  "$device" | grep -q "TYPE=\"ntfs\"" ; then
-				return 0
-			else
-				echo "error: $device: permission denied or not an NTFS device"
-				return 13
-			fi
-		else
-			echo "error: $device: not found or not a device"
-			return 12 
-		fi
-	else
-		# Redundant, since all DEVICE arguments are mandatory and previously tested
-		echo "error: this operation requires a device"
-		return 11
-	fi
-}
-
-_Confirm()
+fatal()
 {
 	local message="$1"
-	
-	if [ -z "$FORCE" ] ; then
-		local confirm
-		read -p "$message (y/n, default YES): " confirm
-		case "x$confirm" in
-			x[Yy]*|x) ;;
-			*) if [ -n "$VERBOSE" ] ; then echo "$SELF: $COMMAND: cancelled by user" ; fi ; return 2 ;;
-		esac
-	fi
-	
-	return 0
+	local errorcode="${2:-1}"
+	local self=$(basename $0)
+	[[ "$message" ]] && printf "%s\n" "$self: ${message/%[[:punct:]]/}" >&2
+	exit $errorcode	
 }
 
-_PrintFlags()
-{
-	# Echoing $DEBUG value is redundant, since this will only be printed if = 1
-    cat <<EOF
-Parsed Options  =$GETOPT
-Debug           = $DEBUG
-Verbose         = $VERBOSE
-Lower case      = $LOWER
-Non-Interactive = $FORCE
-Simulation Test = $TEST
-Binary          = $BINARY
-Command         = $COMMAND
-Device          = $DEVICE
-Uuid            = $UUID
-EOF
-}
+################# Main code
 
+# Checking arguments
+[[ -b "$PARTITION" ]] || fatal "$PARTITION is not a valid device"
 
-#######################################  Main Functions
+# Confirm with user
+#read -p "This may DESTROY ALL DATA on $PARTITION and install grub on ${DEVICE}. Are you SURE you want to continue [yes/NO]? " confirm
+#case "$confirm" in
+#	[Yy]*) ;;
+#	*) exit 0 ;;
+#esac
 
+# Format partition
+#read -p "Format $PARTITION [yes/NO]? " confirm
+#case "$confirm" in
+#	[Yy]*)
+#		[[ $VERBOSE ]] && echo "Formating ${PARTITION} as FAT32..."
+#		sudo mkfs.vfat -n "${LABEL}" "${PARTITION}" || fatal "could not format $PARTITION"
+#	;;
+#esac
 
-Uuid_Generate()
-{
-	_RandomUuid
-	
-	# All input data is set, print debug info
-	if [ -n "$DEBUG" ] ; then _PrintFlags ; fi
-
-	if [ -n "$VERBOSE" ] ; then
-		echo "Random UUID: $UUID"
-	else
-		echo "$UUID"
-	fi
-	
-	return 0
-}
-
-Uuid_Read()
-{
-	if _TestNTFS "$DEVICE" ; then
-
-		if [ -z "$LOWER" ] ; then local u="-u" ; fi
-		UUID=`sudo xxd $u -plain -s 72 -len 8 "$DEVICE"`
-
-		# All input data is set, print debug info
-		if [ -n "$DEBUG" ] ; then _PrintFlags ; fi
-
-		if [ -n "$VERBOSE" ] ; then
-			echo "UUID of "$DEVICE" is $UUID"
-		else
-			echo $UUID
-		fi
-		
-		return 0
-
-	else
-		return $?
-	fi
-}
-
-Uuid_Set()
-{
-	local binary_uuid
-	local result=0
-	
-	# Handle UUID: Calculate a random one if not given
-	if [ -z "$UUID" ] ; then 
-		_RandomUuid
-	else
-		if [ -z "$BINARY" ] ; then		
-			# Hexadecimal String format
-			if ! [[ "$UUID" =~ ^[0-9A-Fa-f]{16}$ ]] ; then
-				echo "error: $UUID: invalid UUID. Must be 16 hexadecimal characters [0-9,A-F]. Ex: 2AE2C85D31835048"
-				return 21
-			fi
-		else
-			# Binary format
-			if [ ${#UUID} -ne 8 ] ; then
-				echo "error: $UUID: invalid UUID. Binary format must be 8-bytes long"
-				return 22
-			fi
-			
-			# Save original UUID
-			binary_uuid="$UUID"
-			
-			# Convert to hexadecimal string
-			UUID="`echo -n "$UUID" | xxd -plain`" # "-n" in echo could be removed if "-len 8" was used in xxd
-		 fi
-	fi
-	# Adjust UUID case
-	if [ -n "$LOWER" ] ; then UUID="${UUID,,}" ; else UUID="${UUID^^}" ; fi
-
-	# All input data is set, print debug info
-	if [ -n "$DEBUG" ] ; then _PrintFlags ; fi
-	if [ -n "$binary_uuid" ] ; then echo "Binary UUID     = $binary_uuid" ; fi
-	
-	# Test device
-	if _TestNTFS "$DEVICE" ; then
-
-		# Confirm with user
-		_Confirm "Set $DEVICE UUID to $UUID?"
-		if [ $? -ne 0 ] ; then return $? ; fi
-		
-		# Set the UUID
-		if [ -z "$TEST" ] ; then
-			echo "$UUID" | xxd -r -plain | sudo dd of="$DEVICE" bs=8 count=1 seek=9 conv=notrunc status=noxfer 2> /dev/null
-			result=$?
-		fi
-
-		if [ $result -eq 0 ] ; then
-			# Verbose message
-			if [ -n "$VERBOSE" ] ; then echo "UUID of $DEVICE set to $UUID" ; fi 
-			return 0
-		else
-			echo "error: $COMMAND: $result (permission denied?)"
-			return $result
-		fi
-			
-	else
-		return $?
-	fi
-}
-
-Uuid_Copy()
-{
-	local input="$DEVICE"
-	local output="$1"
-	local result=0
-	
-	# Check DEVICE_OUTPUT (getopt only handle 1 mandatory argument per option)
-	if [ -z "$output" ] ; then
-		echo "error: output device not specified"
-		usage
-		exit 31
-	fi
-	
-	# Test Input and Output devices
-	if _TestNTFS "$input" && _TestNTFS "$output" ; then
-	
-		# Read input device's UUID
-		if [ -z "$LOWER" ] ; then local u="-u" ; fi
-		UUID=`sudo xxd $u -plain -s 72 -len 8 "$input"`
-	
-		# All input data is set, print debug info (with additional DEVICE_OUTPUT parameter)
-		if [ -n "$DEBUG" ] ; then _PrintFlags ; echo "Output          = $1" ; fi
-
-		# Confirm with user
-		_Confirm "Copy UUID $UUID from $input to $output ?"
-		if [ $? -ne 0 ] ; then return $? ; fi
-				
-		# Copy the UUID
-		if [ -z "$TEST" ] ; then
-			sudo dd if="$input" of="$output" bs=8 count=1 seek=9 skip=9 conv=notrunc status=noxfer 2> /dev/null
-			result=$?
-		fi 
-
-		if [ $result -eq 0 ] ; then
-			# Verbose message
-			if [ -n "$VERBOSE" ] ; then echo "UUID $UUID copied from $input to $output" ; fi 
-			return 0
-		else
-			echo "error: $COMMAND: $result (permission denied?)"
-			return $result
-		fi
-		
-	else
-		return $?
-	fi
-	
-}
-
-#######################################  Command Line parsing
-
-
-# Print usage if no parameter passed
-if [ $# -eq 0 ] ; then
-	usage
-	exit 1
+# Mount partition
+# TODO: gvfs-mount -d $PARTITION for non-sudo mount maybe?
+if ! mount -l | grep -q "${PARTITION} on ${MOUNTDIR}" ; then
+	[[ $VERBOSE ]] && echo "Mounting ${PARTITION} on ${MOUNTDIR}..."
+	sudo mkdir -p "${MOUNTDIR}" || fatal "could not create mountpoint on ${MOUNTDIR}"
+	sudo mount -o defaults,uid=$(id -u),gid=$(id -g),umask=000 "${PARTITION}" "${MOUNTDIR}" || fatal "could not mount ${PARTITION} on ${MOUNTDIR}"
+	unmount=1
 fi
+ 
+# Install grub2
+[[ -f "$grubtest" ]] || {
+	[[ $VERBOSE ]] && echo "Installing grub on ${DEVICE}..."
+	sudo grub-install --no-floppy --root-directory="${MOUNTDIR}" "${DEVICE}" || fatal "could not install grub on ${DEVICE}" 
+}
+ 
+# grub.cfg header
+[[ -f "$grubcfg" ]] || {
+	[[ $VERBOSE ]] && echo "Creating grub config..."
+	cat > "$grubcfg" <<-GRUBCFG
+		menuentry "Boot Hard Drive" {
+			set root='(hd1)'
+			chainloader +1
+		}
+		menuentry "Boot USB 2nd partition" {
+			set root='(hd0,msdos2)'
+			chainloader +1
+		}
+	GRUBCFG
+}
 
-GETOPT=`getopt --alternative --options vdtl: --longoptions verbose,test,debug,label:,help --name "$SELF" -- "$@"`
-if [ $? -gt 0 ] ; then usage ; exit 1 ; fi # error in getopt
-eval set -- "$GETOPT"
+# ISO loop
+[[ $VERBOSE ]] && echo "Copying ISOs from ${ISOSOURCE} to ${ISOTARGET}. This may take a while..."
+mkdir -p "$ISOTARGET"
+for iso in "${isos[@]}"; do
 
-while true ; do
-	case "$1" in
-		-v|--verbose ) shift ; VERBOSE="1"                              ;; # Set verbose
-		-t|--test    ) shift ; TEST="1"                                 ;; # Set simulation test mode
-		-d|--debug   ) shift ; DEBUG="1"                                ;; # Set debug mode
-		--label      ) shift ; LABEL="$1"                       ; shift ;; # Set Label
-		--help       ) shift ; COMMAND="help"                           ;; # Help requested
-#		--read       ) shift ; COMMAND="read"     ; DEVICE="$1" ; shift ;; # Reads UUID from device
-#		--set        ) shift ; COMMAND="set"      ; DEVICE="$1" ; shift ;; # Sets UUID of device 
-#		--copy       ) shift ; COMMAND="copy"     ; DEVICE="$1" ; shift ;; # Copy UUID from device
-		--           ) shift ; break ;;
-		*            ) break ;;
+	filename="${iso##*/}"
+	title="${filename%.*}"
+	arch="${title##*-}" # fails for Fedora, but so far only used by OpenSUSE
+	title="${title//[-_]/ }"
+	title="${title^}"
+	((i++))
+	
+	read -r size _ < <(du -msL "$iso") # OR: stat -Lc %s "$iso"
+	read -r available _ < <(df -PB 1M "${PARTITION}" | awk -v device="${PARTITION}" 'NR==2 && $1==device { print $4 }')
+
+	[[ $VERBOSE ]] && printf "  %2d of %d: %-*s" $i ${#isos[@]} $maxwidth "${title}"
+	
+	if [[ ! -e "${ISOTARGET}/${filename}" ]] ; then
+		if (( $size * 11 >= $available * 10 )) ; then
+			echo " - skipped: requires ${size} MB, but only ${available} MB available"
+			continue
+		else
+			# FIXME: for Fedora, OpenSUSE and Debian, need to extract ISO's contents to a folder
+			case "${filename,,}" in
+			fedora*) ;;
+			opensuse*) ;;
+			*)	# ?buntu* , linuxmint* and derivatives
+				cp -Ln "$iso" "${ISOTARGET}" || fatal "could not copy $iso to ${ISOTARGET} (disk full?)" 
+				;;
+			esac
+			echo " - copied to ${ISOTARGET}/${filename}"
+		fi
+	else
+		echo " - already at destination"
+	fi
+	
+	case "${filename,,}" in
+	
+	# Fedora 16
+	fedora*)
+		cat >> "$grubcfg" <<-GRUBCFG
+			menuentry "$title" {
+				loopback loop ${ISOUSB}/${filename}
+				linux (loop)/isolinux/vmlinuz0 boot=isolinux iso-scan/filename="${ISOUSB}/${filename}"
+				initrd (loop)/isolinux/initrd0.img
+			}
+			menuentry "$title" {
+				loopback loop ${ISOUSB}/${filename}
+				linux (loop)/EFI/boot/vmlinuz0 boot=isolinux iso-scan/filename="${ISOUSB}/${filename}"
+				initrd (loop)/EFI/boot/initrd0.img
+			}
+			menuentry "$title" {
+				loopback loop ${ISOUSB}/${filename}
+				linux (loop)/EFI/boot/vmlinuz0 root=live:CDLABEL=${LABEL} rootfstype=auto ro liveimg rhgb rd.luks=0 rd.md=0 rd.dm=0
+				initrd (loop)/EFI/boot/initrd0.img
+			}
+		GRUBCFG
+ 		;;
+
+ 	# OpenSUSE 11.4 and 12.1
+	opensuse*)
+		cat >> "$grubcfg" <<-GRUBCFG
+			menuentry "$title" {
+				loopback loop ${ISOUSB}/${filename}
+				kernel (loop)/boot/${arch}/loader/linux ramdisk_size=512000 ramdisk_blocksize=4096 splash=silent quiet preloadlog=/dev/null showopts
+				initrd (loop)/boot/${arch}/loader/initrd
+			}	
+		GRUBCFG
+ 		;;
+ 		
+	# LMDE - Linux Mint Debian Edition (and possibly other Debians too)
+	linuxmint-20????-*)
+		cat >> "$grubcfg" <<-GRUBCFG
+			menuentry "$title" {
+				loopback loop ${ISOUSB}/${filename}
+				linux (loop)/casper/vmlinuz fromiso=/dev/disk/by-label/${LABEL}/boot/${ISOUSB}/${filename} boot=live config live-media-path=/casper splash noeject --
+				initrd (loop)/casper/initrd.lz
+			}
+		GRUBCFG
+		;;
+	
+	# Ubuntu, Kubuntu, and all derivatives (including Linux Mint and Zorin OS)
+	*)
+		# ?buntu* , linuxmint* and derivatives
+		cat >> "$grubcfg" <<-GRUBCFG
+			menuentry "$title" {
+				loopback loop ${ISOUSB}/${filename}
+				linux (loop)/casper/vmlinuz boot=casper iso-scan/filename="${ISOUSB}/${filename}" noeject noprompt splash --
+				initrd (loop)/casper/initrd.lz
+			}
+		GRUBCFG
+		;;
 	esac
 done
 
-case "$COMMAND" in
-	help     ) usage "HELP"   ; exit 0  ;;
-	generate ) Uuid_Generate  ; exit $? ;; 
-	read     ) Uuid_Read      ; exit $? ;; 
-	set      ) Uuid_Set       ; exit $? ;; 
-#	copy     ) Uuid_Copy "$@" ; exit $? ;; 
-	*        ) usage          ; exit 1  ;; 
-esac
+# Housekeeping
+sync
+[[ $unmount ]] && {
+	sudo umount "${MOUNTDIR}"
+	sudo rm -f "${MOUNTDIR}"
+}
+[[ $VERBOSE ]] && echo "Done! Re-mount ${MOUNTDIR} and check to see if its all ok."
+
+
+# reference links
+# http://www.panticz.de/MultiBootUSB
+# http://sourceforge.net/projects/bashmount
+# http://hal.freedesktop.org/docs/udisks/index.html
+# http://michael-prokop.at/blog/2009/05/25/boot-an-iso-via-grub2/
+# 
+# https://wiki.edubuntu.org/Grub2
+# http://wiki.ubuntuusers.de/GRUB_2/Konfiguration?highlight=cd
 

@@ -1,0 +1,36 @@
+#!/bin/bash -x
+
+[[ -z "$CUSTOM_ROOT" ]] && export CUSTOM_ROOT="/dados/progs/linux"
+
+# startup files
+
+if ! { [[ -f ~/.profile ]] && grep -q "CUSTOM_ROOT" ~/.profile ; } ; then
+
+cat >> ~/.profile <<_EOF_
+# Rodrigo
+export CUSTOM_ROOT="/dados/progs/linux"
+if [ -f "\${CUSTOM_ROOT}/.custom_profile" ] ; then
+	. "\${CUSTOM_ROOT}/.custom_profile"
+fi
+_EOF_
+
+
+fi
+
+if ! { [[ -f ~/.bashrc ]] && grep -q "CUSTOM_ROOT" ~/.bashrc ; } ; then
+
+cat >> ~/.bashrc <<_EOF_
+# Rodrigo
+if [ -f "\${CUSTOM_ROOT}/.custom_bashrc" ] ; then
+	source "\${CUSTOM_ROOT}/.custom_bashrc"
+fi
+_EOF_
+
+fi
+
+
+# Nautilus-extensions
+
+rmdir ~/.gnome2/nautilus-scripts/
+ln -s "${CUSTOM_ROOT}/scripts/nautilus-scripts/" ~/.gnome2/nautilus-scripts
+

@@ -1,0 +1,37 @@
+w_metadata eudora apps \
+    title="Eudora 7.1" \
+    publisher="Qualcomm" \
+    year="2006" \
+    media="download" \
+    file1="Eudora_7.1.0.9.exe" \
+    installed_exe1="$W_PROGRAMS_X86_WIN/Qualcomm/Eudora/Eudora.exe"
+
+load_eudora()
+{
+    # Alternate direct download URL: http://www.eudora.com/download/eudora/windows/7.1/Eudora_7.1.0.9.exe
+    w_download http://www.eudora.com/cgi-bin/export.cgi?productid=EUDORA_win_7109 9dfb889ef112e2079be7485edd2acedfa1a4a1b3 Eudora_7.1.0.9.exe
+
+    cd "$W_CACHE/$W_PACKAGE"
+    w_ahk_do "
+        run, Eudora_7.1.0.9.exe
+        SetTitleMatchMode, 2
+        winwait, Microsoft Age of Empires Trial Version
+        if ( w_opt_unattended > 0 ) {
+            sleep 1000
+            ControlClick, Button1
+            winwait, End User License Agreement
+            sleep 1000
+            ControlClick, Button1
+            winwait, Microsoft Age of Empires Trial Version, Setup will install
+            sleep 1000
+            ControlClick Button2
+            winwait, Microsoft Age of Empires Trial Version, Setup has successfully
+            sleep 1000
+            ControlClick Button1
+        }
+        WinWaitClose, Microsoft Age of Empires Trial Version
+    "
+
+    w_declare_exe "$W_PROGRAMS_X86_WIN\\Qualcomm\\Eudora" "Eudora"
+}
+

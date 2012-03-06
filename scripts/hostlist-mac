@@ -1,0 +1,127 @@
+#!/bin/bash
+
+# MAC Address Parser - Creates list of MAC addresses of active machines on network
+# Created by Greg Lavino
+# Last modified 28May09 - 16:06 CST
+
+# Feel free to modify to suit your needs.
+
+
+# Output to file (true/false)?
+fileout=true
+
+# Output filename
+fileout_path='./macs'
+
+# Number of address blocks to ping at a time (only if nmap not installed)
+ipblocks=51
+
+# make temp file
+tmpfile=$(tempfile)
+
+# get local address
+ip_addr_str=$(ip route list|grep 'src')
+
+# Get device string
+self_ip_dev=$(echo $ip_addr_str|cut -d ' ' -f 3)
+
+# Get ip address
+self_ip_addr=$(echo $ip_addr_str|cut -d ' ' -f 9)
+
+# Get self mac address
+self_mac_addr=$(ifconfig ${self_ip_dev}|grep 'HWaddr'|cut -c 39-55)
+
+testinstalled()
+{
+# search path enviroment for file
+    IFS=':'
+    for p in $PATH
+    do
+        [[ -f ${p}/${1} ]]&&{
+            unset IFS
+            return 0
+        }
+    done
+    unset IFS
+    return 1
+}
+pingit()
+{
+ping -n -c 1 -W 1 ${1}>/dev/null && echo ${1}>>${tmpfile}
+}
+
+pingall()
+{
+# ping all addresses in block
+# (much slower than nmap)
+
+ip_prefix=$(echo ${self_ip_addr}|cut -d '.' -f 1-3)
+
+for i in {1..254}
+do
+    # Ip address to ping
+    ip="${ip_prefix}.${i}"
+
+    # ping in background
+    pingit ${ip}&
+    
+    # Wait for all ping blocks to finish
+    [[ $(( ${i}%${ipblocks} )) -eq 0 ]]&&{
+    echo -n '|'
+    wait
+    }
+done
+
+# wait for last batch of pings
+wait
+
+# remove progress line
+echo -en '\r'
+
+
+
+}
+
+# get online addresses and populate arp cache
+if $(testinstalled nmap);then
+    nmap -n -sP -oG ${tmpfile} "${self_ip_addr}/24">/dev/null
+    ip_list=$(grep 'Status: Up' ${tmpfile}|cut -d ' ' -f 2)
+
+else
+# TODO: use ping loop if nmap is missing instead of exiting
+    echo "You can speed up discovery by installing nmap:"
+    echo "sudo apt-get install nmap"
+
+    # Start ping loops
+    pingall
+    # List is sorted just in case
+    ip_list=$(sort ${tmpfile})
+
+fi
+
+
+# remove output file
+$fileout && [[ -f $fileout_path ]] && rm ${fileout_path}
+
+
+
+# find mac address of online machines
+for i in $ip_list
+do
+    if [ ${i} == ${self_ip_addr} ];then
+        # Already got mac address for local machine
+        mac=$self_mac_addr
+    else
+        # Use arp cache to get mac address
+        arpstr=$(arp -n ${i}|grep ${i})
+        mac=${arpstr:33:17}
+    fi
+
+    # Output table
+    printf "${i}\t${mac}\n"
+    $fileout && printf "${i}\t${mac}\n">>$fileout_path
+
+done
+
+# cleanup
+rm ${tmpfile} 

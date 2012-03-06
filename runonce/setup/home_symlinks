@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Replace home "special" directories for symlinks to data partition
+dir="/dados"
+[[ ! -h ~/Documents ]] && rmdir ~/Documents  && ln -s "${dir}/Arquivos/"             ~/Documents
+[[ ! -h ~/Downloads ]] && rmdir ~/Downloads  && ln -s "${dir}/Download/"             ~/Downloads
+[[ ! -h ~/Music     ]] && rmdir ~/Music      && ln -s "${dir}/Mp3/Albuns/"           ~/Music
+[[ ! -h ~/Pictures  ]] && rmdir ~/Pictures   && ln -s "${dir}/Arquivos/My Pictures/" ~/Pictures
+[[ ! -h ~/Videos    ]] && rmdir ~/Videos     && ln -s "${dir}/Filmes/"               ~/Videos
+
+# change templates and publicshare
+# "$HOME/user-dirs.dirs"
+# XDG_TEMPLATES_DIR="$HOME/.templates"
+# XDG_PUBLICSHARE_DIR="$HOME/.publicshare"
+# rm "$HOME/Templates" "$HOME/Public"
+

@@ -1,0 +1,8 @@
+#!/bin/bash -x
+
+[[ -h ~/Documents ]] && rm ~/Documents  && mkdir ~/Documents
+[[ -h ~/Downloads ]] && rm ~/Downloads  && mkdir ~/Downloads
+[[ -h ~/Music     ]] && rm ~/Music      && mkdir ~/Music
+[[ -h ~/Pictures  ]] && rm ~/Pictures   && mkdir ~/Pictures
+[[ -h ~/Videos    ]] && rm ~/Videos     && mkdir ~/Videos
+

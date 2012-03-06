@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Prepare host for LFS
+# Host is Linux Mint 10 i386 @ /dev/sda1
+
+# useful aliases
+grep -q "alias ls" $HOME/.bashrc 2>/dev/null || echo "alias ls='ls --color=auto --group-directories-first -1'" >> $HOME/.bashrc
+grep -q "alias ll" $HOME/.bashrc 2>/dev/null || echo "alias ll='ls -l'" >> $HOME/.bashrc
+grep -q "alias la" $HOME/.bashrc 2>/dev/null || echo "alias la='ll -A'" >> $HOME/.bashrc
+
+# update packages
+sudo apt-get update && sudo apt-get upgrade
+
+# Install Guest Addons
+
+# For Ubuntu / Mint client on Virtualbox, i2c_piix4 generates annoying message on boot:
+file="/etc/modprobe.d/blacklist.conf"
+msg="# Virtualbox VM's have no smbus"
+mod="i2c_piix4"
+{ dmesg | grep -q "SMBus base address uninitialized - upgrade BIOS or use force_addr=0xaddr" ; } && \
+{ lsmod | grep -q "$mod" ; } && \
+{ ! grep -q "$msg" "$file" 2>/dev/null ; } && \
+sudo tee -a "$file" > /dev/null << EOF
+
+$msg
+blackist $mod
+EOF
+
+# disable some start ups and include others
+cp /etc/xdg/autostart/user-dirs-update-gtk.desktop $HOME/.config/autostart && echo "X-GNOME-Autostart-enabled=false" >> $HOME/.config/autostart/user-dirs-update-gtk.desktop
+cp /etc/xdg/autostart/mintwelcome.desktop          $HOME/.config/autostart && echo "X-GNOME-Autostart-enabled=false" >> $HOME/.config/autostart/mintwelcome.desktop
+cp /usr/share/applications/gnome-terminal.desktop  $HOME/.config/autostart
+cp /usr/share/applications/gedit.desktop           $HOME/.config/autostart
+
+# gedit settings
+gconftool-2 --type string --set /apps/gedit-2/preferences/editor/wrap_mode/wrap_mode "GTK_WRAP_NONE"
+
+# Samba settings
+sudo sed -i 's/workgroup = WORKGROUP/workgroup = CASA/' /etc/samba/smb.conf
+
+# Terminal settings
+# - Background
+# - Size
+# - Scrolling
+
+# Desktop Settings
+# - Appearance -> Fonts
+
+# Disable Compiz (for Virtual Box)
+# - Preferences -> Appearance -> Visual Effects -> None
+
+

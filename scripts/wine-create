@@ -22,12 +22,12 @@ if [[ -z "$prefix" ]] ; then
 else
 
 	#check if prefix exists
-	[[ -e "$WINEHOME/$prefix" ]] && fatal "wine prefix $WINEHOME/$prefix already exists. Use wine-delete to remove." 3
+	[[ -e "$WINEBOTTLEHOME/$prefix" ]] && fatal "wine prefix $WINEBOTTLEHOME/$prefix already exists. Use wine-delete to remove." 3
 
 	# create the prefix
 	mkdir -p "$WINEBOTTLEHOME"
 	env WINEARCH=win32 WINEPREFIX="$WINEBOTTLEHOME/$prefix" wine wineboot 2>&3
-	while [[ ! -f "$WINEHOME/$prefix/system.reg" ]] ; do : ; done ; sleep 3
+	while [[ ! -f "$WINEBOTTLEHOME/$prefix/system.reg" ]] ; do : ; done ; sleep 3
 
 	# add link to /dados
 	ln -s /dados "$WINEBOTTLEHOME/$prefix/dosdevices/d:"

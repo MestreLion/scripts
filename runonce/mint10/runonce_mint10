@@ -1,0 +1,34 @@
+#!/bin/bash -x
+
+#PATH=${PATH}:/dados/progs/linux/runonce/mint10:/dados/progs/linux/runonce/setup
+
+[[ -z "${CUSTOM_ROOT}" ]] && export CUSTOM_ROOT="/dados/progs/linux"
+
+dir="${CUSTOM_ROOT}/runonce/mint10"
+scripts=( "${dir}"/* )
+
+for script in "${scripts[@]}" ; do
+	
+	filename="${script##*/}"
+	[[ "$filename" != runonce_* && "$filename" != *.undo ]] && echo "${script}"
+
+done
+
+# GTK BOOKMARKS!
+# gedit settings (PLUGINS!!!)
+# screen resolution and drivers
+
+# Enable repos
+# Add PPAs
+# Install software
+sudo apt-get install gedit-plugins
+
+# Symlinks to /dados
+# Grub customization
+# Nautilus Settings
+# Firefox settings
+
+
+
+
+
