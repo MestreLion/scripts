@@ -1,0 +1,172 @@
+#!/bin/bash
+#
+# debextract - Wrapper to "dpkg-deb -x" for multiple files
+#
+#    Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>
+#
+# Wrapper to extract multiple debian packages (*.deb). It automatically chooses
+# a destination directory based on the deb's filename and also extracts the
+# control information files (the DEBIAN directory inside the package)
+
+usage() {
+cat <<- USAGE
+	Usage: $self [${main} options] [options] FILE...
+USAGE
+if [[ "$1" ]] ; then
+	cat <<- USAGE
+		Try '$self --help' for more information.
+	USAGE
+	exit 1
+fi
+cat <<-USAGE
+
+	Extracts Debian Package files (.deb) to a directory matching their filenames
+
+	Options:
+	-h|--help     - show this page.
+	-v|--verbose  - print more details about what is being done. Also enables
+	                 verbosity for ${main}. Use -X/+X to enable or disable this
+	-X|--vextract - turns ON  verbosity for ${main}. Useful if -v is not set
+	+X            - turns OFF verbosity for ${main}. Useful if -v is set
+	--destdir DIR - sets a directory for extraction of all packages. If ommited
+	                 or blank, destination will be each package's current
+	                 directory. In all cases, package filename will be appended
+	                 to the final destination path.
+	--nocontrol      - do not extract the control files. (DEBIAN directory)
+	--controldir DIR - set the destination directory for the control files, 
+	                    relative to the extracted package directory. Ignored if
+	                    --nocontrol is set. Default is DEBIAN.
+	--onerror ACTION - What to do if an error occur when executing $main for a
+	                    given file. Valid ACTION values are:
+	          skip     - skip error and continue with next file, if any
+	          quit     - quit immediately, do not extract any further files
+	          ask      - if not last file, ask user what to do. Default action
+	                   Regardless of the action chosen, in case of any error
+	                   $self will always exit with ${main}'s last unsucessfull
+	                   exit code
+	${main} options:
+	              - see ${main} --help or man ${main}
+
+	FILE...       - package file(s) to extract, multiple files accepted
+
+	The destination directory for extraction of each package will be the package
+	filename without its extension (usually .deb). If the filename  has no
+	extension, an error will occur, since this would be the same as executing
+	${main} -x file file
+
+	Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+USAGE
+exit 0
+}
+
+opterror() { echo "$self: $1" ; usage 1 ; }
+missing()  { opterror "missing ${1:+$1 }operand" ; }
+
+testaction() {
+	[[ "$1" ]] || missing "action"
+	actions=( skip quit ask )
+	for action in "${actions[@]}"; do [[ "$action" == "$1" ]] && return ; done
+	opterror "invalid action '$1'. valid options are: ${actions[*]}"
+}
+
+handleerror() {
+	code=$1
+	(( verbose )) && echo "$self: error $code in $main"
+	(( $2 > 1 )) || return 0 # Noting to handle if this is the last file
+	case "$action" in
+	skip) return 0 ;;
+	quit) return 1 ;;
+	ask )
+		local choice
+		read -rp "(Q)uit, (S)kip, or Skip (A)ll ? " choice
+		case "$choice" in
+		[Aa]*) action="skip" ; return 0 ;;
+		[Ss]*) return 0 ;;
+		    *) return 1 ;; # Educating users not to blindly hit Enter :)
+		esac
+	esac
+}
+
+declare -a opts=()
+self="${0##*/}"
+main="dpkg-deb"
+action="ask"
+destdir=""
+control=1
+controldir="DEBIAN"
+verbose=0
+dverb=0
+dquiet=0
+code=0
+ext="--extract"
+
+# Loop options
+while (( $# )); do
+	case "$1" in
+	-h|--help     ) usage                   ;;
+	-v|--verbose  ) verbose=1               ;;
+	-X|--vextract ) dverb=1                 ;;
+	+X            ) dquiet=1                ;;
+	-x|--extract  )                         ;; #I'm not so naive.Silently ignore
+	--nocontrol   ) control=0               ;;
+	--controldir=*) controldir="${1#*=}"    ;;
+	--controldir  ) shift ; controldir="$1" ;;
+	--destdir=*   ) destdir="${1#*=}"       ;;
+	--destdir     ) shift ; destdir="$1"    ;;
+	--onerror=*   ) testaction "${1#*=}"    ;;
+	--onerror     ) shift ; testaction "$1" ;;
+	--            ) shift ; break           ;;
+	-*            ) opts+=( "$1" )          ;;
+	*             ) break                   ;;
+	esac
+	shift
+done
+
+# Basic parser tests
+[[ "$controldir" ]] || missing "control directory"
+
+# Handle dpkg verbosity (done via extract command)
+if ((verbose && !dquiet)) || (( !verbose && dverb )); then ext="--vextract"; fi
+
+# Loop file arguments
+(( $# )) || missing "file"
+while (( $# )); do
+	#FIXME: extremely unlikely corner-case flaw: filename without extension, in
+	#       a path that contains a dot.  /etc/dir.d/no-deb-ext
+	filetitle="${1%.*}"
+	if [[ "$destdir" ]] ; then
+		path="${destdir}/${filetitle##*/}"
+	else
+		path="$filetitle"
+	fi
+	mkdir -p "$path" # make it easy for dpkg
+	cmd1=("$main" "${opts[@]}" "$ext"    -- "$1" "${path//\/\///}"            )
+	cmd2=("$main" "${opts[@]}" --control -- "$1" "${path//\/\///}/$controldir")
+	if (( control )) ; then
+		(( verbose )) && echo "$self: executing ${cmd1[@]} && ${cmd2[@]}"
+		"${cmd1[@]}" && "${cmd2[@]}" || handleerror $? $# || break
+	else
+		(( verbose )) && echo "$self: executing ${cmd1[@]}"
+		"${cmd1[@]}"                 || handleerror $? $# || break
+	fi
+	shift
+done
+
+(( verbose )) && (( code )) &&
+	echo "$self: error(s) occurred, exiting with $main last error's code, $code"
+
+exit $code

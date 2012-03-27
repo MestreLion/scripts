@@ -1,18 +1,37 @@
 #!/bin/bash
 
-arguments="PWD\n$PWD\n\n"
-arguments="${arguments}NAUTILUS_SCRIPT_CURRENT_URI\n$NAUTILUS_SCRIPT_CURRENT_URI\n\n"
-arguments="${arguments}NAUTILUS_SCRIPT_SELECTED_URIS\n$NAUTILUS_SCRIPT_SELECTED_URIS\n"
-arguments="${arguments}NAUTILUS_SCRIPT_SELECTED_FILE_PATHS\n$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS\n"
+# Print all command line arguments. If used in GUI, also prints relevant 
+# Nautilus Scripts vars and uses zenity for output
+
+# Use -v var1 [var2...] to inspect shell/env variables
+
+var=0
+
+get_var() {
+	{ declare -p $1 2>/dev/null || echo "declare - $1: not set" ; } |
+	awk '/^declare/{$1="";$2=sprintf("%-3s",substr($2,2))}1'
+}
 
 i=0
 while [ $# -gt 0 ]; do
 	((i++))
-	arguments="${arguments}\$$i: $1\n"
+	output+="\$$i=$1\n"
+	((var)) && vars+="$(get_var "$1")\n"
+	case "$1" in -v) var=1 ;; esac
 	shift
 done
 
-[[ "$DEBUG" ]] && :
-printf "%b\n" "$arguments" >&2
+output+="$vars"
 
-zenity --info --no-wrap --text "${arguments//&/&amp;}"
+if [[ "$TERM" == "dumb" ]] ; then
+	[[ "$output" ]] &&
+	output+="\n"
+	output+="PWD\n$PWD\n\n"
+	output+="NAUTILUS_SCRIPT_CURRENT_URI\n${NAUTILUS_SCRIPT_CURRENT_URI:+$NAUTILUS_SCRIPT_CURRENT_URI\n\n}"
+	output+="NAUTILUS_SCRIPT_SELECTED_URIS\n${NAUTILUS_SCRIPT_SELECTED_URIS:+$NAUTILUS_SCRIPT_SELECTED_URIS\n}"
+	output+="NAUTILUS_SCRIPT_SELECTED_FILE_PATHS\n${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS:+$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS\n}"
+	zenity --info --no-wrap --text "${output//&/&amp;}"
+else
+	[[ "$output" ]] && printf "%b" "$output"
+fi
+

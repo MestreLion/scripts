@@ -19,9 +19,6 @@ fi
 # A.K.A 'why echo "Hello World!" do not work?'
 set +o histexpand # same as set +H
 
-which() { builtin type -P "$@" ; }
-sudo() { cmd=$(type -p "$1"); shift; command sudo "$cmd" "$@" ; }
-
 wine-cd() {
 	local prefix="$1"
 	if [[ -z "$1" || "$1" = "default" ]] ; then

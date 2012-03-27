@@ -13,7 +13,12 @@ alias ....="cd ../../.."
 alias .....="cd ../../../.."
 alias path="echo \$PATH"
 alias fstab="gksudo gedit /etc/fstab &"
+alias open="xdg-open"
 
-cdl() { cd "$@" && ll ; }
-md() { mkdir "$@" ; cd "${@: -1}" ; }
+cdl()     { cd "$@" && ll ; }
+md()      { mkdir "$@" ; cd "${@: -1}" ; }
+which()   { builtin type -P "$@" ; }
+sudo()    { cmd=$(type -P "$1") ; shift ; command sudo "$cmd" "$@" ; }
+sprunge() { echo "$(curl -sSF 'sprunge=<-' http://sprunge.us)${1+?$1}${2+#n-$2}"; }
+
 
