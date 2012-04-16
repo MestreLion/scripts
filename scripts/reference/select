@@ -37,7 +37,7 @@ while menu && read -rp "$PS3" REPLY && NUMREPLY=""; do
 	
 # ---- INSIDE THE LOOP - EDITABLE -------------------------------------------
 
-# Run your COMMANDS
+# Run your COMMANDS here
 
 # Do whatever you want, but of course, dont mess with WORDS, NAME or NUMREPLY
 # (remember those those are "inner" vars). But messing with REPLY

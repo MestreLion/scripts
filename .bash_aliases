@@ -14,6 +14,7 @@ alias .....="cd ../../../.."
 alias path="echo \$PATH"
 alias fstab="gksudo gedit /etc/fstab &"
 alias open="xdg-open"
+alias pygettext-singularity="pygettext --output-dir=data code/*.py code/graphics/*.py code/screens/*.py"
 
 cdl()     { cd "$@" && ll ; }
 md()      { mkdir "$@" ; cd "${@: -1}" ; }

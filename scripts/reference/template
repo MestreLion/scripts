@@ -20,17 +20,30 @@
 # Long description
 # ... that may span over multiple lines
 
+myname="${0##*/}"
+mydir=$(dirname "$(readlink -f "$0")")
+verbose=0
+
+fatal()   { [[ "$1" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
+message() { ((verbose)) && echo "$1" ; } # [[ "$1" ]] does not apply
+argerr()  { echo "$myname: ${1:-error}" >&2 ; usage 1 ; }
+invalid() { argerr "invalid option: $1" ; }
+missing() { argerr "missing ${2:+$2 }operand${1:+ from $1}." ; }
+integer() { [[ "$1" != *[!0-9]* ]] || argerr "'$1'${2:+ in $2} is not an integer." ; }
+
+quit()    { message "Goodbye!" ; exit; }
+
 usage() {
-cat <<- USAGE
-	Usage: $self [options]
-USAGE
-if [[ "$1" ]] ; then
 	cat <<- USAGE
-		Try '$self --help' for more information.
+	Usage: $myname [options]
 	USAGE
-	exit 1
-fi
-cat <<-USAGE
+	if [[ "$1" ]] ; then
+		cat >&2 <<- USAGE
+		Try '$myname --help' for more information.
+		USAGE
+		exit 1
+	fi
+	cat <<-USAGE
 
 	Short description
 
@@ -40,24 +53,28 @@ cat <<-USAGE
 
 	Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
-USAGE
-exit 0
+	USAGE
+	exit 0
 }
-invalid() { echo "$self: $1" ; usage 1 ; }
-
-self="${0##*/}"
-verbose=0
 
 # Loop options
 while (( $# )); do
 	case "$1" in
 	-h|--help     ) usage                          ;;
 	-v|--verbose  ) verbose=1                      ;;
+	--var=*       ) var="${1#*=}"                  ;;
+	--var         ) shift ; var="$1"               ;;
 	--            ) shift ; files=( "$@" ) ; break ;;
+	--            ) shift ; break                  ;;
+	-*            ) invalid "$1"                   ;;
 	-*            ) opts+=( "$1" )                 ;;
+	*             ) opterr "$1"                    ;;
 	*             ) shift ; files=( "$@" ) ; break ;;
 	esac
 	shift
 done
 
+[[ "$var" ]] || missing "--var" "ARG"
 
+echo "var=$var"
+((${#files[@]})) &&  echo "files: ${files[@]}"
