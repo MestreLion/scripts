@@ -146,7 +146,7 @@ if ((verbose && !dquiet)) || (( !verbose && dverb )); then ext="--vextract"; fi
 (( $# )) || missing "file"
 while (( $# )); do
 	#FIXME: extremely unlikely corner-case flaw: filename without extension, in
-	#       a path that contains a dot.  /etc/dir.d/no-deb-ext
+	#       a path that contains a dot.  /etc/dir.d/file_with_no_extension
 	filetitle="${1%.*}"
 	if [[ "$destdir" ]] ; then
 		path="${destdir}/${filetitle##*/}"

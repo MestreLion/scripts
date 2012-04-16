@@ -54,7 +54,7 @@ USAGE
 exit 0
 }
 invalid() { echo "$self: invalid option $1" ; usage 1 ; }
-missing() { echo "missing ${1:+$1 }operand" ; usage 1 ; }
+missing() { echo "$self: missing ${1:+$1 }operand" ; usage 1 ; }
 
 self="${0##*/}"
 verbose=0

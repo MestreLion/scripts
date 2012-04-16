@@ -49,9 +49,10 @@
 # So be sure to properly include or not trailling "/" when SOURCE is single file
 # and DEST does not exist
 
-source "$CUSTOM_SCRIPTS/lib/common"
-
-(( $# >= 2 )) || fatal "missing parameters. usage: $SELF SOURCE... DEST\n"
+(( $# >= 2 )) || { 
+	echo "${0##*/}: missing parameters. usage: ${0##*/} SOURCE... DEST" >&2
+	exit 1
+}
 
 dest="${@:(-1)}" # Last argument
 

@@ -70,7 +70,7 @@ else
 fi
 
 # Add scripts and current folder to PATH
-append_path "$CUSTOM_SCRIPTS:$HOME/.local/bin:."
+append_path "$CUSTOM_SCRIPTS:$HOME/.local/bin"
 
 export PATH
 

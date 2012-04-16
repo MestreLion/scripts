@@ -48,7 +48,7 @@ git diff-index --check --cached "$against" -- |
 awk -F: '!/^[+-]/{NF-=2;print $0}' |
 uniq |
 while IFS= read -r file ; do
-	sed -i 's/[ \t]*$//;s/^ *\t/\t/;:a;/^\n*$/{$d;N;ba;}' "$file"
+	sed -i ':a;s/[ \t]*$//;s/^ *\t/\t/;/^\n*$/{$d;N;ba;}' "$file"
 	git add "$file"
 	echo "fixed $file"
 done
