@@ -17,7 +17,7 @@ alias open="xdg-open"
 alias pygettext-singularity="pygettext --output-dir=data code/*.py code/graphics/*.py code/screens/*.py"
 
 cdl()     { cd "$@" && ll ; }
-md()      { mkdir "$@" ; cd "${@: -1}" ; }
+md()      { mkdir "$@" && cd "${@: -1}" ; }
 which()   { builtin type -P "$@" ; }
 sudo()    { cmd=$(type -P "$1") ; shift ; command sudo "$cmd" "$@" ; }
 sprunge() { echo "$(curl -sSF 'sprunge=<${1--}' http://sprunge.us)${2+?$2}${3+#n-$3}"; }

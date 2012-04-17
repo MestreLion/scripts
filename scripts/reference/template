@@ -48,8 +48,8 @@ usage() {
 	Short description
 
 	Options:
-	-h|--help     - show this page.
-	-v|--verbose  - print more details about what is being done.
+	  -h|--help     - show this page.
+	  -v|--verbose  - print more details about what is being done.
 
 	Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
@@ -57,22 +57,25 @@ usage() {
 	exit 0
 }
 
-# Loop options
+# Option handling
+(($#)) || usage
+files=()
+for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
 while (( $# )); do
 	case "$1" in
-	-h|--help     ) usage                          ;;
 	-v|--verbose  ) verbose=1                      ;;
 	--var=*       ) var="${1#*=}"                  ;;
 	--var         ) shift ; var="$1"               ;;
-	--            ) shift ; files=( "$@" ) ; break ;;
 	--            ) shift ; break                  ;;
 	-*            ) invalid "$1"                   ;;
 	-*            ) opts+=( "$1" )                 ;;
 	*             ) opterr "$1"                    ;;
-	*             ) shift ; files=( "$@" ) ; break ;;
+	*             ) files+=( "$1" )                ;;
 	esac
 	shift
 done
+files+=( "$@" )
+
 
 [[ "$var" ]] || missing "--var" "ARG"
 
