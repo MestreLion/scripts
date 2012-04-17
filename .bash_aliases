@@ -20,6 +20,6 @@ cdl()     { cd "$@" && ll ; }
 md()      { mkdir "$@" ; cd "${@: -1}" ; }
 which()   { builtin type -P "$@" ; }
 sudo()    { cmd=$(type -P "$1") ; shift ; command sudo "$cmd" "$@" ; }
-sprunge() { echo "$(curl -sSF 'sprunge=<-' http://sprunge.us)${1+?$1}${2+#n-$2}"; }
+sprunge() { echo "$(curl -sSF 'sprunge=<${1--}' http://sprunge.us)${2+?$2}${3+#n-$3}"; }
 
 
