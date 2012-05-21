@@ -27,7 +27,7 @@ else
 			echo "$SELF will now launch wine's uninstaller. Please use it to uninstall all applications so menu entries will be cleaned before data is deleted."
 			[[ -z "$FORCE" ]] && read -n 1 -p "Press any key to continue" dummy
 		fi
-	
+
 		# run unintaller
 		env WINEPREFIX="$WINEBOTTLEHOME/$prefix" wine uninstaller
 	fi
@@ -42,4 +42,3 @@ else
 	rm -rf "$WINEBOTTLEHOME/$prefix"
 	[[ -n "$VERBOSE" ]] && echo "wine prefix $WINEBOTTLEHOME/$prefix was removed."
 fi
-

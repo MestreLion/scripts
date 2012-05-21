@@ -69,13 +69,13 @@ fatalgui()
 	local message="$1"
 	local errorcode="${2:-1}"
 	local dump="$3"
-	
+
 	[[ -n "$dump"    ]] && echo "$dump" >&2
 	[[ -n "$message" ]] && echo "$SELF: ${message/%['!''.'':']/}" >&2
 
 	zenity --error --title="$SELF_GUI" \
 	       --text="${message:+$message\n\n}${dump:+$dump\n\n}" #"Exiting with error code ${errorcode}"
-	
+
 	exit $errorcode
 }
 
@@ -108,16 +108,16 @@ while IFS=":" read -r -s keyType _ keySize _ keyId keyDate _ _ _ keyUser _ keyFl
 
 	# Check for (pub)lic keys that are able to (s)ign and are not (D)isabled
 	if [[ "$keyType" = "pub" && "$keyFlags" = *s* && ! "$keyFlags" = *D* ]] ; then
-	
+
 		# populate the array
 		array+=("$keyId" "$keyUser" "${keyId:(-8)}" "$keyDate" "$keySize")
-		
+
 		# Save the number of chars of the longest user string
 		(( ${#keyUser} > $max_chars )) && max_chars=${#keyUser}
 
 		#DEBUG echo "$keyType|$keySize|${keyId:(-8)}|$keyDate|${#keyUser}|$max_chars|$keyUser"
 	fi
-	
+
 done <<< "$keys"
 
 # Check if suitable keys were found
@@ -139,7 +139,7 @@ key=$(
 
 # default output already exists?
 [[ -f "$OUTPUT" ]] && {
-	
+
 	# prompt for another output file
 	OUTPUT=$(
 		zenity --file-selection --save --filename="$OUTPUT"                               \

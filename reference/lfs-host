@@ -48,5 +48,3 @@ sudo sed -i 's/workgroup = WORKGROUP/workgroup = CASA/' /etc/samba/smb.conf
 
 # Disable Compiz (for Virtual Box)
 # - Preferences -> Appearance -> Visual Effects -> None
-
-

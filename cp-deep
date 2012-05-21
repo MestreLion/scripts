@@ -26,8 +26,8 @@
 # cp-deep works like regular cp, copying files from SOURCE(S) to DESTINATION
 # But it also creates destination path if it does not exist - using mkdir
 # with --parent DEST - thus allowing copied files to be "deep" in the tree
-# 
-# 
+#
+#
 # USE WITH CAUTION! PAY ATTENTION TO TRAILLING "/" IN DEST!!!
 #
 #
@@ -49,7 +49,7 @@
 # So be sure to properly include or not trailling "/" when SOURCE is single file
 # and DEST does not exist
 
-(( $# >= 2 )) || { 
+(( $# >= 2 )) || {
 	echo "${0##*/}: missing parameters. usage: ${0##*/} SOURCE... DEST" >&2
 	exit 1
 }
@@ -63,4 +63,3 @@ dest="${@:(-1)}" # Last argument
 [[ "$dest" ]] && { mkdir --parent -- "$dest" || exit ; }
 
 cp --no-preserve=mode,ownership "$@"
-

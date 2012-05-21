@@ -46,7 +46,7 @@ NTFSUUID=
 usage ()
 {
 	local explicit="$1"
-	
+
     cat <<EOF
 Usage: $SELF [OPTIONS] --generate
        $SELF [OPTIONS] --read     DEVICE
@@ -74,13 +74,13 @@ Options:
   -u, --uuid UUID       uses the specified UUID. Must be a 16 chars ASCII string, case-insensitive, [0-9,A-F]
                         if --binary is used, UUID must be 8 bytes long
                         --uuid is only used with --set, otherwise it is ignored
-  
+
 Commands:
   --generate            output a random UUID suitable for an NTFS device (8 bytes)
   --read DEVICE         output the current UUID of the specified NTFS device
   --set  DEVICE         sets the UUID for the specified NTFS device (uses a random one if --uuid is ommited)
   --copy DEV_IN DEV_OUT copy (clone) the UUID from an NTFS device to another
-  
+
 Examples:
   $SELF --generate
   $SELF --read /dev/sdx1
@@ -100,7 +100,7 @@ EOF
 _RandomUuid()
 {
 	local lower=""
-	
+
 	if [[ -z "$LOWER" ]] ; then lower="-u" ; fi
 	NTFSUUID=$(xxd "$lower" -plain -l 8 /dev/urandom)
 }
@@ -108,7 +108,7 @@ _RandomUuid()
 _TestNTFS()
 {
 	local device="$1"
-	
+
 	if [[ -n "$device" ]] ; then
 		if [[ -b "$device" ]] ; then
 			if sudo blkid -p  "$device" | grep -q "TYPE=\"ntfs\"" ; then
@@ -119,7 +119,7 @@ _TestNTFS()
 			fi
 		else
 			echo "error: $device: not found or not a device"
-			return 12 
+			return 12
 		fi
 	else
 		# Redundant, since DEVICE is mandatory, enforced by getopts
@@ -132,16 +132,16 @@ _Confirm()
 {
 	local message="$1"
 	local confirm
-	
+
 	if [[ -z "$FORCE" ]] ; then
 		# can be improved with smarter setting of default value
-		read -p "$message (y/n, default YES): " confirm 
+		read -p "$message (y/n, default YES): " confirm
 		case "x$confirm" in
 			x[Yy]*|x) ;;
 			*) if [[ -n "$VERBOSE" ]] ; then echo "$SELF: $COMMAND: cancelled by user" ; fi ; return 2 ;;
 		esac
 	fi
-	
+
 	return 0
 }
 
@@ -169,7 +169,7 @@ EOF
 Uuid_Generate()
 {
 	_RandomUuid
-	
+
 	# All input data is set, print debug info
 	if [[ -n "$DEBUG" ]] ; then _PrintFlags ; fi
 
@@ -178,14 +178,14 @@ Uuid_Generate()
 	else
 		echo "$NTFSUUID"
 	fi
-	
+
 	return 0
 }
 
 Uuid_Read()
 {
 	local lower=""
-	
+
 	_TestNTFS "$DEVICE" || return $?
 
 	if [[ -z "$LOWER" ]] ; then lower="-u" ; fi
@@ -199,7 +199,7 @@ Uuid_Read()
 	else
 		echo "$NTFSUUID"
 	fi
-	
+
 	return 0
 }
 
@@ -207,12 +207,12 @@ Uuid_Set()
 {
 	local binary_uuid
 	local result=0
-	
+
 	# Handle UUID: Calculate a random one if not given
-	if [[ -z "$NTFSUUID" ]] ; then 
+	if [[ -z "$NTFSUUID" ]] ; then
 		_RandomUuid
 	else
-		if [[ -z "$BINARY" ]] ; then		
+		if [[ -z "$BINARY" ]] ; then
 			# Hexadecimal String format
 			if ! [[ "$NTFSUUID" =~ ^[0-9A-Fa-f]{16}$ ]] ; then
 				echo "error: $NTFSUUID: invalid UUID. Must be 16 hexadecimal characters [0-9,A-F]. Ex: 2AE2C85D31835048"
@@ -224,28 +224,28 @@ Uuid_Set()
 				echo "error: $NTFSUUID: invalid UUID. Binary format must be 8-bytes long"
 				return 22
 			fi
-			
+
 			# Save original UUID
 			binary_uuid="$NTFSUUID"
-			
+
 			# Convert to hexadecimal string
 			NTFSUUID=$(echo "$NTFSUUID" | xxd -len 8 -plain)
 		 fi
 	fi
-	
+
 	# Adjust UUID case
 	if [[ -n "$LOWER" ]] ; then NTFSUUID="${UUID,,}" ; else NTFSUUID="${UUID^^}" ; fi
 
 	# All input data is set, print debug info
 	if [[ -n "$DEBUG" ]] ; then _PrintFlags ; fi
 	if [[ -n "$binary_uuid" ]] ; then echo "Binary UUID     = $binary_uuid" ; fi
-	
+
 	# Test device
 	_TestNTFS "$DEVICE" || return $?
 
 	# Confirm with user
 	_Confirm "Set $DEVICE UUID to $NTFSUUID?" || return $?
-	
+
 	# Set the UUID
 	if [[ -z "$TEST" ]] ; then
 		echo "$NTFSUUID" | xxd -r -plain | sudo dd of="$DEVICE" bs=8 count=1 seek=9 \
@@ -255,7 +255,7 @@ Uuid_Set()
 
 	if [[ $result -eq 0 ]] ; then
 		# Verbose message
-		if [[ -n "$VERBOSE" ]] ; then echo "UUID of $DEVICE set to $NTFSUUID" ; fi 
+		if [[ -n "$VERBOSE" ]] ; then echo "UUID of $DEVICE set to $NTFSUUID" ; fi
 		return 0
 	else
 		echo "error: $COMMAND: $result (permission denied?)"
@@ -269,14 +269,14 @@ Uuid_Copy()
 	local output="$1"
 	local result=0
 	local lower
-	
+
 	# Check DEVICE_OUTPUT (getopt only handle 1 mandatory argument per option)
 	if [[ -z "$output" ]] ; then
 		echo "error: output device not specified"
 		usage
 		exit 31
 	fi
-	
+
 	# Test Input and Output devices
 	_TestNTFS "$input" && _TestNTFS "$output" || return $?
 
@@ -289,17 +289,17 @@ Uuid_Copy()
 
 	# Confirm with user
 	_Confirm "Copy UUID $NTFSUUID from $input to $output ?" || return $?
-			
+
 	# Copy the UUID
 	if [[ -z "$TEST" ]] ; then
 		sudo dd if="$input" of="$output" bs=8 count=1 seek=9 skip=9 conv=notrunc /
 		        status=noxfer 2>&3
 		result=$?
-	fi 
+	fi
 
 	if [[ $result -eq 0 ]] ; then
 		# Verbose message
-		if [[ -n "$VERBOSE" ]] ; then echo "UUID $NTFSUUID copied from $input to $output" ; fi 
+		if [[ -n "$VERBOSE" ]] ; then echo "UUID $NTFSUUID copied from $input to $output" ; fi
 		return 0
 	else
 		echo "error: $COMMAND: $result (permission denied?)"
@@ -341,10 +341,9 @@ done
 
 case "$COMMAND" in
 	help     ) usage "HELP"   ; exit 0  ;;
-	generate ) Uuid_Generate  ; exit $? ;; 
-	read     ) Uuid_Read      ; exit $? ;; 
-	set      ) Uuid_Set       ; exit $? ;; 
-	copy     ) Uuid_Copy "$@" ; exit $? ;; 
-	*        ) usage          ; exit 1  ;; 
+	generate ) Uuid_Generate  ; exit $? ;;
+	read     ) Uuid_Read      ; exit $? ;;
+	set      ) Uuid_Set       ; exit $? ;;
+	copy     ) Uuid_Copy "$@" ; exit $? ;;
+	*        ) usage          ; exit 1  ;;
 esac
-

@@ -57,7 +57,7 @@ prompt="Pick an option:"
 
 echo "$title"
 PS3="$prompt "
-select opt in "${options[@]}" "Quit"; do 
+select opt in "${options[@]}" "Quit"; do
 
 	case "$REPLY" in
 
@@ -107,4 +107,3 @@ select entry in "${list[@]}"; do
 done
 
 # For reference: last element of array=	echo "${arr[@]:(-1)}"
-

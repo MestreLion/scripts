@@ -283,7 +283,7 @@ SetupExecutable()
 	fi
 
 	[[ "$RESTORE" || "$UNDO" ]] && return
-	
+
 	winexec="$(wine winepath -w "$executable")"
 	command="${winexec//\\/\\\\} \\\"%1\\\""
 
@@ -679,6 +679,3 @@ exit 0
 #	Registry file "regfile.txt" was generated
 #	0:00.28
 #	0
-
-
-

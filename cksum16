@@ -34,14 +34,14 @@ usage() {
 crc16()
 (
 	export LC_ALL=C
-	
+
 	local string="$1"
 	local format="${2:-"%d"}"
 	local crc=0
 	local i j xor_poly
-	
+
 	for ((i=0; i<${#string}; i++)); do
-		
+
 		c=$(printf "%d" "'${string:i:1}")
 		for ((j=0; j<8; c>>=1, j++)); do
 
@@ -55,7 +55,7 @@ crc16()
 )
 
 while [[ $# -gt 0 ]]; do
-	arg="$1"; shift	
+	arg="$1"; shift
 	case "$arg" in
 	-h|--help  ) usage                              ;;
 	-x|--hex   ) format="%04X"                      ;;
@@ -89,7 +89,7 @@ printf "\n"
 #{
 #    unsigned short crc = 0;
 #    int i, j, xor_poly;
-# 
+#
 #    for (i = 0; string[i] != 0; i++)
 #    {
 #        char c = string[i];
@@ -103,4 +103,3 @@ printf "\n"
 #    }
 #    return crc;
 #}
-

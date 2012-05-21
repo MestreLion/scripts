@@ -11,7 +11,7 @@ options=("AAA" "BBB" "CCC" "DDD")
 
 menu() {
 	echo 'Avaliable options:'
-	for i in ${!options[@]}; do 
+	for i in ${!options[@]}; do
 		printf '%3d%s) %s\n' $((i+1)) "${choices[i]:- }" "${options[i]}"
 	done
 	[[ "$msg" ]] && echo "$msg"; :
@@ -28,7 +28,7 @@ while menu && read -rp "$prompt" num && [[ "$num" ]]; do
 done
 
 printf 'You selected'; msg=' nothing'
-for i in ${!options[@]}; do 
+for i in ${!options[@]}; do
 	[[ "${choices[i]}" ]] && { printf ' %s' "${options[i]}"; msg=; }
 done
 echo "$msg"

@@ -11,12 +11,12 @@
 declare -a options=()
 
 while [[ "$1" ]]; do
-	
+
 	case "$1" in
-	
+
 	# Added in apt 0.8.11.2
 	--install-suggests|--suggests) options+=( "-o" "APT::Install-Suggests=true" ) ;;
-	
+
 	# Added in apt 0.8.11
 	download)
 		if [[ $(type -p aptitude) ]] ; then
@@ -31,11 +31,10 @@ while [[ "$1" ]]; do
 
 	# Other options
 	*) options+=( "$1" ) ;;
-	
+
 	esac
-	
+
 	shift
 done
 
 /usr/bin/apt-get "${options[@]}"
-

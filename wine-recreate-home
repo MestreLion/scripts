@@ -58,4 +58,3 @@ while [[ ! -f "$prefix/system.reg" ]] ; do : ; done ; sleep 3
 ln -s /dados "$prefix/dosdevices/d:"
 
 [[ -n "$VERBOSE" ]] && echo "wine defaut prefix $prefix was re-created."
-

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Print all command line arguments. If used in GUI, also prints relevant 
+# Print all command line arguments. If used in GUI, also prints relevant
 # Nautilus Scripts vars and uses zenity for output
 
 # Use -v var1 [var2...] to inspect shell/env variables
@@ -34,4 +34,3 @@ if [[ "$TERM" == "dumb" ]] ; then
 else
 	[[ "$output" ]] && printf "%b" "$output"
 fi
-

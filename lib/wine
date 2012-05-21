@@ -6,4 +6,3 @@ if [ -z "$WINEBOTTLEHOME" ]; then
 	echo "	export WINEBOTTLEHOME=\"$HOME/.local/share/wineprefixes\""
 	exit 1
 fi
-

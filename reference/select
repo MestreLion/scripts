@@ -25,7 +25,7 @@ declare    NAME="option"             # name your output var
 # ----- SELECT/IN/DO STATEMENT - DO NOT EDIT --------------------------------
 
 menu() {
-	for i in ${!WORDS[@]}; do 
+	for i in ${!WORDS[@]}; do
 		printf "%*d) %s\n" $(((${#WORDS[@]}/10)+1)) $((i+1)) "${WORDS[i]}"
 	done;
 }
@@ -34,7 +34,7 @@ while menu && read -rp "$PS3" REPLY && NUMREPLY=""; do
 	[[ "$REPLY" != *[![:digit:]]* ]] && NUMREPLY=$((10#$REPLY)) # avoid 08 error
 	(( NUMREPLY )) && declare "$NAME"="${WORDS[NUMREPLY-1]}" || declare "$NAME"=""
 
-	
+
 # ---- INSIDE THE LOOP - EDITABLE -------------------------------------------
 
 # Run your COMMANDS here
@@ -42,10 +42,10 @@ while menu && read -rp "$PS3" REPLY && NUMREPLY=""; do
 # Do whatever you want, but of course, dont mess with WORDS, NAME or NUMREPLY
 # (remember those those are "inner" vars). But messing with REPLY
 # or with your named variable is allowed
-	
+
 	[[ ! "$REPLY" = "0" ]] || { echo "Goodbye!" ; break; }
 	echo "You picked $option which is option $REPLY"
-	
+
 
 # ---- END OF LOOP - DONE STATEMENT ----------------------------------------
 
@@ -59,7 +59,6 @@ exit
 select option in "${WORDS[@]}"; do
 
 	[[ ! "$REPLY" = "0" ]] || { echo "Goodbye!" ; break; }
-	echo "You picked $option which is option $REPLY"	
+	echo "You picked $option which is option $REPLY"
 
 done
-

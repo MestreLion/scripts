@@ -32,4 +32,3 @@ done < "$1"
 #text = input()
 #encoded = "".join("<U{0:04X}>".format(ord(char)) for char in text)
 #print(encoded)
-

@@ -40,7 +40,7 @@ if [[ "$1" ]] ; then
 fi
 cat <<-USAGE
 	Generates a list of live hostnames on LAN, adding new results to a file
-	
+
 	Options:
 	-h|--help        - show this page
 	-v|--verbose     - print more details about what is being done

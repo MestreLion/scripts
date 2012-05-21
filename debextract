@@ -46,7 +46,7 @@ cat <<-USAGE
 	                 directory. In all cases, package filename will be appended
 	                 to the final destination path.
 	--nocontrol      - do not extract the control files. (DEBIAN directory)
-	--controldir DIR - set the destination directory for the control files, 
+	--controldir DIR - set the destination directory for the control files,
 	                    relative to the extracted package directory. Ignored if
 	                    --nocontrol is set. Default is DEBIAN.
 	--onerror ACTION - What to do if an error occur when executing $main for a
