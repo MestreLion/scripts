@@ -6,3 +6,8 @@
 [[ -h ~/Pictures  ]] && rm ~/Pictures   && mkdir ~/Pictures
 [[ -h ~/Videos    ]] && rm ~/Videos     && mkdir ~/Videos
 
+[[ -f "$HOME"/.config/user-dirs.dirs.bak ]] && mv "$HOME"/.config/user-dirs.dirs{.bak,}
+[[ -d "$HOME"/.templates   ]] && mv "$HOME"/{.templates,Templates}
+[[ -d "$HOME"/.publicshare ]] && mv "$HOME"/{.publicshare,Public}
+[[ -f "$HOME/examples.desktop" ]] || cp /etc/skel/examples.desktop "$HOME"
+

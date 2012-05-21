@@ -1,5 +1,5 @@
 #!/bin/sh
-# 
+#
 # Commands meant to run at every login
 #
 # To be sourced by ~/.profile
@@ -14,13 +14,13 @@
 # And edit "/path/to/custom" to the proper path (usually /dados/progs/linux)
 # Dont forget to un-comment the lines too.
 #
-# Notes: 
+# Notes:
 #
 #  #!/bin/sh is specified to enforce compliance with /etc/gdm/Xession,
 #  which sources ~/.profile at login. Thus, bashisms are not allowed here.
 #
 #  CUSTOM_ROOT variable must be set in ~/.profile, as this script rely on it
-# 
+#
 ##############################################################################
 
 if [ -z "$CUSTOM_ROOT" ] ; then
@@ -32,16 +32,16 @@ export CUSTOM_BIN=$CUSTOM_ROOT/bin
 
 ##############################################################################
 
-# Append folders to $PATH, avoiding duplicates
+# Prepend folders to $PATH, avoiding duplicates
 # Parameters: a single string, ':' separated, cointaining the folders to add
 # This function breaks the string and check each folder to avoid duplicates
-append_path()
+prepend_path()
 {
 	SAVED_IFS="$IFS"
 	IFS=:
 	for folder in $1 ; do
 		if ! $( echo "$PATH" | tr ":" "\n" | grep -qx "$folder" ) ; then
-			PATH=$PATH:$folder
+			PATH=$folder:$PATH
 		fi
 	done
 	IFS="$SAVED_IFS"
@@ -50,27 +50,28 @@ append_path()
 
 ##############################################################################
 
-# Check (and fix) $HOME/bin -> $CUSTOM_ROOT/bin relation
-if [ -d "$HOME/bin" ] ; then
-	if [ -h "$HOME/bin" ] ; then
-		# ~/bin is already a symlink (hopefully, to $CUSTOM_BIN).
+# Check (and fix) $HOME/.local/bin -> $CUSTOM_ROOT/bin relation
+if [ -d "$HOME/.local/bin" ] ; then
+	if [ -h "$HOME/.local/bin" ] ; then
+		# ~/.local/bin is already a symlink (hopefully, to $CUSTOM_BIN).
 		# So ill impersonate it, and its my job to maintain it.
 		# Make sure it is in PATH.
-		append_path "$HOME/bin"
+		prepend_path "$HOME/.local/bin"
 	else
-		# ~/bin is a physical, independent folder.
-		# not my bussiness to use it and/or add it to PATH.
+		# ~/.local/bin is a physical, independent folder.
+		# not my business to use it and/or add it to PATH.
 		# So, add $CUSTOM_BIN
-		append_path "$CUSTOM_BIN"
+		prepend_path "$CUSTOM_BIN"
 	fi
 else
-	# ~/bin does not exist. Create Symlink and add it to PATH
-	ln -s "$CUSTOM_BIN" "$HOME/bin"
-	append_path "$HOME/bin"
+	# ~/.local/bin does not exist. Create Symlink and add it to PATH
+	mkdir -p "$HOME/.local"
+	ln -s "$CUSTOM_BIN" "$HOME/.local/bin"
+	prepend_path "$HOME/.local/bin"
 fi
 
 # Add scripts and current folder to PATH
-append_path "$CUSTOM_SCRIPTS:$HOME/.local/bin"
+prepend_path "$CUSTOM_SCRIPTS"
 
 export PATH
 
@@ -101,10 +102,7 @@ export LC_MEASUREMENT="pt_BR.utf8"
 
 # if running bash (interactive login shell)
 if [ -n "$BASH_VERSION" ]; then
-	if [ -f "$CUSTOM_ROOT/.custom_bashrc" ] ; then
-		. "$CUSTOM_ROOT/.custom_bashrc"
+	if [ -f "$CUSTOM_ROOT/bashrc" ] ; then
+		. "$CUSTOM_ROOT/bashrc"
 	fi
 fi
-
-
-

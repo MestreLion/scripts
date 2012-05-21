@@ -5,12 +5,17 @@ dir="/dados"
 [[ ! -h ~/Documents ]] && rmdir ~/Documents  && ln -s "${dir}/Arquivos/"             ~/Documents
 [[ ! -h ~/Downloads ]] && rmdir ~/Downloads  && ln -s "${dir}/Download/"             ~/Downloads
 [[ ! -h ~/Music     ]] && rmdir ~/Music      && ln -s "${dir}/Mp3/Albuns/"           ~/Music
-[[ ! -h ~/Pictures  ]] && rmdir ~/Pictures   && ln -s "${dir}/Arquivos/My Pictures/" ~/Pictures
+[[ ! -h ~/Pictures  ]] && rmdir ~/Pictures   && ln -s "${dir}/Fotos/"                ~/Pictures
 [[ ! -h ~/Videos    ]] && rmdir ~/Videos     && ln -s "${dir}/Filmes/"               ~/Videos
 
 # change templates and publicshare
-# "$HOME/user-dirs.dirs"
-# XDG_TEMPLATES_DIR="$HOME/.templates"
-# XDG_PUBLICSHARE_DIR="$HOME/.publicshare"
-# rm "$HOME/Templates" "$HOME/Public"
+[[ -f "$HOME"/.config/user-dirs.dirs.bak  ]] || {
+	cp "$HOME"/.config/user-dirs.dirs{,.bak}
+	sed -i '/^XDG_TEMPLATES_DIR=/s/Templates/.templates/'  "$HOME/.config/user-dirs.dirs"
+	sed -i '/^XDG_PUBLICSHARE_DIR=/s/Public/.publicshare/' "$HOME/.config/user-dirs.dirs"
+}
+[[ -d "$HOME"/Templates ]] && mv "$HOME"/{Templates,.templates}
+[[ -d "$HOME"/Public    ]] && mv "$HOME"/{Public,.publicshare}
 
+# delete examples
+rm -f "$HOME/examples.desktop"

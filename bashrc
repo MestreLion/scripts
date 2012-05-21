@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Commands meant to run at every shell
-# 
+#
 # To be sourced by ~/.bashrc
 #
 # To run, add these lines to ~/.bashrc:
@@ -11,8 +11,8 @@
 #	fi
 #
 
-if [ -f "$CUSTOM_ROOT/.bash_aliases" ] ; then
-	source "$CUSTOM_ROOT/.bash_aliases"
+if [ -f "$CUSTOM_ROOT/bash_aliases" ] ; then
+	source "$CUSTOM_ROOT/bash_aliases"
 fi
 
 # Disable the dreaded history expansion for interactive sessions
@@ -69,4 +69,3 @@ wine-run() {
 		env WINEPREFIX="$prefix" wine cmd /c c:\run-$app.bat
 	fi
 }
-

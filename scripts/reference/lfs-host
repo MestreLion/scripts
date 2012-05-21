@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Prepare host for LFS
 # Host is Linux Mint 10 i386 @ /dev/sda1

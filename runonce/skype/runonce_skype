@@ -1,20 +1,28 @@
 #! /bin/bash
 
 # Fix the following WARNING in ~/.xsession-errors
-# gnome-session[2035]: EggSMClient-WARNING: Desktop file '/home/rodrigosilva/.config/autostart/skype.desktop' has malformed Icon key 'skype.png'(should not include extension)
+# gnome-session[2035]: EggSMClient-WARNING: Desktop file '/home/rodrigo/.config/autostart/skype.desktop' has malformed Icon key 'skype.png'(should not include extension)
 
-file="$HOME/.config/autostart/skype.desktop"
+system=1
+sysfile="/usr/share/applications/skype.desktop"
 
-if [ -f "$file" ] ; then
-	if `cat "$file" | grep "Icon=" | grep -q ".png"` ; then
-		sed -i.bak '/^Icon=/s/\.png$//' "$file"
-		cp "$file" "$PWD"
-		cp "${file}.bak" "$PWD"		
-	else
-		echo "Nothing to fix! (maybe fixed already?)"
-		exit $CUSTOM_RUNONCE_ALREADY_DID
-	fi	
-else
+[[ -f "$sysfile" ]] || {
 	echo "Skype not installed (yet...)"
-	exit $CUSTOM_RUNONCE_NOT_YET
+	exit
+}
+
+if ((system)) ; then
+	file=$sysfile
+	sudo=sudo
+else
+	file="$HOME/.local/share/applications/skype.desktop"
+	mkdir -p "$(dirname "$file")"
+	cp "$sysfile" "$file"
+	sudo=env
+fi
+
+if cat "$file" | grep "^Icon=" | grep -q "\.png" ; then
+	$sudo sed -i.bak '/^Icon=/s/\.png$//' "$file"
+else
+	echo "Nothing to fix! (maybe fixed already?)"
 fi

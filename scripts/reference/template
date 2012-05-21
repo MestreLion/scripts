@@ -15,7 +15,7 @@
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with this program. If not see <http://www.gnu.org/licenses/gpl.html>
+#    along with this program. See <http://www.gnu.org/licenses/gpl.html>
 #
 # Long description
 # ... that may span over multiple lines
@@ -24,14 +24,22 @@ myname="${0##*/}"
 mydir=$(dirname "$(readlink -f "$0")")
 verbose=0
 
+fatal()   { printf "%s: error: %s\n" "$myname" "$1" >&2 ; exit "${2:-1}" ; }
+fatal()   { [[ "$1" ]] && printf "%s: error: %s\n" "$myname" "$1" >&2 ; exit "${2:-1}" ; }
 fatal()   { [[ "$1" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
-message() { ((verbose)) && echo "$1" ; } # [[ "$1" ]] does not apply
-argerr()  { echo "$myname: ${1:-error}" >&2 ; usage 1 ; }
-invalid() { argerr "invalid option: $1" ; }
-missing() { argerr "missing ${2:+$2 }operand${1:+ from $1}." ; }
+message() { ((verbose)) && printf "%s\n" "$1"; }
 integer() { [[ "$1" != *[!0-9]* ]] || argerr "'$1'${2:+ in $2} is not an integer." ; }
 
+message() { printf "%s\n" "$1" >&2 ; }
+fatal()   { [[ "$1" ]] && message "$myname: error: $1" ; exit ${2:-1} ; }
+skip()    { i=${2:-$file}; message "skipping${i:+ $i}${1:+: $1}"; continue ; }
+argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1 ; }
+invalid() { argerr "invalid option: $1" ; }
+missing() { argerr "missing${1:+ $1} operand." ; }
+missing() { argerr "missing ${2:+$2 }operand${1:+ from $1}." ; }
+
 quit()    { message "Goodbye!" ; exit; }
+rel()     { python -c "import os.path; print os.path.relpath('$1','$dir')"; }
 
 usage() {
 	cat <<- USAGE
