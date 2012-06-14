@@ -1,0 +1,46 @@
+#!/bin/bash -x
+
+# Wrapper to run executable that begins with $1
+# Useful, for example, to find and run a suitable python2 executable
+# $1 must be either --file=/path/to/caller when the caller is a file
+# (to exclude itself from the search) or the desired target name
+# (for alias, functions, etc)
+#
+# Example: wrapper --file="$0" "$@"
+#          wrapper "python2"   "$@"
+
+case "$1" in
+	--file=*)
+		caller=${1#*=}
+		name=${caller##*/}
+	;;
+	*)
+		caller=""
+		name=$1
+	;;
+esac
+
+[[ "$name" && (-z "$caller" || -f "$caller") ]] || {
+	echo "Usage: [--file=CALLER | TARGET] [target options]" >&2
+	exit 1
+}
+
+IFS=:
+for path in $PATH; do
+	for file in "$path"/"$name"*; do
+		[[ -x "$file" && ! ("$caller" && "$file" -ef "$caller") ]] && {
+			shift
+			echo exec "$file" "$@"
+			exit
+		}
+	done
+done
+
+echo "No executable named ${name}* was found" >&2
+exit 1
+
+# neater version for the loops (by geirha. a bit strict on exec names)
+#while read -r file ; do : ; done < <(type -ap python2{,.{9..0}})
+
+# original version of the test (3x slower, but catches copies of $0 on $PATH)
+#[[ -x "$file" ]] && ! cmp --silent "$0" "$file" && :

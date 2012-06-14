@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Wrapper to find the appropriate python 2 executable
+
+wrapper "--file=python2" "$@"
