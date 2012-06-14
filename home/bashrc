@@ -6,14 +6,25 @@
 #
 # To run, add these lines to ~/.bashrc:
 #
-#	if [ -f "$CUSTOM_ROOT/.custom_bashrc" ] ; then
-#		source "$CUSTOM_ROOT/.custom_bashrc"
+#	if [ -f "$SCRIPTS/home/bashrc" ] ; then
+#	    . "$SCRIPTS/home/bashrc"
 #	fi
 #
 
-if [ -f "$CUSTOM_ROOT/bash_aliases" ] ; then
-	source "$CUSTOM_ROOT/bash_aliases"
+if [ -f "$SCRIPTS/home/bash_aliases" ] ; then
+	source "$SCRIPTS/home/bash_aliases"
 fi
+
+declare -A termcolor
+termcolor[RED]="\[\033[1;31m\]"
+termcolor[GREEN]="\[\033[1;32m\]"
+termcolor[BLUE]="\[\033[1;34m\]"
+termcolor[WHITE]="\[\033[1;37m\]"
+termcolor[GRAY]="\[\033[00m\]"
+
+PS1="${termcolor[GREEN]}\u@\h ${termcolor[BLUE]}\w "\
+"${termcolor[RED]}\$(git branch 2>/dev/null | grep '^*' | cut -c 3- | sed 's/.*/& /')"\
+"${termcolor[BLUE]}\$${termcolor[GRAY]} "
 
 # Disable the dreaded history expansion for interactive sessions
 # A.K.A 'why echo "Hello World!" do not work?'
