@@ -1,0 +1,31 @@
+#!/bin/bash
+
+myname="${0##*/}"
+
+usage() {
+	msg="$1\nUsage: $myname <FILE|DIR> <FILE|DIR> <FILE|DIR>\n"
+	msg="${msg//&/&amp;}"
+	msg="${msg//</&lt;}"
+	if [[ "$TERM" == "dumb" ]] && type zenity >/dev/null 2>&1 ; then
+		zenity --info --no-wrap --text "$msg"
+	else
+		printf "%b" "$msg" >&2
+	fi
+	exit 1
+}
+
+md5sumdir() (
+	cd "$1"
+	find . -type f -exec md5sum {} + | LC_ALL=C sort -f --key=2
+)
+
+file_or_dir() {
+	[[ -f "$1" ]] && { hexdump -C "$1" ; return ; }
+	[[ -d "$1" ]] && { md5sumdir "$1"  ; return ; }
+}
+
+case $# in
+	2) meld <(file_or_dir "$1") <(file_or_dir "$2") ;;
+	3) meld <(file_or_dir "$1") <(file_or_dir "$2") <(file_or_dir "$3") ;;
+	*) usage "$myname requires either 2 or 3 arguments";;
+esac
