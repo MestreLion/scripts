@@ -39,7 +39,7 @@ missing() { argerr "missing${1:+ $1} operand." ; }
 missing() { argerr "missing ${2:+$2 }operand${1:+ from $1}." ; }
 
 quit()    { message "Goodbye!" ; exit; }
-rel()     { python -c "import os.path; print os.path.relpath('$1','$dir')"; }
+relpath() { python -c "import os.path; print os.path.relpath('$1'${2:+,'$2'})";}
 
 usage() {
 	cat <<- USAGE
