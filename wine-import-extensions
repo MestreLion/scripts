@@ -355,7 +355,7 @@ CreateTempFile()
 		# "push" previous file to end of array
 		tempfile+=( "$tempfile" )
 	else
-		# set the trap
+		# set the trap with swapped quotes for delayed array evaluation
 		trap 'rm -f -- "${tempfile[@]}"' EXIT
 	fi
 
@@ -484,7 +484,7 @@ wine_ext=$( { awk -F= '
                           print tolower(ext) "\t" $0
                           ext=""
                       }
-                  }' "$sysreg"                                      \
+                  }' "$sysreg"                                                 \
               || fatal "Could not read wine registry $sysreg"
             }                                                                  \
             |  sort --unique --ignore-case                                     \
