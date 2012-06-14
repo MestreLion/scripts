@@ -2,9 +2,15 @@
 
 #PATH=${PATH}:/dados/progs/linux/runonce/mint10:/dados/progs/linux/runonce/setup
 
-[[ -z "${CUSTOM_ROOT}" ]] && export CUSTOM_ROOT="/dados/progs/linux"
+if [ -z "$SCRIPTS" ] ; then
+	for root in {"$HOME",/home/dados}/work/scripts; do
+		if [ -d "$root" ] ; then break; fi
+	done
+	export SCRIPTS=$root
+	unset root
+fi
 
-dir="${CUSTOM_ROOT}/runonce/mint10"
+dir="$SCRIPTS/runonce/mint10"
 scripts=( "${dir}"/* )
 
 for script in "${scripts[@]}" ; do

@@ -1,36 +1,47 @@
 #!/bin/bash -x
 
-[[ -z "$CUSTOM_ROOT" ]] && export CUSTOM_ROOT="/dados/progs/linux"
+myname="${0##*/}"
 
-# startup files
-
-if ! { [[ -f ~/.profile ]] && grep -q "CUSTOM_ROOT" ~/.profile ; } ; then
-
-cat >> ~/.profile <<_EOF_
-# Rodrigo
-export CUSTOM_ROOT="/dados/progs/linux"
-if [ -f "\${CUSTOM_ROOT}/.custom_profile" ] ; then
-	. "\${CUSTOM_ROOT}/.custom_profile"
-fi
-_EOF_
-
-
+if [ -z "$SCRIPTS" ] ; then
+	for root in {"$HOME",/home/dados}/work/scripts; do
+		if [ -d "$root" ] ; then break; fi
+	done
+	[[ "$root" ]] || { echo "could not find scripts root"; exit 1; }
+	SCRIPTS=$root
 fi
 
-if ! { [[ -f ~/.bashrc ]] && grep -q "CUSTOM_ROOT" ~/.bashrc ; } ; then
+# custom profile
+if ! grep -q "\$SCRIPTS" ~/.profile ; then
+	cat >> ~/.profile <<-_EOF_
 
-cat >> ~/.bashrc <<_EOF_
-# Rodrigo
-if [ -f "\${CUSTOM_ROOT}/.custom_bashrc" ] ; then
-	source "\${CUSTOM_ROOT}/.custom_bashrc"
+		# Added by $myname
+		export SCRIPTS=${SCRIPTS/$HOME/\$HOME}
+		if [ -f "\$SCRIPTS/home/profile" ] ; then
+		    . "\$SCRIPTS/home/profile"
+		fi
+	_EOF_
 fi
-_EOF_
 
+# custom bashrc
+if ! grep -q "\$SCRIPTS" ~/.bashrc ; then
+	cat >> ~/.bashrc <<-_EOF_
+
+		# Added by $myname
+		if [ -f "\$SCRIPTS/home/bashrc" ] ; then
+		    . "\$SCRIPTS/home/bashrc"
+		fi
+	_EOF_
 fi
 
+# personal bin
+mkdir -p "$HOME/.local/bin"
 
 # Nautilus-extensions
-
-rmdir ~/.gnome2/nautilus-scripts/
-ln -s "${CUSTOM_ROOT}/scripts/nautilus-scripts/" ~/.gnome2/nautilus-scripts
-
+relpath(){ python -c "import os.path; print os.path.relpath('$1'${2:+,'$2'})"; }
+original=$HOME/.gnome2/nautilus-scripts
+custom=$SCRIPTS/nautilus-scripts
+[[ -h "$original" ]] || {
+	mkdir -p "$original"
+	rmdir "$original" &&
+	ln -s "$(relpath "$custom" "$(dirname "$original")")" "$original"
+}

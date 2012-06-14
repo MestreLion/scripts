@@ -1,0 +1,14 @@
+#!/bin/bash -x
+
+# custom profile
+grep -q "\$SCRIPTS" ~/.profile && echo "remove from export SCRIPT to fi"
+
+# custom bashrc
+grep -q "\$SCRIPTS" ~/.bashrc && echo "remove from if SCRIPT to fi"
+
+# personal bin
+rmdir "$HOME/.local/bin" 2>/dev/null
+
+# Nautilus-extensions
+original=$HOME/.gnome2/nautilus-scripts
+[[ -h "$original" ]] && rm "$original" && mkdir -p "$original"
