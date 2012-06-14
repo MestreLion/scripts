@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Wrapper to find the appropriate python 2 executable
+
+IFS=:
+for path in $PATH; do
+	for file in "$path"/python2*; do
+		[[ -x "$file" && ! "$file" -ef "$0" ]] && {
+			python2=$file
+			break
+		}
+	done
+	[[ "$python2" ]] && break
+done
+
+[[ "$python2" ]] || {
+	echo "Python 2.x was not found" >&2
+	exit 1
+}
+
+exec "$python2" "$@"
+
+# neater version for the loops (by geirha. a bit strict on exec names)
+#while read -r file ; do : ; done < <(type -ap python2{,.{9..0}})
+
+# original version of the test (3x slower, but catches copies of $0 on $PATH)
+#[[ -x "$file" ]] && ! cmp --silent "$0" "$file" && :
