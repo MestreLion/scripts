@@ -26,6 +26,7 @@ case $# in
 		items=()
 
 		while (( $# )) ; do
+			#FIXME: Use mktemp instead of tempfile
 			tempfile=$(tempfile --prefix "_" --suffix "_${1//\//_}")
 			items+=( "$tempfile" )
 
