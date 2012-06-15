@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# copies a completion definition for a command to other command(s)
+complete_copy() {
+	local cmd="$1"
+	shift
+	complete -p "$cmd" >/dev/null 2>&1 &&
+	type "$@"          >/dev/null 2>&1 &&
+	eval $(complete -p "$cmd") "$@"
+}
+
+
+BASH_COMPLETION_DIR_USER="$SCRIPTS/home/bash_completion.d"
+
+if [[ -d $BASH_COMPLETION_DIR_USER &&
+      -r $BASH_COMPLETION_DIR_USER &&
+      -x $BASH_COMPLETION_DIR_USER ]]; then
+	for script in "$BASH_COMPLETION_DIR_USER"/*; do
+		[[ ${script##*/} != @(*~|*.bak) &&
+		   -f $script &&
+		   -r $script ]] &&
+			source "$script"
+	done
+fi

@@ -15,6 +15,10 @@ if [ -f "$SCRIPTS/home/bash_aliases" ] ; then
 	source "$SCRIPTS/home/bash_aliases"
 fi
 
+if [ -f "$SCRIPTS/home/bash_completion" ] ; then
+	source "$SCRIPTS/home/bash_completion"
+fi
+
 declare -A termcolor
 termcolor[RED]="\[\033[1;31m\]"
 termcolor[GREEN]="\[\033[1;32m\]"
