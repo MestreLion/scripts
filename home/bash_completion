@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 BASH_COMPLETION_DIR_USER="$SCRIPTS/home/bash_completion.d"
 
 if [[ -d $BASH_COMPLETION_DIR_USER &&

@@ -1,0 +1,71 @@
+#!/bin/bash
+#
+# dwww-man - wrapper for dwww to go straight to a command's man page
+#
+#    Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program. See <http://www.gnu.org/licenses/gpl.html>
+
+fatal() { [[ "$1" ]] && printf "%s\n" "$1" >&2 ; exit ${2:-1} ; }
+
+usage() {
+	myname="${0##*/}"
+	cat <<-USAGE
+	Usage: $myname [options] [[section] page]
+	USAGE
+	if [[ "$1" ]] ; then
+		cat >&2 <<- USAGE
+		Try '$myname --help' for more information.
+		USAGE
+		exit 1
+	fi
+	cat <<-USAGE
+
+	Wrapper for dwww to go straight to a man page. With no arguments, open
+	dwww's main man page.
+
+	Options:
+	  -h|--help     - show this page.
+
+	Examples:
+	$myname printf
+	$myname 3 printf
+
+	Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+	USAGE
+	exit 0
+}
+
+# parse args for help option
+for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
+
+# ensure dwww is installed
+dwww=$(type -p dwww 2>&1) || fatal "dwww is not installed"
+
+# source a no-op modified dwww to set all relevant vars
+source <(awk '/^[ \t]*exec/ {print ": #" $0; next} 1' "$dwww")
+
+# set manpage url
+if [[ "$1" ]]; then
+	manpage=$(man -w -- "${@:1:2}") || exit
+	[[ "$manpage" ]] || exit
+	IFS= read -r manpage <<<"$manpage"
+	url="cgi-bin/dwww$(urlencode "$manpage")?type=man"
+else
+	url="dwww/man"
+fi
+
+# open browser
+exec "$www_browser" "$prot://$DWWW_SERVERNAME/$url"
