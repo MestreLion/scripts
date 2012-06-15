@@ -42,7 +42,7 @@ quit()    { message "Goodbye!" ; exit; }
 relpath() { python -c "import os.path; print os.path.relpath('$1'${2:+,'$2'})";}
 
 usage() {
-	cat <<- USAGE
+	cat <<-USAGE
 	Usage: $myname [options]
 	USAGE
 	if [[ "$1" ]] ; then
