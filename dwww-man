@@ -67,5 +67,5 @@ else
 	url="dwww/man"
 fi
 
-# open browser
-exec "$www_browser" "$prot://$DWWW_SERVERNAME/$url"
+# open browser - xdg-open is better than "$www_browser"
+exec xdg-open "$prot://$DWWW_SERVERNAME/$url"

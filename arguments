@@ -30,7 +30,10 @@ if [[ "$TERM" == "dumb" ]] ; then
 	output+="NAUTILUS_SCRIPT_CURRENT_URI\n${NAUTILUS_SCRIPT_CURRENT_URI:+$NAUTILUS_SCRIPT_CURRENT_URI\n\n}"
 	output+="NAUTILUS_SCRIPT_SELECTED_URIS\n${NAUTILUS_SCRIPT_SELECTED_URIS:+$NAUTILUS_SCRIPT_SELECTED_URIS\n}"
 	output+="NAUTILUS_SCRIPT_SELECTED_FILE_PATHS\n${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS:+$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS\n}"
-	zenity --info --no-wrap --text "${output//&/&amp;}"
+	msg=$output
+	msg="${msg//&/&amp;}"
+	msg="${msg//</&lt;}"
+	zenity --info --no-wrap --text "$msg"
 else
 	[[ "$output" ]] && printf "%b" "$output"
 fi
