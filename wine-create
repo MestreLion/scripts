@@ -21,16 +21,36 @@ if [[ -z "$prefix" ]] ; then
 	echo "$SELF: error: please specify the prefix to create"
 else
 
+	bottle="$WINEBOTTLEHOME/$prefix"
+
 	#check if prefix exists
-	[[ -e "$WINEBOTTLEHOME/$prefix" ]] && fatal "wine prefix $WINEBOTTLEHOME/$prefix already exists. Use wine-delete to remove." 3
+	[[ -e "$bottle" ]] && fatal "wine prefix $bottle already exists. Use wine-delete to remove." 3
 
 	# create the prefix
 	mkdir -p "$WINEBOTTLEHOME"
-	env WINEARCH=win32 WINEPREFIX="$WINEBOTTLEHOME/$prefix" wine wineboot 2>&3
-	while [[ ! -f "$WINEBOTTLEHOME/$prefix/system.reg" ]] ; do : ; done ; sleep 3
+	env WINEARCH=win32 WINEPREFIX="$bottle" wine wineboot 2>&3
+	until [[ -f "$bottle/system.reg" ]] ; do : ; done ; sleep 3
+
+	# shift cd-roms and other block devices to make room for D:
+	if [[ -e "$bottle/dosdevices/d::" ]]; then
+		until grep -q '^"d:"=".*"$' "$bottle/system.reg" &&
+		sed -i '/^"d:"=".*"$/d' "$bottle/system.reg"; do : ; done
+
+		drives=( "$bottle"/dosdevices/* )
+		i=${#drives[@]}
+		while ((i--)); do
+			drive="${drives[i]}"
+			if [[ -b "$drive" && -h "$drive" ]]; then
+				letter=$(LC_ALL=C tr '[d-x]' '[e-y]' <<<"${drive##*/}")
+				target=$(readlink "$drive")
+				rm "$drive"
+				ln -s "$target" "$bottle/dosdevices/$letter"
+			fi
+		done
+	fi
 
 	# add link to /dados
-	ln -s /dados "$WINEBOTTLEHOME/$prefix/dosdevices/d:"
+	ln -s /dados "$bottle/dosdevices/d:"
 
-	[[ "$VERBOSE" ]] && echo "wine prefix $WINEBOTTLEHOME/$prefix was created."
+	[[ "$VERBOSE" ]] && echo "wine prefix $bottle was created."
 fi

@@ -44,12 +44,12 @@ PS1="${termcolor[GREEN]}\u@\h ${termcolor[BLUE]}\w "\
 set +o histexpand # same as set +H
 
 wine-cd() {
-	local prefix="$1"
-	if [[ -z "$1" || "$1" = "default" ]] ; then
+	local bottle="$1"
+	if [[ -z "$bottle" || "$bottle" = "default" ]] ; then
 		# default prefix
 		cd "$HOME/.wine/drive_c"
 	else
-		cd "$WINEBOTTLEHOME/$prefix/drive_c"
+		cd "$WINEBOTTLEHOME/$bottle/drive_c"
 	fi
 }
 
@@ -58,21 +58,27 @@ wine-list() {
 }
 
 wine-cmd() {
-	local prefix="$1"
+	local bottle="$1"
 	local cmd="$2"
 
-	if [ -z "$cmd" ] ; then
-		echo "Usage: wine-cmd PREFIX COMMAND"
+	if [[ -z "$bottle" || "$bottle" = "default" ]] ; then
+		# default prefix
+		prefix="$HOME/.wine"
+	else
+		prefix="$WINEBOTTLEHOME/$bottle"
+	fi
+	if [[ -z "$cmd" ]] ; then
+		echo "Usage: wine-cmd BOTTLE COMMAND"
 		echo ""
 		echo "wine-cmd: error: please specify the command to run"
 	else
 		shift; shift
-		env WINEPREFIX="$WINEBOTTLEHOME/$prefix" wine $cmd "$@"
+		env WINEPREFIX="$prefix" wine "$cmd" "$@"
 	fi
 }
 
 wine-install() {
-	wine-cmd "$1" "uninstaller"
+	wine-cmd "$1" "uninstaller" 2>/dev/null
 }
 
 wine-run() {
