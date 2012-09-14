@@ -1,0 +1,41 @@
+#!/bin/bash -x
+
+#PATH=${PATH}:/dados/progs/linux/runonce/mint10:/dados/progs/linux/runonce/setup
+
+if [ -z "$SCRIPTS" ] ; then
+	for root in {"$HOME",/home/dados}/work/scripts; do
+		if [ -d "$root" ] ; then break; fi
+	done
+	export SCRIPTS=$root
+	unset root
+fi
+
+dir="$SCRIPTS/runonce/ubuntu1204"
+scripts=( "${dir}"/* )
+
+for script in "${scripts[@]}" ; do
+
+	filename="${script##*/}"
+	[[ "$filename" != runonce_* && "$filename" != *.undo ]] && echo "${script}"
+
+done
+
+# GTK BOOKMARKS!
+# gedit settings (PLUGINS!!!)
+# screen resolution and drivers
+
+# Enable repos
+# Add PPAs
+# Install software
+sudo apt-get install gedit-plugins
+
+# Symlinks to /dados
+# Grub customization
+# Nautilus Settings
+# Firefox settings
+	#backspace for history.back (from 2 to 0)
+
+#sudo dwww-index++
+
+# keyboard shortcuts for rotate monitor
+# keyboard delay and speed
