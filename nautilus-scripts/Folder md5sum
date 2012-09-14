@@ -1,0 +1,12 @@
+#!/bin/bash
+
+error() {
+	zenity --error --no-wrap --text "$1"
+	exit ${2:-1}
+}
+
+dir=${1:-$PWD}
+
+[[ -d "$dir" ]] || error "$dir is not a folder"
+
+md5sumdir "$dir" > "md5sumdir-${dir##*/}.txt" || error "$PWD: access denied"

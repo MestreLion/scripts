@@ -1,0 +1,11 @@
+#!/bin/bash
+
+dir=${1:-$PWD}
+
+if ! [[ -d "$dir" ]]; then
+	echo "${0##*/}: ${dir}: Not a directory" >&2
+	exit 1
+fi
+
+cd "$dir"
+find . -type f -exec md5sum {} + | LC_ALL=C sort -f --key=2
