@@ -1,0 +1,19 @@
+#!/usr/bin/python
+import gtk, sys
+
+try:
+	icon = sys.argv[1]
+except:
+	sys.stderr.write("Missing ICON argument.\n"
+	                 "Usage: xdg-icon-path ICON [SIZE]\n")
+	sys.exit(1)
+
+try:
+	size = sys.argv[2]
+except:
+	size = 48
+
+
+icon_theme = gtk.icon_theme_get_default()
+icon_info = icon_theme.lookup_icon(sys.argv[1], int(), 0)
+print icon_info.get_filename()
