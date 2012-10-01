@@ -63,9 +63,8 @@ cat <<-USAGE
 	FILE...       - package file(s) to extract, multiple files accepted
 
 	The destination directory for extraction of each package will be the package
-	filename without its extension (usually .deb). If the filename  has no
-	extension, an error will occur, since this would be the same as executing
-	${main} -x file file
+	filename without the .deb extension. Files other than *.deb will be
+	silently ignored.
 
 	Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
@@ -145,13 +144,16 @@ if ((verbose && !dquiet)) || (( !verbose && dverb )); then ext="--vextract"; fi
 # Loop file arguments
 (( $# )) || missing "file"
 while (( $# )); do
-	#FIXME: extremely unlikely corner-case flaw: filename without extension, in
-	#       a path that contains a dot.  /etc/dir.d/file_with_no_extension
-	filetitle="${1%.*}"
+	filename=${1##*/}
+	filepath=${1%"$filename"}
+	filetitle=${filename%.*}
+	fileext=${filename#"$filetitle"}
+	[[ "${fileext,,}" == ".deb" ]] || { shift ; continue ; }
+
 	if [[ "$destdir" ]] ; then
-		path="${destdir}/${filetitle##*/}"
+		path="${destdir}/${filetitle}"
 	else
-		path="$filetitle"
+		path="${filepath}${filetitle}"
 	fi
 	mkdir -p "$path" # make it easy for dpkg
 	cmd1=("$main" "${opts[@]}" "$ext"    -- "$1" "${path//\/\///}"            )
