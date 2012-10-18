@@ -1,0 +1,88 @@
+#!/bin/bash
+
+infile=$1
+
+filename=${infile##*/}
+filepath=${infile%"$filename"}
+filetitle=${filename%.*}
+fileext=${filename#"$filetitle"}
+
+outfile=${filepath}${filetitle}-aac2ac3${fileext}
+
+myname="${0##*/}"
+fatal()   { [[ "$1" ]] && echo "$1" >&2 ; exit ${2:-1} ; }
+
+# Check if external tools are present
+if type avconv >/dev/null 2>&1; then
+	conv=avconv
+elif type ffmpeg >/dev/null 2>&1; then
+	conv=ffmpeg
+else
+	fatal "Neither avconv nor ffmpeg were found. Either one is required."
+fi
+
+
+$conv -i "$infile" \
+	-codec copy -codec:a ac3_fixed -b:a 448k "$outfile"
+
+
+exit
+
+
+# How to De-noise a recording
+# default (ratio=0.5)
+sox $input -n trim 0 $time noiseprof | sox $input $output noisered
+# custom "ratio"
+sox $input -n trim 0 $time noiseprof $tmp
+sox  -n trim 0 $time noiseprof | sox $input  noisered
+sox $input $output noisered $tmp $ratio # ratio = [0-1]
+
+# Concatenating several wavs to create a multichannel
+sox --combine merge L.wav R.wav C.wav SL.wav SR.wav surround.wav
+sox --combine mix f1.wav "|sox f2.wav -p pad 4" "|sox f3.wav -p pad 8" out.wav
+
+
+# Approach 1
+#http://forum.xbmc.org/showthread.php?tid=62652
+
+# extract the specified track
+#mkvextract tracks "$INPUT" $TRACK:"$WORKDIR/AAC2AC3Temp.aac"
+
+# faad outputs a raw 24 bit PCM stream (anything higher than 24 bits seems to
+# introduce anomalies) which is then piped to aften and converted to a 640 kbit/s
+# AC3 stream (640 kbit/s is max allowed and yields highest possible quality)
+#faad -b 2 -f 2 -q -w "$WORKDIR/AAC2AC3Temp.aac" |
+#aften -v 1 -b 640 -raw_fmt s24_le -raw_sr $RATE -raw_ch $CHANNELS -chmap 0 -lfe 1 - "$WORKDIR/AAC2AC3Temp.ac3"
+
+#mkvmerge -o "$OUTPUT" "$INPUT" "$WORKDIR/AAC2AC3Temp.ac3"
+#mkvmerge -o "$OUTPUT" -A "$INPUT" "$WORKDIR/AAC2AC3Temp.ac3"
+
+##########################
+
+# Approach 2
+
+#To create a multichannel .ac3 you need to create first a multichannel wav.
+#Of course sox comes very handy:
+
+#sox -M L.wav R.wav C.wav SL.wav SR.wav surround.wav
+
+# And now the ac3 encoding
+
+#aften -b 448 -cmix 0 -smix 0 -dsur 2 -acmod 7 surround.wav surround.ac3
+
+#-b 448 — Bitrate in kbps (4 channels: 384 kbps, 5 channels: 448 kbps)
+#-smix 2 — Surround mix level ( 0: -3dB, 1: -6dB, 2: 0 )
+#-dsur 2 — (2: Dolby surround encoded, 0: not indicated, 1: not Dolby surround encoded)
+#-acmod 7 — Audio coding mode, or channel order (7: L,R,C,SL,SR)
+
+#sox -m f1.wav "|sox f2.wav -p pad 4" "|sox f3.wav -p pad 8" out.wav
+
+
+# My version
+#mkvmerge --identify-verbose "$infile"
+#File '<file>': container: QuickTime/MP4
+#Track ID 1: video (avc1)
+#Track ID 2: audio (mp4a)
+#Track ID 2: audio (A_AAC)
+
+#mvkextract tracks "$infile" "$id":"$tmpfile"
