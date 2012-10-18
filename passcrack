@@ -1,0 +1,51 @@
+#!/bin/bash
+
+passfile=$2
+keyid=$1
+prev=$(date +%s)
+total=0
+count=0
+start=$(date +%s)
+steps=15
+stepc=2500
+usage="Usage: passcrack <keyid> <password file>\n"
+
+mode=0 # 0 for fixed counts, 1 for fixed seconds, else to disable
+
+[[ "$keyid" ]] || { printf "No key ID!\n$usage"; exit 1; }
+[[ -f "$passfile" ]] || { printf "Password file not found\n$usage"; exit 1; }
+
+printf "Password Cracker\nCracking %s\nUsing %s\n" "$(gpg --list-secret-keys --with-colons "$keyid" | head -n1)" "$passfile"
+while read -r password; do
+	gpg --default-key "$keyid" --passphrase "$password" --batch --dry-run --no-use-agent --clearsign /dev/null >/dev/null 2>&1 && {
+		echo "Password found! :D \o/"
+		echo "$password"
+		exit 0
+	}
+	((count++))
+
+	case "$mode" in
+	0)
+		if ((count==stepc)); then
+			now=$(date +%s)
+			steps=$((now - prev))
+			((total+=count))
+			echo "$(date): tried $count ($((count/steps)) passwords/sec). Total: $total, last: $password"
+			prev=$now
+			count=0
+		fi
+	;;
+	1)
+		now=$(date +%s)
+		if ((now - prev > steps)); then
+			((total+=count))
+			echo "$(date): tried $count ($((count/steps)) passwords/sec). Total: $total, last: $password"
+			prev=$now
+			count=0
+		fi
+	;;
+	esac
+done < "$passfile"
+
+echo "Password not found :("
+exit 2
