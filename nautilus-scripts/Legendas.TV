@@ -1,2 +1,1 @@
-#!/bin/bash
-legendastv "$@"
+../legendastv/legendastv/nautilus-script
