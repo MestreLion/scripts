@@ -1,47 +1,61 @@
 #!/bin/bash
 
-passfile=$2
+# User input
 keyid=$1
-prev=$(date +%s)
+passfile=$2
+
+# Tunables
+sdelta=5
+cdelta=2500
+mode=0 # 0 for fixed counts, 1 for fixed seconds, else to disable feedback
+log=$HOME/.passcrack.log
+
+start=$(date +%s)
+prev=$start
 total=0
 count=0
-start=$(date +%s)
-steps=15
-stepc=2500
-usage="Usage: passcrack <keyid> <password file>\n"
+procs=0
 
-mode=0 # 0 for fixed counts, 1 for fixed seconds, else to disable
-
-[[ "$keyid" ]] || { printf "No key ID!\n$usage"; exit 1; }
-[[ -f "$passfile" ]] || { printf "Password file not found\n$usage"; exit 1; }
-
-printf "Password Cracker\nCracking %s\nUsing %s\n" "$(gpg --list-secret-keys --with-colons "$keyid" | head -n1)" "$passfile"
-while read -r password; do
-	gpg --default-key "$keyid" --passphrase "$password" --batch --dry-run --no-use-agent --clearsign /dev/null >/dev/null 2>&1 && {
+crack() {
+	gpg --default-key "$keyid" --passphrase "$1" --batch --dry-run \
+		--no-use-agent --clearsign /dev/null >/dev/null 2>&1 &&
+	{
 		echo "Password found! :D \o/"
-		echo "$password"
-		exit 0
+		printf "%s\t%s\t%s\n" "$(date +'%F %T')" "$keymsg" "$password" >> "$log"
+		return 0
 	}
+	return 1
+}
+
+usage() { printf "%s\nUsage: passcrack <keyid> <password file>\n" "$1"; exit 1; }
+
+[[ "$keyid" ]]       || usage "No key ID!"
+
+keymsg=$(gpg --list-secret-keys --with-colons "$keyid" | head -n1)
+feedback="%s: tried %d (%d passwords/sec). Total: %d, last: %s\n"
+
+printf "Password Cracker\nCracking %s\nUsing %s\n" "$keymsg" "$passfile"
+while read -r password; do
+
+	crack "$password" && exit
 	((count++))
 
 	case "$mode" in
-	0)
-		if ((count==stepc)); then
-			now=$(date +%s)
-			steps=$((now - prev))
-			((total+=count))
-			echo "$(date): tried $count ($((count/steps)) passwords/sec). Total: $total, last: $password"
-			prev=$now
-			count=0
+	0) # feedback every 'cdelta' tries. Fast, but hard to tune
+		if (( count==cdelta )); then
+			printf -v now '%(%s)T' -1 #now=$(date +%s)
+			sdelta=$((now - prev))
+			((total += count))
+			printf "$feedback" "$(date +'%F %T')" "$count" "$((count/sdelta))" "$total" "$password"
+			((prev = now, count = 0))
 		fi
 	;;
-	1)
-		now=$(date +%s)
-		if ((now - prev > steps)); then
-			((total+=count))
-			echo "$(date): tried $count ($((count/steps)) passwords/sec). Total: $total, last: $password"
-			prev=$now
-			count=0
+	1) # feedback every 'sdelta' seconds. Hardware-independent, but *very* slow
+		printf -v now '%(%s)T' -1 # now=$(date +%s)
+		if ((now - prev > sdelta)); then
+			(( total+=count ))
+			printf "$feedback" "$(date +'%F %T')" "$count" "$((count/sdelta))" "$total" "$password"
+			((prev = now, count = 0))
 		fi
 	;;
 	esac
