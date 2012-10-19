@@ -39,3 +39,13 @@ sudo apt-get install gedit-plugins
 
 # keyboard shortcuts for rotate monitor
 # keyboard delay and speed
+
+# Wine Fix
+wget https://launchpad.net/~jcollins/+archive/jaminppa/+build/1482994/+files/getlibs_2.06-0ubuntu1%7Eppa2_all.deb
+sudo dpkg -i getlibs_2.06-0ubuntu1~ppa2_all.deb
+sudo ln -s /usr/lib/i386-linux-gnu /usr/lib32
+sudo getlibs -p gnome-keyring:i386
+sudo mkdir -p /usr/lib/i386-linux-gnu/pkcs11
+sudo ln -s /usr/lib32/i386-linux-gnu/pkcs11/gnome-keyring-pkcs11.so /usr/lib/i386-linux-gnu/pkcs11/gnome-keyring-pkcs11.so
+sudo apt-get remove --purge getlibs
+rm getlibs_2.06-0ubuntu1~ppa2_all.deb
