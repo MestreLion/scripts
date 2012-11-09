@@ -55,7 +55,7 @@ prepend_path()
 ##############################################################################
 
 # Add scripts bin and current folder to PATH
-prepend_path "$HOME/.local/bin:$SCRIPTS"
+prepend_path "$HOME/.local/bin:$SCRIPTS:/usr/local/games"
 
 export PATH
 
