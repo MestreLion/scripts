@@ -58,20 +58,20 @@ fatal()
 [[ -b "$PARTITION" ]] || fatal "$PARTITION is not a valid device"
 
 # Confirm with user
-#read -p "This may DESTROY ALL DATA on $PARTITION and install grub on ${DEVICE}. Are you SURE you want to continue [yes/NO]? " confirm
-#case "$confirm" in
-#	[Yy]*) ;;
-#	*) exit 0 ;;
-#esac
+read -p "This may DESTROY ALL DATA on $PARTITION and install grub on ${DEVICE}. Are you SURE you want to continue [yes/NO]? " confirm
+case "$confirm" in
+	[Yy]*) ;;
+	*) exit 0 ;;
+esac
 
 # Format partition
-#read -p "Format $PARTITION [yes/NO]? " confirm
-#case "$confirm" in
-#	[Yy]*)
-#		[[ $VERBOSE ]] && echo "Formating ${PARTITION} as FAT32..."
-#		sudo mkfs.vfat -n "${LABEL}" "${PARTITION}" || fatal "could not format $PARTITION"
-#	;;
-#esac
+read -p "Format $PARTITION [yes/NO]? " confirm
+case "$confirm" in
+	[Yy]*)
+		[[ $VERBOSE ]] && echo "Formating ${PARTITION} as FAT32..."
+		sudo mkfs.vfat -n "${LABEL}" "${PARTITION}" || fatal "could not format $PARTITION"
+	;;
+esac
 
 # Mount partition
 # TODO: gvfs-mount -d $PARTITION for non-sudo mount maybe?
@@ -200,10 +200,7 @@ done
 
 # Housekeeping
 sync
-[[ $unmount ]] && {
-	sudo umount "${MOUNTDIR}"
-	sudo rm -f "${MOUNTDIR}"
-}
+[[ $unmount ]] && sudo umount "${MOUNTDIR}" && sudo rmdir "${MOUNTDIR}"
 [[ $VERBOSE ]] && echo "Done! Re-mount ${MOUNTDIR} and check to see if its all ok."
 
 
