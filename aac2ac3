@@ -7,7 +7,7 @@ filepath=${infile%"$filename"}
 filetitle=${filename%.*}
 fileext=${filename#"$filetitle"}
 
-outfile=${filepath}${filetitle}-aac2ac3${fileext}
+outfile=${filepath}${filetitle}-aac2ac3.mkv #${fileext}
 
 myname="${0##*/}"
 fatal()   { [[ "$1" ]] && echo "$1" >&2 ; exit ${2:-1} ; }
