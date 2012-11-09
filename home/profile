@@ -68,7 +68,7 @@ export WINEBOTTLEHOME="$HOME/.local/share/wineprefixes"
 
 # Debian Development
 export DEBFULLNAME="Rodrigo Silva"
-export DEBEMAIL="linux@rodrigosilva.com"
+export DEBEMAIL="debian@rodrigosilva.com"
 
 # Locales
 export LANG="en_US.utf8"
