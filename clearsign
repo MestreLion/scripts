@@ -104,10 +104,10 @@ keys=$(
 array=()
 
 # Loop the list
-while IFS=":" read -r -s keyType _ keySize _ keyId keyDate _ _ _ keyUser _ keyFlags _ ; do
+while IFS=":" read -r -s keyType keyTrust keySize _ keyId keyDate _ _ _ keyUser _ keyFlags _ ; do
 
 	# Check for (pub)lic keys that are able to (s)ign and are not (D)isabled
-	if [[ "$keyType" = "pub" && "$keyFlags" = *s* && ! "$keyFlags" = *D* ]] ; then
+	if [[ "$keyType" = "pub" && "$keyFlags" = *s* && ! "$keyFlags" = *D* && "$keyTrust" = u ]] ; then
 
 		# populate the array
 		array+=("$keyId" "$keyUser" "${keyId:(-8)}" "$keyDate" "$keySize")
