@@ -24,8 +24,7 @@ done
 output+="$vars"
 
 if [[ "$TERM" == "dumb" ]] ; then
-	[[ "$output" ]] &&
-	output+="\n"
+	if [[ "$output" ]]; then output+="\n"; fi
 	output+="PWD\n$PWD\n\n"
 	output+="NAUTILUS_SCRIPT_CURRENT_URI\n${NAUTILUS_SCRIPT_CURRENT_URI:+$NAUTILUS_SCRIPT_CURRENT_URI\n\n}"
 	output+="NAUTILUS_SCRIPT_SELECTED_URIS\n${NAUTILUS_SCRIPT_SELECTED_URIS:+$NAUTILUS_SCRIPT_SELECTED_URIS\n}"
@@ -35,5 +34,5 @@ if [[ "$TERM" == "dumb" ]] ; then
 	msg="${msg//</&lt;}"
 	zenity --info --no-wrap --text "$msg"
 else
-	[[ "$output" ]] && printf "%b" "$output"
+	if [[ "$output" ]]; then printf "%b" "$output"; fi
 fi
