@@ -100,26 +100,19 @@ fatal()
 }
 
 xdg_data_cat()
-{
+(
 	local path="$1"
-	local user
-	local sys
 	local folder
-	local list=()
+	local xdgpath
 
-	user="${XDG_DATA_HOME:-$HOME/.local/share}/$path"
-	[[ -e "$user" ]] && list+=("$user")
+	xdgpath+="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:"
+	xdgpath+="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-	IFS=: read -ra sys <<< "${XDG_DATA_DIRS:-/usr/local/share/:/usr/share/}"
-
-	for folder in "${sys[@]}" ; do
-		if [[ -e "$folder/$path" ]] ; then
-			list+=("${folder%/}/$path")
-		fi
+	IFS=:
+	for folder in $xdgpath ; do
+		[[ -f "${folder%/}/$path" ]] && cat "${folder%/}/$path" 2>&3
 	done
-
-	cat "${list[@]}"
-}
+)
 
 crc16()
 (
