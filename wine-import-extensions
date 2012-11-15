@@ -24,11 +24,6 @@
 #  corner case where winemenubuilder might choose a different mime than I did.
 #  Currently I (must) sort and de-dupe user+sys globs, while wmb just picks the
 #  first match in user+sys (no sort, no de-dupe)
-# FIXME: Only add extensions that have default app (defauts.list+mimeapps.list)
-#  Will be *really* hard considering there is user and system databases,
-#  [Removed Apps] section in mimeapps.list, and, most important, mimetypes have
-#  aliases and *parents* (example: *.xml files may be opened by plain/text app,
-#  *.deb by application/zip, and so on - how to deal with that?)
 # FIXME: Properly handle cases in exts and mime-types. Windows might be case-
 #  insensitive but winemenubuilder is not. And it is buggy about it.
 # TODO: undo option (from changes file)
@@ -446,13 +441,22 @@ export LC_ALL=C
 
 # Native extensions (freedesktop.org xdg mime database globs)
 # Format: <NUMBER>:$mimetype:$glob
-native_ext=$( { awk -F: '$3~/^\*'"$REGEX"'$/ && !/^#/ {
-                            print substr($3,3) "\t" $2
-                         }'                                                    \
-                    < <(xdg_data_cat "mime/globs2")                            \
-                || fatal "Could not access mime database globs list"
-              }                                                                \
-              | sort --unique --ignore-case
+native_ext=$(
+	xdg_data_cat "mime/globs2" |
+	awk -F: '
+		$3~/^\*'"$REGEX"'$/ && !/^#/ {
+			print substr($3,3) "\t" $2
+		}' |
+	perl -e '
+		use strict; use warnings;
+		use File::MimeInfo::Magic; use File::MimeInfo::Applications;
+		while (my $line = <STDIN>) {
+			chomp($line);
+			my ($ext, $mime) = (split/\t/, $line);
+			my ($def, @apps) = mime_applications_all($mime);
+			print "$line\n" if ($def || @apps)
+		}' |
+	sort --unique --ignore-case
 ) 2>&3
 
 [[ "$VERBOSE" ]] && printf "%4d %s\n" $(wc -l <<< "$native_ext")               \
