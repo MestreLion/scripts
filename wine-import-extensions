@@ -57,7 +57,9 @@ GUI=
 #constants
 CLASSTAG="WineImportedExtension"
 REGEX='\.[[:alnum:]_+%~-]+'
-WINEBOTTLEHOME="$HOME/.local/share/wineprefixes"
+xdg_data_home=${XDG_DATA_HOME:-"$HOME"/.local/share}
+xdg_data_dirs=${XDG_DATA_DIRS:-/usr/local/share:/usr/share}
+winebottlehome=${WINEBOTTLEHOME:-"$xdg_data_home"/wineprefixes}
 
 #global variables
 command=
@@ -98,10 +100,7 @@ xdg_data_cat()
 (
 	local path="$1"
 	local folder
-	local xdgpath
-
-	xdgpath+="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:"
-	xdgpath+="${XDG_DATA_HOME:-$HOME/.local/share}"
+	local xdgpath=${xdg_data_dirs}:${xdg_data_home}
 
 	IFS=:
 	for folder in $xdgpath ; do
@@ -177,7 +176,7 @@ Usage ()
 
 	 -b, --bottle NAME
 	     Sets the wine bottle to work. A bottle is a wine prefix currently
-	     located at $WINEBOTTLEHOME/NAME
+	     located at $winebottlehome/NAME
 	     If used, enviroment variable WINEPREFIX is ignored. Overrides --prefix
 
 	 -o, --overwrite EXT,...
@@ -363,8 +362,8 @@ Restore()
 	cp -- "$backup" "$sysreg" || fatal "Could not restore wine's registry"
 
 	# Force wine to update extensions and mime types
-	rm -f  -- "$HOME"/.local/share/mime/packages/x-wine-*
-	update-mime-database "$HOME/.local/share/mime/"
+	rm -f  -- "$xdg_data_home"/mime/packages/x-wine-*
+	update-mime-database "$xdg_data_home"/mime
 	wine winemenubuilder -a -r
 
 	# delete winebrowser-gui.exe
@@ -420,7 +419,7 @@ done
 #######################################  Main Body
 
 [[ "$PREFIX" ]] && prefix="$PREFIX"
-[[ "$BOTTLE" ]] && prefix="$WINEBOTTLEHOME/$BOTTLE"
+[[ "$BOTTLE" ]] && prefix="$winebottlehome/$BOTTLE"
 [[ "$DEBUG"  ]] && { PrintFlags ; exec 3>&2 ; }
 
 export WINEPREFIX="$prefix"
