@@ -621,7 +621,7 @@ if [[ "$TEST" ]]; then
 else
 	export LC_ALL="$savedlocale"
 	wine regedit "$outputfile" || fatal "Registry changes could not be merged into wine"
-	wine winemenubuilder -a -r  # force refresh
+	sleep 3 && wine winemenubuilder -a -r  # force refresh
 	[[ "$VERBOSE" ]] && echo "Registry changes successfully merged into wine"
 fi
 
