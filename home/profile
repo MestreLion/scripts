@@ -70,6 +70,13 @@ export WINEBOTTLEHOME="$HOME/.local/share/wineprefixes"
 export DEBFULLNAME="Rodrigo Silva"
 export DEBEMAIL="debian@rodrigosilva.com"
 
+#Python
+export PYTHONWARNINGS=default  # re-enable DeprecationWarning's disabled in Python 2.7
+
+# PyLint
+export PYLINTHOME=${XDG_CACHE_HOME:-$HOME/.cache}/pylint
+export PYLINTRC=${XDG_CONFIG_HOME:-$HOME/.config}/pylintrc
+
 # Locales
 export LANG="en_US.utf8"
 export LANGUAGE="en_US:en"
