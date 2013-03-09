@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# boinc-manager - wrapper for boincmgr to auto-start boinc and fix some issues
+#
+#    Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program. See <http://www.gnu.org/licenses/gpl.html>
+#
+# Workaround the annoying bug where boinc client daemon starts too soon in the
+# boot sequence, before GPU driver (or X, or DE) is active, causing boinc not
+# to find the GPU.
+#
+# Also fixes a Manager limitation of not starting the client daemon by itself.
+#
+# It is recommended to change the Manager launcher at
+# /usr/share/applications/boinc-manager.desktop to execute this script instead
+# of /usr/bin/bootmgr. Or, better yet, copy the .desktop file to
+# ~/.local/share/applications and edit it there. Use the following commands:
+# desktop="share/applications/boinc-manager.desktop"
+# sed 's#/usr/bin/boincmgr#boinc-manager#' "/usr/$desktop" > "$HOME/.local/$desktop"
+
+boinc=/etc/init.d/boinc-client
+boincdir=/var/lib/boinc-client
+
+cd "$boincdir"
+
+if "$boinc" status | grep -q 'stopped$'; then
+	gksudo "$boinc" start
+elif boinccmd --get_messages | grep -qi "No usable GPUs found"; then
+	gksudo "$boinc" restart
+fi
+
+/usr/bin/boincmgr "$@"
