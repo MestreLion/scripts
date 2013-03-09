@@ -1,0 +1,16 @@
+#!/bin/bash
+
+save="00${1:-0}.user"
+dir="$HOME/.local/share/Zachtronics Industries/SpaceChem/save"
+out="$HOME/spacechemsave.zip"
+in="$dir/$save"
+
+if [[ -f "$in" ]]; then
+	echo "zipping $(du -h "$in" | cut -f1)"
+	rm -f "$out" &&
+	cd "$dir" &&
+	zip "$out" "$save" &&
+	du -h "$out"
+else
+	echo "file not found: '$in'"
+fi
