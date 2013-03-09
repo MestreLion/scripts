@@ -38,6 +38,7 @@ usage() {
 
 	Options:
 	  -h|--help     - show this page.
+	  -v|--verbose  - print detailed info
 
 	Copyright (C) 2013 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
@@ -47,6 +48,18 @@ usage() {
 
 # Option handling
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
+while (( $# )); do
+	case "$1" in
+	-v|--verbose  ) verbose=1                      ;;
+#	--var=*       ) var="${1#*=}"                  ;;
+#	--var         ) shift ; var="$1"               ;;
+#	--            ) shift ; break                  ;;
+#	-*            ) invalid "$1"                   ;;
+#	-*            ) opts+=( "$1" )                 ;;
+#	*             ) opterr "$1"                    ;;
+	esac
+	shift
+done
 
 # if not for formatting, the whole info could be displayed in a single command:
 #aticonfig --odgc --odgt --pplib-cmd "get fanspeed 0" --pplib-cmd "get faninfo 0"
@@ -55,10 +68,17 @@ gputemp=$(aticonfig --odgt | awk -F ' - ' '/Temperature/{print $2}')
 fanspeed=$(aticonfig --pplib-cmd "get fanspeed 0" | awk -F ': |%' '/^Result:/{print $3}')
 fanmaxrpm=$(aticonfig --pplib-cmd "get faninfo 0" | awk -F '0 - | RPM' '{print $2}')
 fanrpm=$((fanmaxrpm * fanspeed / 100))
+odgc=$(aticonfig --odgc)
 
-aticonfig --odgc
+
+if [[ "$verbose" ]]; then
+	echo "$odgc"
+	echo "                Fan speed : ${fanspeed}% (${fanrpm}/${fanmaxrpm} RPM)"
+else
+	awk -F ' - | : ' 'NR==2{print $2}  /load/{print}' <<< "$odgc"
+	echo "                Fan speed : ${fanspeed}%"
+fi
 echo "              Temperature : ${gputemp}"
-echo "                Fan speed : ${fanrpm} RPM, ${fanspeed}% of ${fanmaxrpm} RPM"
 
 exit
 
