@@ -76,7 +76,7 @@ if [[ "$verbose" ]]; then
 	echo "                Fan speed : ${fanspeed}% (${fanrpm}/${fanmaxrpm} RPM)"
 else
 	awk -F ' - | : ' 'NR==2{print $2}  /load/{print}' <<< "$odgc"
-	echo "                Fan speed : ${fanspeed}%"
+	echo "                Fan speed : ${fanspeed}%, ${fanrpm} RPM"
 fi
 echo "              Temperature : ${gputemp}"
 
