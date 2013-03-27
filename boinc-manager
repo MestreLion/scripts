@@ -37,7 +37,8 @@ cd "$boincdir"
 
 if "$boinc" status | grep -q 'stopped$'; then
 	gksudo "$boinc" start
-elif boinccmd --get_messages | grep -qi "No usable GPUs found"; then
+elif boinccmd --get_messages | grep -qi "No usable GPUs found" &&
+     lsmod | grep -qi "fglrx"; then
 	gksudo "$boinc" restart
 fi
 
