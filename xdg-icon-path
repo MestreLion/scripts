@@ -15,7 +15,7 @@ except:
 
 
 icon_theme = gtk.icon_theme_get_default()
-icon_info = icon_theme.lookup_icon(sys.argv[1], int(), 0)
+icon_info = icon_theme.lookup_icon(sys.argv[1], int(size), 0)
 if icon_info:
 	print icon_info.get_filename()
 else:
