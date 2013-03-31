@@ -26,6 +26,7 @@ verbose=0
 notify=1
 rotate=normal
 layout_list="right-of,left-of,above"
+primary=
 
 message() { printf "%s\n" "$1" >&2 ; }
 fatal()   { [[ "$1" ]] && message "$myname: error: $1" ; exit ${2:-1} ; }
@@ -53,6 +54,11 @@ usage() {
 	  -h|--help      - show this page.
 	  -q|--no-notify - do not show notify "bubble"
 	  -v|--verbose   - print in terminal the full xrandr command executed
+
+	  --primary OUTPUT
+	                 - select which output will be set as primary.
+	                   Default is the first connected monitor in xrandr list
+	                   Example: --primary DFP10
 
 	  --rotate ORIENTATION
 	                 - how to rotate the primary monitor. ORIENTATION must
@@ -83,10 +89,12 @@ while (( $# )); do
 	case "$1" in
 	-v|--verbose) verbose=1 ;;
 	-q|--no-notify) notify=0 ;;
-	--layout=*) layout_list="${1#*=}" ;;
-	--layout  ) shift ; layout_list="$1" ;;
-	--rotate=*) rotate="${1#*=}" ;;
-	--rotate  ) shift ; rotate="$1" ;;
+	--primary=*) primary="${1#*=}" ;;
+	--layout=* ) layout_list="${1#*=}" ;;
+	--rotate=* ) rotate="${1#*=}" ;;
+	--primary  ) shift ; primary="$1" ;;
+	--layout   ) shift ; layout_list="$1" ;;
+	--rotate   ) shift ; rotate="$1" ;;
 	--normal|--landscape) rotate="normal" ;;
 	--left|--portrait|--counterclockwise) rotate="left" ;;
 	--right|--clockwise) rotate="right" ;;
@@ -123,13 +131,17 @@ done
 # Read outputs (monitors)
 {
 	# Set primary
-	read -r primary
+	if [[ -z "$primary" ]]; then
+		read -r primary
+	fi
 	xrandropts+=(--output "$primary" --primary --rotate "$rotate" --pos 0x0)
 
 	# Loop the others
 	i=0
 	while ((i++)); read -r output; do
-		xrandropts+=(--output "$output" "--${layout[i-1],,}" "$primary")
+		if [[ "$output" != "$primary" ]]; then
+			xrandropts+=(--output "$output" "--${layout[i-1],,}" "$primary")
+		fi
 	done
 } < <(xrandr | awk '$2 ~/^c/{print $1}')
 
