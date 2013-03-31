@@ -25,7 +25,8 @@ myname="${0##*/}"
 verbose=0
 notify=1
 rotate=normal
-layout_list="right-of,left-of,above"
+layout_list=
+position="right-of"
 primary=
 
 message() { printf "%s\n" "$1" >&2 ; }
@@ -119,14 +120,20 @@ case "${rotate,,}" in
 esac
 
 # Parse layout
-[[ "$layout_list" ]] || missing "--layout" "POSITION"
 IFS=, read -a layout <<<"$layout_list"
-for position in "${layout[@]}"; do
-	case "${position,,}" in
+for pos in "${layout[@]}"; do
+	case "${pos,,}" in
 		right-of|left-of|above|below|same-as) continue ;;
-		*) argerr "invalid position argument for --layout: $position" ;;
+		*) argerr "invalid position argument for --layout: $pos" ;;
 	esac
 done
+
+# Parse default position
+[[ "$position" ]] || missing "--position" "DEFAULT_POSITION"
+case "${position,,}" in
+	right-of|left-of|above|below|same-as) ;;
+	*) argerr "invalid position argument for --position: $position" ;;
+esac
 
 # Read outputs (monitors)
 {
@@ -135,12 +142,15 @@ done
 		read -r primary
 	fi
 	xrandropts+=(--output "$primary" --primary --rotate "$rotate" --pos 0x0)
+	previous="$primary"
 
 	# Loop the others
 	i=0
 	while ((i++)); read -r output; do
 		if [[ "$output" != "$primary" ]]; then
-			xrandropts+=(--output "$output" "--${layout[i-1],,}" "$primary")
+			[[ "${layout[i-1]}" ]] || layout[i-1]="$position"
+			xrandropts+=(--output "$output" "--${layout[i-1],,}" "$previous")
+			previous="$output"
 		fi
 	done
 } < <(xrandr | awk '$2 ~/^c/{print $1}')
