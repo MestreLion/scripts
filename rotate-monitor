@@ -21,6 +21,19 @@
 # repositioning of all other monitors relative to the new height x width
 # of the primary monitor
 
+# FIXME: currently layout_list is setting positions relative to *previous*
+# output (starting with primary). This should apply only to --position, while
+# --layout list should be always relative to primary.
+
+# TODO: There could be 2 distinct layout lists: one always relative to primary
+# outout, the other relative to previous output. Or maybe a single list, which
+# defaults "to relative to primary", and a "--previous" flag to set list as
+# "relative to previous"
+
+# TODO: make said "notification bubbles", *then* document -q :)
+#	  -q|--no-notify - do not show notify "bubble"
+
+
 myname="${0##*/}"
 verbose=0
 notify=1
@@ -49,11 +62,11 @@ usage() {
 	cat <<-USAGE
 
 	Rotate the primary monitor using xrandr, re-positioning the others
-	monitors (if any) according to it.
+	monitors (if any) to $position the previous monitor, starting with the
+	primary one.
 
 	Options:
 	  -h|--help      - show this page.
-	  -q|--no-notify - do not show notify "bubble"
 	  -v|--verbose   - print in terminal the full xrandr command executed
 
 	  --primary OUTPUT
