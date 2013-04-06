@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Remove old kernels but keep the first, the current and the previous
+
+export current=$(uname -r | cut -d- -f-2)
+list=$(dpkg --list | grep -E "^ii  linux-(headers|image)-[2-5]\." | cut -d' ' -f3 | grep -v "$current")
+first=$(head -n 1 <<< "$list" | cut -d- -f3,4)
+previous=$(tail -n 1 <<< "$list" | cut -d- -f3,4)
+
+echo "Removing all kernels but keeping:"
+echo "First   : $first"
+echo "Previous: $previous"
+echo "Current : $current"
+
+sudo apt-get purge $(grep -v -e "$first" -e "$previous" <<< "$list") &&
+echo "Done, success!" ||
+echo "Opps, something went wrong, better check the output!"
