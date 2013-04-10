@@ -17,7 +17,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program. See <http://www.gnu.org/licenses/gpl.html>
 
-swaplabel=SWAP
+label=SWAP
 fstab=/etc/fstab
 resume=/etc/initramfs-tools/conf.d/resume
 
@@ -27,6 +27,7 @@ verbose=1
 fatal()   { [[ "$1" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
 message() { ((verbose)) && printf "%s\n" "$1"; }
 argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1 ; }
+missing() { argerr "missing ${2:+$2 }argument${1:+ from $1}." ; }
 invalid() { argerr "invalid option: $1" ; }
 
 usage() {
@@ -54,6 +55,8 @@ usage() {
 	  -h|--help     - show this page.
 	  -q|--quiet    - supress informative messages, only output errors.
 
+	  --label LABEL - set swap partition label to LABEL (default $label)
+
 	Copyright (C) 2013 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
 	USAGE
@@ -66,6 +69,8 @@ for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
 while (( $# )); do
 	case "$1" in
 	-q|--quiet    ) verbose=1                      ;;
+	--label=*     ) label="${1#*=}"                ;;
+	--label       ) shift ; label="$1"             ;;
 	*             ) invalid "$1"                   ;;
 	esac
 	shift
@@ -73,20 +78,21 @@ done
 
 [[ "$(id -u)" -eq 0 ]] || fatal "$myname must be run as root"
 
+[[ "$label" ]] || missing "--label" "LABEL"
+
 uuid=( $(blkid -t TYPE=swap -s UUID -o value) )
 
 (( "${#uuid[@]}" < 1 )) && fatal "no swap partitions found. Use 'mkswap' to create one"
 (( "${#uuid[@]}" > 1 )) && fatal "multiple swap partitions found, too complex for me"
 
 dev=$(blkid -U "$uuid")
-label=$(swaplabel "$dev" | grep 'LABEL:' | cut -d' ' -f2)
+devlabel=$(swaplabel "$dev" | grep 'LABEL:' | cut -d' ' -f2)
 
-message "Found swap partition: $dev (UUID=$uuid${label:+, label=$label})"
+message "Found swap partition: $dev (UUID=$uuid${devlabel:+, label=$devlabel})"
 
-if [[ -z "$label" ]]; then
-	message "Labeling swap partition $swaplabel"
-	swaplabel --label "$swaplabel" "$dev"
-	label=$swaplabel
+if [[ "$devlabel" != "$label" ]]; then
+	message "Labeling swap partition $label"
+	swaplabel --label "$label" "$dev"
 fi
 
 if [[ $(awk -v label="$label" '$3 == "swap" && $1 ~ "^LABEL=" label "$" {print}' "$fstab") ]]; then
