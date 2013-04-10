@@ -1,0 +1,116 @@
+#!/bin/bash
+#
+# swap-fix - fix references of swap partition in fstab, initramfs, etc
+#
+#    Copyright (C) 2013 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program. See <http://www.gnu.org/licenses/gpl.html>
+
+swaplabel=SWAP
+fstab=/etc/fstab
+resume=/etc/initramfs-tools/conf.d/resume
+
+myname="${0##*/}"
+verbose=1
+
+fatal()   { [[ "$1" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
+message() { ((verbose)) && printf "%s\n" "$1"; }
+argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1 ; }
+invalid() { argerr "invalid option: $1" ; }
+
+usage() {
+	cat <<-USAGE
+	Usage: $myname [options]
+	USAGE
+	if [[ "$1" ]] ; then
+		cat >&2 <<- USAGE
+		Try '$myname --help' for more information.
+		USAGE
+		exit 1
+	fi
+	cat <<-USAGE
+
+	Add a $swaplabel label to your swap partition, and updates references
+	in $fstab and $resume to use LABEL instead of UUID.
+
+	Both files are only modified if necessary. $fstab is backed up prior
+	to edit, and $resume is created if it does not exist.
+
+	Refuses to run if none or multiple swap partitions are found on the
+	system. Multiple swap entries in $fstab are removed.
+
+	Options:
+	  -h|--help     - show this page.
+	  -q|--quiet    - supress informative messages, only output errors.
+
+	Copyright (C) 2013 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+	USAGE
+	exit 0
+}
+
+# Option handling
+files=()
+for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
+while (( $# )); do
+	case "$1" in
+	-q|--quiet    ) verbose=1                      ;;
+	*             ) invalid "$1"                   ;;
+	esac
+	shift
+done
+
+[[ "$(id -u)" -eq 0 ]] || fatal "$myname must be run as root"
+
+uuid=( $(blkid -t TYPE=swap -s UUID -o value) )
+
+(( "${#uuid[@]}" < 1 )) && fatal "no swap partitions found. Use 'mkswap' to create one"
+(( "${#uuid[@]}" > 1 )) && fatal "multiple swap partitions found, too complex for me"
+
+dev=$(blkid -U "$uuid")
+label=$(swaplabel "$dev" | grep 'LABEL:' | cut -d' ' -f2)
+
+message "Found swap partition: $dev (UUID=$uuid${label:+, label=$label})"
+
+if [[ -z "$label" ]]; then
+	message "Labeling swap partition $swaplabel"
+	swaplabel --label "$swaplabel" "$dev"
+	label=$swaplabel
+fi
+
+if [[ $(awk '$3 == "swap" && $1 ~ /^UUID=/{print}' "$fstab") ]]; then
+	message "updating $fstab, replacing swap UUID reference to LABEL"
+	cp "$fstab"{,.swapfix.bak}
+	awk -v label="$label" \
+		'$3 == "swap" && $1 ~ /^UUID=/ {
+			if (swap) next
+			swap=1
+			len=length($1)
+			sub(/UUID=[[:xdigit:]-]+/, sprintf("%*s", -len, "LABEL=" label))
+		} 1' "$fstab".swapfix.bak > "$fstab"
+
+elif [[ -z $(awk '$3 == "swap" &&  $1 !~ /^[[:blank:]]*#/{print}' "$fstab") ]]; then
+	message "updating $fstab, adding reference to swap"
+	cp "$fstab"{,.swapfix.bak}
+	echo "LABEL=$label none swap sw 0 0" >> "$fstab"
+else
+	message "no changes necessary in $fstab"
+fi
+
+if [[ ! -e "$resume" ]] || grep -q "RESUME=UUID" "$resume"; then
+	message "updating $resume"
+	echo "RESUME=LABEL=$label" > "$resume"
+else
+	message "no changes necessary in $resume"
+fi
