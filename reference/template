@@ -70,7 +70,7 @@ while (( $# )); do
 	--            ) shift ; break                  ;;
 	-*            ) invalid "$1"                   ;;
 	-*            ) opts+=( "$1" )                 ;;
-	*             ) opterr "$1"                    ;;
+	*             ) argerr "$1"                    ;;
 	*             ) files+=( "$1" )                ;;
 	esac
 	shift
