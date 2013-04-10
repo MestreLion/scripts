@@ -3,7 +3,7 @@
 # Remove old kernels but keep the first, the current and the previous
 
 export current=$(uname -r | cut -d- -f-2)
-list=$(dpkg --list | grep -E "^ii  linux-(headers|image)-[2-5]\." | cut -d' ' -f3 | grep -v "$current")
+list=$(dpkg --list "linux-*" | grep -E "^ii  linux-(headers|image)-[2-5]\." | cut -d' ' -f3 | grep -v "$current")
 first=$(head -n 1 <<< "$list" | cut -d- -f3,4)
 previous=$(tail -n 1 <<< "$list" | cut -d- -f3,4)
 
