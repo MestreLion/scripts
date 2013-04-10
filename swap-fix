@@ -89,28 +89,27 @@ if [[ -z "$label" ]]; then
 	label=$swaplabel
 fi
 
-if [[ $(awk '$3 == "swap" && $1 ~ /^UUID=/{print}' "$fstab") ]]; then
-	message "updating $fstab, replacing swap UUID reference to LABEL"
-	cp "$fstab"{,.swapfix.bak}
-	awk -v label="$label" \
-		'$3 == "swap" && $1 ~ /^UUID=/ {
-			if (swap) next
-			swap=1
-			len=length($1)
-			sub(/UUID=[[:xdigit:]-]+/, sprintf("%*s", -len, "LABEL=" label))
-		} 1' "$fstab".swapfix.bak > "$fstab"
-
-elif [[ -z $(awk '$3 == "swap" &&  $1 !~ /^[[:blank:]]*#/{print}' "$fstab") ]]; then
+if [[ $(awk -v label="$label" '$3 == "swap" && $1 ~ "^LABEL=" label "$" {print}' "$fstab") ]]; then
+	message "no changes necessary in $fstab"
+elif [[ -z $(awk '$3 == "swap" && $1 !~ /^#/{print}' "$fstab") ]]; then
 	message "updating $fstab, adding reference to swap"
 	cp "$fstab"{,.swapfix.bak}
 	echo "LABEL=$label none swap sw 0 0" >> "$fstab"
 else
-	message "no changes necessary in $fstab"
+	message "updating $fstab, replacing swap reference to LABEL=$label"
+	cp "$fstab"{,.swapfix.bak}
+	awk -v label="$label" \
+		'$3 == "swap" && $1 !~ /^#/ {
+			if (swap) next
+			swap=1
+			len=length($1)-1
+			sub($1, sprintf("%*s", -len, "LABEL=" label))
+		} 1' "$fstab".swapfix.bak > "$fstab"
 fi
 
-if [[ ! -e "$resume" ]] || grep -q "RESUME=UUID" "$resume"; then
+if [[ -f "$resume" ]] && grep -q "^RESUME=LABEL=$label" "$resume"; then
+	message "no changes necessary in $resume"
+else
 	message "updating $resume"
 	echo "RESUME=LABEL=$label" > "$resume"
-else
-	message "no changes necessary in $resume"
 fi
