@@ -30,6 +30,9 @@ else
 
 		# run unintaller
 		env WINEPREFIX="$WINEBOTTLEHOME/$prefix" wine uninstaller 2>&3
+
+		# refresh winemenubuilder
+		env WINEPREFIX="$WINEBOTTLEHOME/$prefix" wine winemenubuilder -r 2>&3
 	fi
 
 	# confirm with user
