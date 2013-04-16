@@ -11,21 +11,12 @@
 #	fi
 #
 
-# copies a completion definition for a command to other command(s)
-complete-copy() {
-	local cmd="$1"
-	shift
-	complete -p "$cmd" >/dev/null 2>&1 &&
-	type "$@"          >/dev/null 2>&1 &&
-	eval $(complete -p "$cmd") "$@"
-}
+if [ -f "$SCRIPTS/home/bash_completion" ] ; then
+	source "$SCRIPTS/home/bash_completion"
+fi
 
 if [ -f "$SCRIPTS/home/bash_aliases" ] ; then
 	source "$SCRIPTS/home/bash_aliases"
-fi
-
-if [ -f "$SCRIPTS/home/bash_completion" ] ; then
-	source "$SCRIPTS/home/bash_completion"
 fi
 
 if [ -d "$HOME/work/wine-tools" ] ; then

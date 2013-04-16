@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# copies a completion definition for a command to other command(s)
+complete-copy() {
+	local cmd="$1"
+	shift
+	complete -p "$cmd" >/dev/null 2>&1 &&
+	type "$@"          >/dev/null 2>&1 &&
+	eval $(complete -p "$cmd") "$@"
+}
+
 BASH_COMPLETION_DIR_USER="$SCRIPTS/home/bash_completion.d"
 
 if [[ -d $BASH_COMPLETION_DIR_USER &&
