@@ -34,15 +34,15 @@ if [ -d "$HOME/work/wine-tools" ] ; then
 fi
 
 declare -A termcolor
-termcolor[RED]="\[\033[1;31m\]"
-termcolor[GREEN]="\[\033[1;32m\]"
-termcolor[BLUE]="\[\033[1;34m\]"
-termcolor[WHITE]="\[\033[1;37m\]"
-termcolor[GRAY]="\[\033[00m\]"
+termcolor[RED]="\[\033[1;31m\]"    # $(tput bold; tput setaf 1)
+termcolor[GREEN]="\[\033[1;32m\]"  # $(tput bold; tput setaf 2)
+termcolor[BLUE]="\[\033[1;34m\]"   # $(tput bold; tput setaf 4)
+termcolor[WHITE]="\[\033[1;37m\]"  # $(tput bold; tput setaf 7)
+termcolor[RESET]="\[\033[00m\]"    # $(tput sgr0)
 
 PS1="${termcolor[GREEN]}\u@\h ${termcolor[BLUE]}\w "\
 "${termcolor[RED]}\$(git branch 2>/dev/null | grep '^*' | cut -c 3- | sed 's/.*/& /')"\
-"${termcolor[BLUE]}\$${termcolor[GRAY]} "
+"${termcolor[BLUE]}\$${termcolor[RESET]} "
 
 # Disable the dreaded history expansion for interactive sessions
 # A.K.A 'why echo "Hello World!" do not work?'
