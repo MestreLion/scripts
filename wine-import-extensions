@@ -23,7 +23,10 @@
 # FIXME: inhibit winemenubuilder for exts that have multiple mime-types. It is a
 #  corner case where winemenubuilder might choose a different mime than I did.
 #  Currently I (must) sort and de-dupe user+sys globs, while wmb just picks the
-#  first match in user+sys (no sort, no de-dupe)
+#  first match in user+sys (no sort, no de-dupe). Also my de-dupe of native exts
+#  must be done *before* filtering by installed native apps, since wmb might
+#  choose mine that has no installed native app, which is currently not in my
+#  natives list (case in point: js and sdp)
 # FIXME: Properly handle cases in exts and mime-types. Windows might be case-
 #  insensitive but winemenubuilder is not. And it is buggy about it.
 # TODO: undo option (from changes file)
@@ -100,7 +103,7 @@ xdg_data_cat()
 (
 	local path="$1"
 	local folder
-	local xdgpath=${xdg_data_dirs}:${xdg_data_home}
+	local xdgpath=${xdg_data_home}:${xdg_data_dirs}
 
 	IFS=:
 	for folder in $xdgpath ; do
