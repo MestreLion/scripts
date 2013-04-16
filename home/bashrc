@@ -28,6 +28,11 @@ if [ -f "$SCRIPTS/home/bash_completion" ] ; then
 	source "$SCRIPTS/home/bash_completion"
 fi
 
+if [ -d "$HOME/work/wine-tools" ] ; then
+	PATH="$PATH:$HOME/work/wine-tools"
+	source "$HOME/work/wine-tools/wine-tools-bashrc"
+fi
+
 declare -A termcolor
 termcolor[RED]="\[\033[1;31m\]"
 termcolor[GREEN]="\[\033[1;32m\]"
@@ -42,63 +47,6 @@ PS1="${termcolor[GREEN]}\u@\h ${termcolor[BLUE]}\w "\
 # Disable the dreaded history expansion for interactive sessions
 # A.K.A 'why echo "Hello World!" do not work?'
 set +o histexpand # same as set +H
-
-wine-cd() {
-	local bottle="$1"
-	if [[ -z "$bottle" || "$bottle" = "default" ]] ; then
-		# default prefix
-		cd "$HOME/.wine/drive_c"
-	else
-		cd "$WINEBOTTLEHOME/$bottle/drive_c"
-	fi
-}
-
-wine-list() {
-	ls "$@" "$WINEBOTTLEHOME"
-}
-
-wine-cmd() {
-	local bottle="$1"
-	local cmd="$2"
-
-	if [[ -z "$bottle" || "$bottle" = "default" ]] ; then
-		# default prefix
-		prefix="$HOME/.wine"
-	else
-		prefix="$WINEBOTTLEHOME/$bottle"
-	fi
-	if [[ -z "$cmd" ]] ; then
-		echo "Usage: wine-cmd BOTTLE COMMAND"
-		echo ""
-		echo "wine-cmd: error: please specify the command to run"
-	else
-		shift; shift
-		env WINEPREFIX="$prefix" wine "$cmd" "$@"
-	fi
-}
-
-wine-install() {
-	wine-cmd "$1" "uninstaller" 2>/dev/null
-}
-
-wine-run() {
-	local app="$1"
-	local prefix
-
-	if [ -z "$app" ] ; then
-		echo "Usage: wine-run APP"
-		echo ""
-		echo "wine-run: error: please specify the application to run"
-	else
-		if [ ! -d "$WINEBOTTLEHOME/$app" ] ; then
-			# default prefix
-			prefix="$HOME/.wine"
-		else
-			prefix="$WINEBOTTLEHOME/$app"
-		fi
-		env WINEPREFIX="$prefix" wine cmd /c c:\run-$app.bat
-	fi
-}
 
 relpath() { python -c "import os,sys;print os.path.relpath(*sys.argv[1:3])" "$@"; }
 mv-link() (

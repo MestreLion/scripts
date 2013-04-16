@@ -1,7 +1,0 @@
-#!/bin/bash
-error=$(xdg-open "$(winepath -u "$1")" 2>&1)
-error=${error##*:}
-if [[ "$error" ]] ; then
-	zenity --error --no-wrap --text="${error//&/&amp;}"
-	exit 1
-fi

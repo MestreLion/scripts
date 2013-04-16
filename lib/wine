@@ -1,8 +1,0 @@
-#!/bin/bash
-
-if [ -z "$WINEBOTTLEHOME" ]; then
-	echo "WINEBOTTLEHOME is not set! Please set it to your prefixes folder"
-	echo "Example: "
-	echo "	export WINEBOTTLEHOME=\"$HOME/.local/share/wineprefixes\""
-	exit 1
-fi

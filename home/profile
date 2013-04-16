@@ -63,9 +63,6 @@ export PATH
 # could also use ls -l --block-size="'1" as alias
 export LS_BLOCK_SIZE="'1"
 
-# Wine Bottles
-export WINEBOTTLEHOME="$HOME/.local/share/wineprefixes"
-
 # Debian Development
 export DEBFULLNAME="Rodrigo Silva"
 export DEBEMAIL="debian@rodrigosilva.com"
