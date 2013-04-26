@@ -51,3 +51,6 @@ mv-link() (
 		rm "$link"
 	done < <(find "." -maxdepth 1 -type l)
 )
+
+# So cute!
+type cowfortune >/dev/null 2>&1 && cowfortune
