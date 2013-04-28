@@ -25,7 +25,7 @@
 
 ################# User adjustable global constants - feel free to edit
 LABEL="MultiBoot"
-DEVICE="/dev/sdc"
+DEVICE="/dev/sde"
 PARTITION="${DEVICE}1"
 MOUNTDIR="/media/${LABEL}"
 ISOUSB="/distros" # Relative to USB root

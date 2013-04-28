@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# Better icons for BOINC
+# https://bugs.launchpad.net/bugs/1173622
+
+# is boinc really installed?
+desktop=/usr/share/applications/boinc-manager.desktop
+[[ -f "$desktop" ]] || exit
+
+# create temp dir, the right way
+dir=$(mktemp -d) || exit 1
+trap "rm -rf -- '$dir'" EXIT
+cd "$dir"
+
+# download each icon
+for size in 16 32 48 64 128 256 512; do
+	file=boinc${size}.bmp
+	icon=${file/bmp/png}
+	wget -q http://boinc.berkeley.edu/logo/"$file" || continue
+	echo "installing icon size $size"
+	convert "$file" "$icon" &&
+	xdg-icon-resource install --noupdate --novendor --size "$size" \
+		"$icon" boincmgr
+done
+xdg-icon-resource forceupdate
+
+# use my wrapper, if installed
+if type boinc-manager >/dev/null 2>&1; then
+	exec=boinc-manager
+else
+	# do not use full path
+	exec=boincmgr
+fi
+
+echo "Updating desktop file"
+cp "$desktop" .
+desktop-file-edit --set-icon=boincmgr --set-key=Exec --set-value="$exec" \
+	"${desktop##*/}"
+xdg-desktop-menu install --novendor "${desktop##*/}"
