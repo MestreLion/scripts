@@ -3,15 +3,24 @@
 # Better icons for BOINC
 # https://bugs.launchpad.net/bugs/1173622
 
-url="http://boinc.berkeley.edu/trac/export/HEAD/boinc-v2/clientgui/res/BOINCGUIApp.ico"
+url="http://boinc.berkeley.edu/trac/export/HEAD/boinc-v2/clientgui/res"
+urlt="http://boinc.berkeley.edu/logo"
 
-# Alternate locations: upstream gitweb and debian packaging repo. Don't remove the quotes!
-# "http://boinc.berkeley.edu/gitweb/?p=boinc-v2.git;a=blob;f=clientgui/res/BOINCGUIApp.ico;hb=HEAD"
-# "http://anonscm.debian.org/gitweb/?p=pkg-boinc/boinc.git;a=blob;f=clientgui/res/BOINCGUIApp.ico;hb=HEAD"
+# Alternate locations: upstream gitweb and debian packaging repo.
+# Don't remove the quotes! And make icon file be the last part of the url.
+# "http://boinc.berkeley.edu/gitweb/?p=boinc-v2.git;a=blob;hb=HEAD;f=clientgui/res"
+# "http://anonscm.debian.org/gitweb/?p=pkg-boinc/boinc.git;a=blob;hb=HEAD;f=clientgui/res"
+
+ico="BOINCGUIApp.ico"
+icns="BOINCMgr.icns"
+tif="boinc_glossy2_512_F.tif"
+
+has() { type "$1" >/dev/null 2>&1; }
+get() { wget -q "$1" -O "$2"; }
 
 # is boinc really installed?
 desktop=/usr/share/applications/boinc-manager.desktop
-[[ -f "$desktop" ]] || exit
+[[ -f "$desktop" ]] && has identify || exit
 
 # create temp dir, the right way
 dir=$(mktemp -d) || exit 1
@@ -19,12 +28,17 @@ trap "rm -rf -- '$dir'" EXIT
 cd "$dir"
 
 # download and extract icons
-wget "$url" && icotool --extract * || exit 1
+echo "Downloading icons"
+has icotool  && get "$url/$ico"  "1.$ico"  && icotool --extract "1.$ico"
+has icns2png && get "$url/$icns" "2.$icns" && icns2png -x -d 32 "2.$icns" >/dev/null
+has convert  && get "$urlt/$tif" "3.$tif"  && convert "3.$tif"  "3.$tif.png"
 
-# install each extracted icon
+# install each extracted icon, skipping duplicate sizes
+touch sizes
 for icon in *.png; do
 	size=$(identify -format '%w' "$icon")
-	echo "Installing icon size $size"
+	grep -q "$size" sizes && continue || echo "$size" >> sizes
+	printf "Installing icon size %3d from %s\n" "$size" "${icon##*/}"
 	xdg-icon-resource install --noupdate --novendor --size "$size" \
 		"$icon" boincmgr
 done
