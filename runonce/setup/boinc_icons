@@ -3,6 +3,12 @@
 # Better icons for BOINC
 # https://bugs.launchpad.net/bugs/1173622
 
+url="http://boinc.berkeley.edu/trac/export/HEAD/boinc-v2/clientgui/res/BOINCGUIApp.ico"
+
+# Alternate locations: upstream gitweb and debian packaging repo. Don't remove the quotes!
+# "http://boinc.berkeley.edu/gitweb/?p=boinc-v2.git;a=blob;f=clientgui/res/BOINCGUIApp.ico;hb=HEAD"
+# "http://anonscm.debian.org/gitweb/?p=pkg-boinc/boinc.git;a=blob;f=clientgui/res/BOINCGUIApp.ico;hb=HEAD"
+
 # is boinc really installed?
 desktop=/usr/share/applications/boinc-manager.desktop
 [[ -f "$desktop" ]] || exit
@@ -12,13 +18,13 @@ dir=$(mktemp -d) || exit 1
 trap "rm -rf -- '$dir'" EXIT
 cd "$dir"
 
-# download each icon
-for size in 16 32 48 64 128 256 512; do
-	file=boinc${size}.bmp
-	icon=${file/bmp/png}
-	wget -q http://boinc.berkeley.edu/logo/"$file" || continue
-	echo "installing icon size $size"
-	convert "$file" "$icon" &&
+# download and extract icons
+wget "$url" && icotool --extract * || exit 1
+
+# install each extracted icon
+for icon in *.png; do
+	size=$(identify -format '%w' "$icon")
+	echo "Installing icon size $size"
 	xdg-icon-resource install --noupdate --novendor --size "$size" \
 		"$icon" boincmgr
 done
@@ -37,3 +43,4 @@ cp "$desktop" .
 desktop-file-edit --set-icon=boincmgr --set-key=Exec --set-value="$exec" \
 	"${desktop##*/}"
 xdg-desktop-menu install --novendor "${desktop##*/}"
+echo "Done!"
