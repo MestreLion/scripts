@@ -3,7 +3,7 @@
 myname="${0##*/}"
 
 if [ -z "$SCRIPTS" ] ; then
-	for root in {"$HOME",/home/dados}/work/scripts; do
+	for root in {"$HOME",/home/{dados,rodrigo}}{/work,}/scripts; do
 		if [ -d "$root" ] ; then break; fi
 	done
 	[[ "$root" ]] || { echo "could not find scripts root"; exit 1; }
