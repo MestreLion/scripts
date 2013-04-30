@@ -40,8 +40,8 @@ mkdir -p "$HOME/.local/bin"
 relpath(){ python -c "import os.path; print os.path.relpath('$1'${2:+,'$2'})"; }
 original=$HOME/.gnome2/nautilus-scripts
 custom=$SCRIPTS/nautilus-scripts
-[[ -h "$original" ]] || {
+if ! [[ -h "$original" ]]; then
 	mkdir -p "$original"
 	rmdir "$original" &&
 	ln -s "$(relpath "$custom" "$(dirname "$original")")" "$original"
-}
+fi
