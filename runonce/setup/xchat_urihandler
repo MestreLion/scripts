@@ -1,0 +1,25 @@
+#! /bin/bash
+
+# Associate irc:// uri handler with xchat
+# Allows to launch xchat by clicking irc:// urls in browser, xdg-open, etc
+
+# is xchat really installed, and still not handling irc:// uris ?
+desktop=/usr/share/applications/xchat.desktop
+mime=x-scheme-handler/irc
+[[ -f "$desktop" ]] && ! grep -q "^MimeType=.*$mime" "$desktop" || exit
+
+dir=$(mktemp -d) || exit 1
+trap "rm -rf -- '$dir'" EXIT
+cd "$dir"
+
+file=xchat-irc-scheme-handler.desktop
+cp "$desktop" "$dir/$file"
+
+desktop-file-edit \
+	--set-key=Exec           --set-value="xchat --existing --url=%u" \
+	--set-key=NoDisplay      --set-value=true \
+	--set-key=StartupWMClass --set-value=xchat \
+	--add-mime-type="$mime" \
+	"$file"
+
+xdg-desktop-menu install --novendor "$file"
