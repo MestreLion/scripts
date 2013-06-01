@@ -25,7 +25,7 @@
 
 ################# User adjustable global constants - feel free to edit
 LABEL="MultiBoot"
-DEVICE="/dev/sde"
+DEVICE="/dev/sdc"
 PARTITION="${DEVICE}1"
 MOUNTDIR="/media/${LABEL}"
 ISOUSB="/distros" # Relative to USB root
@@ -187,10 +187,19 @@ for iso in "${isos[@]}"; do
 	# Ubuntu, Kubuntu, and all derivatives (including Linux Mint and Zorin OS)
 	*)
 		# ?buntu* , linuxmint* and derivatives
+		# vmlinuz (and maybe initrd) filenames depends on release
+		# For Ubuntu/Mint/Zorin 32-bit:
+		#    linux (loop)/casper/vmlinuz
+		# Ubuntu 12.04.2 64-bit:
+		#    linux (loop)/casper/vmlinuz.efi
+		# To automatically find, mount .iso and inspect
+		# see https://help.ubuntu.com/community/Grub2/ISOBoot
 		cat >> "$grubcfg" <<-GRUBCFG
 			menuentry "$title" {
+				insmod ntfs
+				insmod iso9660
 				loopback loop ${ISOUSB}/${filename}
-				linux (loop)/casper/vmlinuz boot=casper iso-scan/filename="${ISOUSB}/${filename}" noeject noprompt splash --
+				linux (loop)/casper/vmlinuz.efi boot=casper iso-scan/filename="${ISOUSB}/${filename}" noeject noprompt splash toram --
 				initrd (loop)/casper/initrd.lz
 			}
 		GRUBCFG
