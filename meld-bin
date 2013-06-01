@@ -21,13 +21,12 @@ md5sumdir() (
 
 case $# in
 	2|3)
-		# set the trap with swapped quotes for delayed array evaluation
-		trap 'rm -f -- "${items[@]}"' EXIT
+		tempdir=$(mktemp -d)
+		trap 'rm -rf -- "$tempdir"' EXIT
 		items=()
 
 		while (( $# )) ; do
-			#FIXME: Use mktemp instead of tempfile
-			tempfile=$(tempfile --prefix "_" --suffix "_${1//\//_}")
+			tempfile="$tempdir"/"${1//\//_}"
 			items+=( "$tempfile" )
 
 			[[ -f "$1" ]] && hexdump -C "$1" > "$tempfile"
