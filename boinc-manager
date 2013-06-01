@@ -25,21 +25,33 @@
 #
 # It is recommended to change the Manager launcher at
 # /usr/share/applications/boinc-manager.desktop to execute this script instead
-# of /usr/bin/bootmgr. Or, better yet, copy the .desktop file to
+# of /usr/bin/boincmgr. Or, better yet, copy the .desktop file to
 # ~/.local/share/applications and edit it there. Use the following commands:
 # desktop="share/applications/boinc-manager.desktop"
-# sed 's#/usr/bin/boincmgr#boinc-manager#' "/usr/$desktop" > "$HOME/.local/$desktop"
+# sed '/^Exec=/s/=.*/=boinc-manager/' "/usr/$desktop" > "$HOME/.local/$desktop"
 
 boinc=/etc/init.d/boinc-client
 boincdir=/var/lib/boinc-client
 
 cd "$boincdir"
 
-if "$boinc" status | grep -q 'stopped$'; then
-	gksudo "$boinc" start
-elif boinccmd --get_messages | grep -qi "No usable GPUs found" &&
-     lsmod | grep -qi "fglrx"; then
-	gksudo "$boinc" restart
+if "$boinc" status | grep -q 'stopped$' ||
+   { boinccmd --get_messages | grep -qi "No usable GPUs found" &&
+     lsmod | grep -qi "fglrx" ; }
+then
+	pkexec "$boinc" restart
 fi
 
 /usr/bin/boincmgr "$@"
+
+exit
+
+# For reference: a test for boinc restart to fix 'AMD GPU not found' bug
+boinc=/etc/init.d/boinc-client
+if  [ -x "$boinc" ]                                           &&  # init script exists and is enabled
+    "$boinc" status | grep -qi ': running$'                   &&  # boinc client is running
+    lsmod | grep -qi "fglrx"                                  &&  # AMD/ATI proprietary driver is enabled
+    boinccmd --get_messages | grep -qi "No usable GPUs found" ;   # but GPU is not detected by boinc
+then
+	pkexec "$boinc" restart
+fi
