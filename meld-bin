@@ -25,12 +25,18 @@ case $# in
 		trap 'rm -rf -- "$tempdir"' EXIT
 		i=0
 
+		{
+		echo # to start pulsating zenity's progress bar
 		while (( $# )) ; do
 			tempfile="${tempdir}/$((++i)) ${1//\//_}"
 			[[ -f "$1" ]] && hexdump -C "$1" > "$tempfile"
 			[[ -d "$1" ]] && md5sumdir  "$1" > "$tempfile"
 			shift
 		done
+		} |
+		zenity --progress --pulsate --auto-close --auto-kill --title "$myname" \
+		       --text "Comparing $*\n\nThis may take a long time.\n" \
+		        >/dev/null 2>&1
 	;;
 	*) usage "$myname requires either 2 or 3 arguments";;
 esac
