@@ -1,5 +1,3 @@
-#!/bin/sh
-#
 # Commands meant to run at every login
 #
 # To be sourced by ~/.profile

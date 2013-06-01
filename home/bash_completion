@@ -1,4 +1,3 @@
-#!/bin/bash
 # To be sourced by ~/.bash_completion
 
 # copies a completion definition for a command to other command(s)
