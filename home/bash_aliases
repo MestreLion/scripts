@@ -21,7 +21,6 @@ complete-copy dwww-man mand
 cdl()     { cd "$@" && ll ; }
 md()      { mkdir "$@" && cd "${@: -1}" ; }
 which()   { builtin type -P "$@" ; }
-sudo()    { cmd=$(type -P "$1") ; shift ; command sudo "$cmd" "$@" ; }
 sprunge() { local l=${2-bash}; echo $(curl -sSF "sprunge=<${1:--}" http://sprunge.us)${l:+?$l}${3:+#n-$3}; }
 
 cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
