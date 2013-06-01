@@ -1,0 +1,4 @@
+#!/bin/bash
+
+PACKAGE=$(zenity --entry --text="packagename")
+echo "#[${PACKAGE}](http://apps.ubuntu.com/cat/applications/${PACKAGE}) [![Install ${PACKAGE}](http://hostmar.co/software-large)](http://apt.ubuntu.com/p/${PACKAGE})"
