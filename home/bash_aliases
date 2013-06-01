@@ -16,7 +16,9 @@ alias fstab="gksudo gedit /etc/fstab"
 alias open="xdg-open"
 alias trash="trash-put"
 alias mand="dwww-man"
-complete-copy man mand
+
+complete-copy ls ll la
+complete-copy dwww-man mand
 
 cdl()     { cd "$@" && ll ; }
 md()      { mkdir "$@" && cd "${@: -1}" ; }

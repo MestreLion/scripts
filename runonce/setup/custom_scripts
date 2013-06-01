@@ -11,7 +11,7 @@ if [ -z "$SCRIPTS" ] ; then
 fi
 
 # custom profile
-if ! grep -q "\$SCRIPTS" ~/.profile ; then
+if ! grep -q "\$SCRIPTS" ~/.profile 2>/dev/null ; then
 	cat >> ~/.profile <<-_EOF_
 
 		# Added by $myname
@@ -23,7 +23,7 @@ if ! grep -q "\$SCRIPTS" ~/.profile ; then
 fi
 
 # custom bashrc
-if ! grep -q "\$SCRIPTS" ~/.bashrc ; then
+if ! grep -q "\$SCRIPTS" ~/.bashrc 2>/dev/null ; then
 	cat >> ~/.bashrc <<-_EOF_
 
 		# Added by $myname
@@ -32,6 +32,18 @@ if ! grep -q "\$SCRIPTS" ~/.bashrc ; then
 		fi
 	_EOF_
 fi
+
+# custom bash_completion
+if ! grep -q "\$SCRIPTS" ~/.bash_completion 2>/dev/null ; then
+	cat >> ~/.bash_completion <<-_EOF_
+
+		# Added by $myname
+		if [ -f "\$SCRIPTS/home/bash_completion" ] ; then
+		    . "\$SCRIPTS/home/bash_completion"
+		fi
+	_EOF_
+fi
+
 
 # personal bin
 mkdir -p "$HOME/.local/bin"

@@ -11,10 +11,6 @@
 #	fi
 #
 
-if [ -f "$SCRIPTS/home/bash_completion" ] ; then
-	source "$SCRIPTS/home/bash_completion"
-fi
-
 if [ -f "$SCRIPTS/home/bash_aliases" ] ; then
 	source "$SCRIPTS/home/bash_aliases"
 fi
