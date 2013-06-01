@@ -21,14 +21,12 @@ md5sumdir() (
 
 case $# in
 	2|3)
-		tempdir=$(mktemp -d)
+		tempdir=$(mktemp -d) || exit 1
 		trap 'rm -rf -- "$tempdir"' EXIT
-		items=()
+		i=0
 
 		while (( $# )) ; do
-			tempfile="$tempdir"/"${1//\//_}"
-			items+=( "$tempfile" )
-
+			tempfile="${tempdir}/$((++i)) ${1//\//_}"
 			[[ -f "$1" ]] && hexdump -C "$1" > "$tempfile"
 			[[ -d "$1" ]] && md5sumdir  "$1" > "$tempfile"
 			shift
@@ -37,4 +35,4 @@ case $# in
 	*) usage "$myname requires either 2 or 3 arguments";;
 esac
 
-meld "${items[@]}"
+meld "$tempdir"/*
