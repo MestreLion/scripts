@@ -52,5 +52,18 @@ mv-link() (
 	done < <(find "." -maxdepth 1 -type l)
 )
 
+#minecraft
+minecraft-restore() {
+	rm -rf ~/Dropbox/minecraft/saves.bak &&
+	mv     ~/Dropbox/minecraft/saves{,.bak} &&
+	cp -r  ~/work/minecraft/saves/minecraft-auto/saves ~/Dropbox/minecraft
+}
+minecraft-save() {
+	rm -rf   ~/work/minecraft/saves/minecraft-auto/saves.bak &&
+	mkdir -p ~/work/minecraft/saves/minecraft-auto/saves
+	mv       ~/work/minecraft/saves/minecraft-auto/saves{,.bak} &&
+	cp -r    ~/Dropbox/minecraft/saves ~/work/minecraft/saves/minecraft-auto
+}
+
 # So cute!
 type cowfortune >/dev/null 2>&1 && cowfortune
