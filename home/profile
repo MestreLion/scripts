@@ -23,13 +23,7 @@
 #
 ##############################################################################
 
-if [ -z "$SCRIPTS" ] ; then
-	for root in {"$HOME",/home/dados}/work/scripts; do
-		if [ -d "$root" ] ; then break; fi
-	done
-	export SCRIPTS=$root
-	unset root
-fi
+export SCRIPTS=/home/rodrigo/work/scripts
 
 ##############################################################################
 
@@ -81,10 +75,3 @@ export LC_MESSAGES="en_US.utf8"
 #export LC_MONETARY="pt_BR.utf8"
 #export LC_PAPER="pt_BR.utf8"
 #export LC_MEASUREMENT="pt_BR.utf8"
-
-# if running bash (interactive login shell)
-if [ -n "$BASH_VERSION" ]; then
-	if [ -f "$SCRIPTS/home/bashrc" ] ; then
-		. "$SCRIPTS/home/bashrc"
-	fi
-fi
