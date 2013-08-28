@@ -60,6 +60,7 @@ export DEBFULLNAME="Rodrigo Silva"
 export DEBEMAIL="debian@rodrigosilva.com"
 
 #Python
+export PYTHONPATH="$PYTHONPATH":"$HOME"/work
 export PYTHONWARNINGS=default  # re-enable DeprecationWarning's disabled in Python 2.7
 
 # PyLint
