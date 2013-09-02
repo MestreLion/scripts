@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Install software or upgrade from old unsupported release
+# http://askubuntu.com/questions/91815
+
+sources=/etc/apt/sources.list
+
+if ! [[ -f "$sources" ]]; then
+	sudo cp "$sources"{,.runonce.bak}
+fi
+sudo sed -i -e 's/archive.ubuntu.com/old-releases.ubuntu.com/g;s/security.ubuntu.com/old-releases.ubuntu.com/g' "$sources"
+sudo apt-get update
+sudo apt-get upgrade

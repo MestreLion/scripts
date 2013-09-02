@@ -1,0 +1,7 @@
+#!/bin/bash -x
+
+sources=/etc/apt/sources.list
+
+if [[ -f "$sources".runonce.bak ]]; then
+	sudo mv "$sources"{.runonce.bak,}
+fi
