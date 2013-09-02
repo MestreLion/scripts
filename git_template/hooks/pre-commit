@@ -44,13 +44,25 @@ fi
 # Fix common issues: trailing whitespace, blank lines at EOF and leading spaces
 # before tab. Due to the nature of diff-index --check the snippet below is NOT
 # protected against filenames containing newlines
-git diff-index --check --cached "$against" -- |
-awk -F: '!/^[+-]/{NF-=2;print $0}' |
-uniq |
+git diff-index --cached "$against" -- |
+cut -f2 |
 while IFS= read -r file ; do
-	sed -i ':a;s/[ \t]*$//;s/[ \t]*\r$/\r/;s/^ *\t/\t/;/^[\r\n]*$/{$d;N;ba;}' "$file"
-	git add -f "$file"
-	echo "fixed $file"
+	fixed=
+	if ! git diff-index --check --cached "$against" -- "$file" >/dev/null ; then
+		# FIXME: "space-before-tab" only fix *leading* spaces, not *mixed* ones.
+		# it also simply deletes spaces, instead of perhaps replacing 4*\n with a \t
+		sed -i ':a;s/[ \t]*$//;s/[ \t]*\r$/\r/;s/^ *\t/\t/;/^[\r\n]*$/{$d;N;ba;}' "$file"
+		fixed=1
+	fi
+	# Addiional check for no newline at end of file
+	if [ "$(mimetype -b "$file" | cut -d'/' -f1)" = 'text' -a "$(tail -c1 "$file" | hexdump -e '"%02X"')" != '0A' ] ; then
+		echo >> "$file"
+		fixed=1
+	fi
+	if [ -n "$fixed" ] ; then
+		git add -f "$file"
+		echo "fixed $file"
+	fi
 done
 
 # Check again, just in case we didn't fix all issues
