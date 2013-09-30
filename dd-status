@@ -95,6 +95,7 @@ echo "dd if=\"$input\" of=\"$output\" bs=\"$block\""
 
 #set -m  # do not supress backgound output
 dd if="$input" of="$output" bs="$block" & pid=$!
+trap 'pkill -P $$' EXIT  # abort dd if script it aborted
 sleep 0.2  # wait for any immediate errors (permission denied, file not found, etc)
 
 if is_running $pid; then
