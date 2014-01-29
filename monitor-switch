@@ -92,11 +92,13 @@ for output in "${monitors[@]}"; do
 		xrandropts+=(--output "$output" --auto ${monitor_opts["$output"]})
 		if ((all)); then
 			if [[ "$output" = "${monitors[0]}" ]]; then
-				xrandropts+=(--pos 0x0)
+				xrandropts+=(--pos 0x0 --primary)
 			else
 				xrandropts+=(--right-of "$previous")
 			fi
 			previous="$output"
+		else
+			xrandropts+=(--primary)
 		fi
 	else
 		xrandropts+=(--output "$output" --off)
