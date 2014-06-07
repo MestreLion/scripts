@@ -23,7 +23,7 @@ declare -a monitors
 # Default settings
 # TODO: source from a ~/.config file
 monitors=(DFP10 DFP9)  # order matters: list them from left to right
-monitor_opts[DFP9]="--mode 1280x720 --rate 60"
+monitor_opts[DFP9]="--mode 1920x1080 --rate 60"
 #############
 
 myname="${0##*/}"
