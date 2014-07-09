@@ -1,0 +1,59 @@
+#!/bin/bash
+
+format="--3dsbs"
+args=(--font Arial --color 0xFFFF00 --margin-vertical 50)
+
+myname="${0##*/}"
+
+argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1 ; }
+invalid() { argerr "invalid option: $1" ; }
+
+usage() {
+	cat <<-USAGE
+	Usage: $myname [--sbs|--tab] INPUT...
+	USAGE
+	if [[ "$1" ]] ; then
+		cat >&2 <<- USAGE
+		Try '$myname --help' for more information.
+		USAGE
+		exit 1
+	fi
+	cat <<-USAGE
+
+	A sub3dtool wrapper to convert an SRT file to 3D (using ASS format)
+	using custom font and color options
+
+	Options:
+	  -h|--help       - show this page
+
+	  -s|--sbs|--side - Side-by-Side (default)
+	  -t|--tab|--top  - Top-and-Bottom
+
+	Current custom options:
+	  ${args[@]}
+
+	Copyright (C) 2013 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+	USAGE
+	exit 0
+}
+
+# Option handling
+files=()
+for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
+while (( $# )); do
+	case "$1" in
+	-s|--sbs|--side) format="--3dsbs" ;;
+	-t|--tab|--top)  format="--3dtb"  ;;
+	--) shift ; break ;;
+	-*) invalid "$1" ;;
+	*) files+=( "$1" ) ;;
+	esac
+	shift
+done
+files+=( "$@" )
+
+for sub in "${files[@]}"; do
+	out="${sub%.*}".ssa
+	sub3dtool "$format" "${args[@]}" -o "$out" "$sub"
+done
