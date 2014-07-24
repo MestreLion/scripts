@@ -20,20 +20,34 @@
 declare -A monitor_opts
 declare -a monitors
 
-# Default settings
-# TODO: source from a ~/.config file
-monitors=(DFP10 DFP9)  # order matters: list them from left to right
-monitor_opts[DFP9]="--mode 1920x1080 --rate 60"
-#############
-
 myname="${0##*/}"
 verbose=0
 
+# Read settings from config file
+config=${XDG_CONFIG_HOME:-"$HOME"/.config}/"$myname".conf
+if [[ -f "$config" ]]; then
+	source "$config"
+fi
+
 # if there's no pre-defined monitors list, read from xrandr
+# and save them to config file
 if [[ -z "$monitors" ]]; then
 	while read -r output ; do
 		monitors+=("$output")
 	done < <(xrandr | awk '$2 ~/^c/{print $1}' | sort)
+	cat > "$config" <<-EOF
+		# $myname config file
+
+		# List of monitors, from left to right. Edit to your actual layout
+		monitors=(${monitors[@]})
+
+		# Extra xrandr options for each monitor.
+		# Useful when EDID data does not reflect actual preferred mode
+		# Options for non-existing outputs (such as the examples below) are ignored
+		# Examples:
+		monitor_opts[DFPx]="--mode 1920x1080 --rate 60"
+		monitor_opts[DFPy]="--mode 1280x720"
+	EOF
 fi
 
 message() { printf "%s\n" "$1" >&2 ; }
