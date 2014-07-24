@@ -29,6 +29,26 @@ if [[ -f "$config" ]]; then
 	source "$config"
 fi
 
+print_monitors() {
+	while read -r output conn hex; do
+		echo "# $output	$conn	$(xxd -r -p <<<"$hex")"
+	done < <(xrandr --prop | awk '
+	!/^[ \t]/ {
+		if (output && hex) print output, conn, hex
+		output=$1
+		hex=""
+	}
+	/ConnectorType:/ {conn=$2}
+	/[:.]/ && h {
+		sub(/.*000000fc00/, "", hex)
+		hex = substr(hex, 0, 26) "0a"
+		sub(/0a.*/, "", hex)
+		h=0
+	}
+	h {sub(/[ \t]+/, ""); hex = hex $0}
+	/EDID.*:/ {h=1}')
+}
+
 # if there's no pre-defined monitors list, read from xrandr
 # and save them to config file
 if [[ -z "$monitors" ]]; then
@@ -47,6 +67,12 @@ if [[ -z "$monitors" ]]; then
 		# Examples:
 		monitor_opts[DFPx]="--mode 1920x1080 --rate 60"
 		monitor_opts[DFPy]="--mode 1280x720"
+
+		# As a reference, these were the connected monitors when this config file was created
+		# use it as a guide when editing the above monitors list and extra options
+		$(print_monitors)
+
+		# For an updated list, run $myname --list
 	EOF
 fi
 
@@ -74,6 +100,8 @@ usage() {
 	  -h|--help          - show this page.
 	  -v|--verbose       - print in terminal the full xrandr command executed.
 
+	  -l|--list          - list connector and monitor names of connected outputs
+
 	  -a|--all           - enable all monitors.
 	  -s|--select OUTPUT - enable monitor OUTPUT, disable all others.
 	  -l|--left          - enable leftmost monitor.  Alias for --select ${monitors[0]}
@@ -91,6 +119,7 @@ while (( $# )); do
 	case "$1" in
 	-v|--verbose) verbose=1 ;;
 	-q|--no-notify) notify=0 ;;
+	-l|--list) list=1 ;;
 	-a|--all) all=1 ;;
 	-s|--select) shift ; monitor="$1" ;;
 	-l|--left ) monitor="${monitors[0]}" ;;
@@ -99,6 +128,12 @@ while (( $# )); do
 	esac
 	shift
 done
+
+if ((list)); then
+	echo "Connected monitors:"
+	print_monitors
+	exit
+fi
 
 if [[ -z "$monitor" && -z "$all" ]]; then
 	usage
