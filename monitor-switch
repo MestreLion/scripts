@@ -86,6 +86,10 @@ while (( $# )); do
 	shift
 done
 
+if [[ -z "$monitor" && -z "$all" ]]; then
+	usage
+fi
+
 # Loop outputs (monitors)
 for output in "${monitors[@]}"; do
 	if ((all)) || [[ "$output" = "$monitor" ]]; then
