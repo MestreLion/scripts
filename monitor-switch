@@ -79,8 +79,8 @@ while (( $# )); do
 	-q|--no-notify) notify=0 ;;
 	-a|--all) all=1 ;;
 	-s|--select) shift ; monitor="$1" ;;
-	-l|--left )  xrandr --output DFP10 --off --output DFP9 --auto --mode 1920x1080 --rate 60 --primary ; all=1 ;;  # monitor="${monitors[0]}" ;;
-	-r|--right)  xrandr --output DFP10 --auto --primary --output DFP9 --off ; all=1 ;;  # monitor="${monitors[${#monitors[@]}-1]}" ;;
+	-l|--left ) monitor="${monitors[0]}" ;;
+	-r|--right) monitor="${monitors[${#monitors[@]}-1]}" ;;
 	*) invalid "$1" ;;
 	esac
 	shift
