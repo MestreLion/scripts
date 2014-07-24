@@ -25,6 +25,16 @@ SELF="${0##*/}" # buitin $(basename $0)
 
 # _TestRequirements() { #TODO }
 
+required()
+{
+	local cmd=$1
+	local msg=${2:-Missing required command: $cmd}
+	if ! type "$1" >/dev/null 2>&1; then
+		fatal "$msg"
+	fi
+}
+
+
 testroot()
 {
 	# simple root test
