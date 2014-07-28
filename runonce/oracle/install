@@ -1,0 +1,17 @@
+#!/bin/bash -e
+
+sources="/etc/apt/sources.list.d/oracle.list"
+
+if [[ "$(id -u)" != 0 ]]; then
+	echo "You must run this as root" >&2
+	exit 1
+fi
+
+if ! [[ -f "$sources" ]]; then
+	echo "deb http://oss.oracle.com/debian unstable main non-free" > "$sources"
+fi
+
+wget http://oss.oracle.com/el4/RPM-GPG-KEY-oracle  -O- | apt-key add -
+
+apt-get update
+#apt-get install oracle-xe-universal
