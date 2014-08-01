@@ -19,13 +19,13 @@ if [ -f "$SCRIPTS/home/bash_aliases" ] ; then
 	source "$SCRIPTS/home/bash_aliases"
 fi
 
-if [ -d "$HOME/work/wine-tools" ] ; then
+if [ -f "$HOME/work/wine-tools/wine-tools-bashrc" ] ; then
 	PATH="$PATH:$HOME/work/wine-tools"
 	source "$HOME/work/wine-tools/wine-tools-bashrc"
 fi
 
-if [ -d "$HOME/work/dosbox" ] ; then
-	source "$HOME/work/dosbox/dosbox-bashrc"
+if [ -f "$HOME/work/dosbox/dosbox-tools/dosbox-bashrc" ] ; then
+	source "$HOME/work/dosbox/dosbox-tools/dosbox-bashrc"
 fi
 
 declare -A termcolor
