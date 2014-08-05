@@ -2,7 +2,7 @@
 #
 # progname - short desciption
 #
-#    Copyright (C) 2013 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#    Copyright (C) 2014 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -53,7 +53,7 @@ usage() {
 	  -h|--help     - show this page.
 	  -v|--verbose  - print more details about what is being done.
 
-	Copyright (C) 2013 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	Copyright (C) 2014 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
 	USAGE
 	exit 0
