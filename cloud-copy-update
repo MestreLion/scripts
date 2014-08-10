@@ -1,0 +1,107 @@
+#!/bin/bash
+#
+# cloud-copy-update - update and clean up Copy.com mirror directory
+#
+#    Copyright (C) 2014 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program. See <http://www.gnu.org/licenses/gpl.html>
+#
+
+myname="${0##*/}"
+mydir=$(dirname "$(readlink -f "$0")")
+verbose=1
+greenC=$(tput setaf 2; tput bold)
+redC=$(tput setaf 1; tput bold)
+endC=$(tput sgr0)
+
+fatal()   { [[ "$1" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
+argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1 ; }
+invalid() { argerr "invalid option: $1" ; }
+message() { ((verbose)) && echo && echo && echo "${greenC}*** ${1}${endC}" ; }
+
+
+usage() {
+	cat <<-USAGE
+	Usage: $myname [options]
+	USAGE
+	if [[ "$1" ]] ; then
+		cat >&2 <<- USAGE
+		Try '$myname --help' for more information.
+		USAGE
+		exit 1
+	fi
+	cat <<-USAGE
+
+	Update and clean up Copy.com online directory
+
+	Options:
+	  -h|--help   - show this page.
+	  -q|--quiet  - do not print informative messages
+
+	Copyright (C) 2014 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+	USAGE
+	exit 0
+}
+
+# Option handling
+files=()
+for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
+
+while (( $# )); do
+	case "$1" in
+	-q|--quiet ) verbose=0                      ;;
+	-*         ) invalid "$1"                   ;;
+	*          ) argerr "$1"                    ;;
+	esac
+	shift
+done
+
+config=${XDG_CONFIG_HOME:-$HOME/.config}/$myname/$myname.conf
+
+{ copydir=$(<"$config"); } 2>/dev/null
+
+if ! [[ -d "$copydir" ]]; then
+	echo "Copy.com local directory location not found: '$copydir'"
+	echo "Please check the config file at '$config'"
+	exit 1
+fi
+
+message "Mirroring local dir"
+rsync -axSv --delete "$HOME"/.local/ "$copydir"
+
+message "Cleaning up the Trash"
+rm -rf "$copydir"/share/Trash
+
+#echo "Cleaning up wineprefixes"
+#for bottle in "$copydir"/share/wineprefixes/*; do
+#	rm -f "$bottle"/dosdevices/*
+#	for userdir in "$bottle"/drive_c/users/"$USER"/*; do
+#		if [[ -h "$userdir" ]]; then
+#			rm -f "$userdir"
+#		fi
+#	done
+#done
+
+message "Removing absolute dir symlinks"
+while read -r symlink; do
+	target=$(readlink "$symlink")
+	if [[ "${target:0:1}" == "/" ]]; then
+		rm -fv "$symlink"
+	fi
+done < <(find "$copydir" -type l -xtype d)
+
+
+message "Deleting broken symlinks"
+find -L "$copydir" -type l -delete
