@@ -100,7 +100,9 @@ for video in "${files[@]}"; do
 	dir="${dir:-./}"
 
 	# Is it a video?
-	case "${ext,,}" in avi|mpg|mpeg|mkv|mp4|ogv) ;; *) continue ;; esac
+	shopt -s nocasematch
+	case "${ext}" in avi|mpg|mpeg|mkv|mp4|ogv) ;; *) continue ;; esac
+	shopt -u nocasematch
 
 	# Has a matching subtitle already?
 	subtitle="${video%."$ext"}.srt"
