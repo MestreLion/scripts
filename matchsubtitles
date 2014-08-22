@@ -9,9 +9,13 @@
 #
 # TODO: Sort files array
 # TODO: Support for multiple language subtitles ( *.xx.srt )
-# FIXME: Decent usage explaining options and behaviour
+# FIXME: undo file should handle chained renames of the same file
 
 self="${0##*/}"
+
+run=0
+verbose=0
+undo=
 
 fatal() {
 	local msg="$1"
@@ -87,7 +91,7 @@ if [[ "${#files[@]}" -eq 0 ]]; then addfiles "$PWD"; fi  # no files given: add c
 
 # loop the files
 prevdir=""
-match=""
+match=0
 for video in "${files[@]}"; do
 
 	# File exists? (can be an umatched glob or empty dir)
@@ -131,8 +135,8 @@ for video in "${files[@]}"; do
 	if ! (( s < ${#subtitles[@]} )); then continue; fi
 
 	# Rename the first subtitle
-	if [[ "$verbose" ]]; then printf 'old=%s\tnew=%s\n' "${subtitles[s]}" "${subtitle}"; fi
-	if [[ "$run" ]]; then
+	if ((verbose)); then printf 'old=%s\tnew=%s\n' "${subtitles[s]}" "${subtitle}"; fi
+	if ((run)); then
 		mv -- "${subtitles[s]}" "${subtitle}" ||
 		fatal "could not rename ${subtitles[s]}"
 		if [[ "$undo" ]]; then
@@ -145,7 +149,7 @@ for video in "${files[@]}"; do
 
 done
 
-if [[ "$undo" && "$match" && "$run" ]]; then
+if [[ "$undo" ]] && ((match && run)); then
 	printf '\n' >> "$undo" || fatal "could not write to undo file $undo"
 	chmod +x "$undo" || fatal "could not set to executable undo script $undo"
 fi
