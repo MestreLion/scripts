@@ -132,20 +132,20 @@ for video in "${files[@]}"; do
 
 	# Rename the first subtitle
 	if [[ "$verbose" ]]; then printf 'old=%s\tnew=%s\n' "${subtitles[s]}" "${subtitle}"; fi
-	if [[ "$undo" ]]; then
-		printundo "$match" "${subtitle}" "${subtitles[s]}" >> "$undo" ||
-		fatal "could not write to undo file $undo"
-	fi
 	if [[ "$run" ]]; then
 		mv -- "${subtitles[s]}" "${subtitle}" ||
 		fatal "could not rename ${subtitles[s]}"
+		if [[ "$undo" ]]; then
+			printundo "$match" "${subtitle}" "${subtitles[s]}" >> "$undo" ||
+			fatal "could not write to undo file $undo"
+		fi
 	fi
 	match=1
 	(( s++ ))
 
 done
 
-if [[ "$undo" && "$match" ]]; then
+if [[ "$undo" && "$match" && "$run" ]]; then
 	printf '\n' >> "$undo" || fatal "could not write to undo file $undo"
 	chmod +x "$undo" || fatal "could not set to executable undo script $undo"
 fi
