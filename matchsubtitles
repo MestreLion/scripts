@@ -130,7 +130,7 @@ for video in "${files[@]}"; do
 
 	# Rename the first subtitle
 	[[ "$verbose" ]] && printf 'old=%s\tnew=%s\n' "${subtitles[s]}" "${subtitle}"
-	[[ "$undo" ]] && printundo "$match" "${subtitle}" "${subtitles[s]}" >> "$undo" || fatal "could not write to undo file $undo"
+	[[ "$undo" ]] && { printundo "$match" "${subtitle}" "${subtitles[s]}" >> "$undo" || fatal "could not write to undo file $undo"; }
 	[[ "$run" ]] && { mv -- "${subtitles[s]}" "${subtitle}" || fatal "could not rename ${subtitles[s]}" ; }
 	match=1
 	(( s++ ))
