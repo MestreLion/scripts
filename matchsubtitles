@@ -15,8 +15,10 @@ self="${0##*/}"
 
 fatal() {
 	local msg="$1"
-	[[ "$msg" ]] && printf "%s: %s\nTry '%s --help' for more information\n" \
-	                       "$self" "$msg" "$self" >&2
+	if [[ "$msg" ]]; then
+		printf "%s: %s\nTry '%s --help' for more information\n" \
+		       "$self" "$msg" "$self" >&2
+	fi
 	exit 1
 }
 usage() {
@@ -60,8 +62,8 @@ printundo() {
 
 addfiles() {
 	local arg="$1"
-	[[ -f "$arg" ]] && { files+=( "$arg"       ) ; return ; } # add file
-	[[ -d "$arg" ]] && { files+=( "${arg%/}/"* ) ; return ; } # add files in dir
+	if [[ -f "$arg" ]]; then files+=( "$arg"       ); return; fi  # add file
+	if [[ -d "$arg" ]]; then files+=( "${arg%/}/"* ); return; fi  # add files in dir
 	fatal "\'$arg\' is not a file or directory"
 }
 
@@ -80,8 +82,8 @@ while [[ $# -gt 0 ]]; do
 	*           ) addfiles "$arg" ;;
 	esac
 done
-for arg; do addfiles "$arg"; done # add remaining files after --
-[[ "${#files[@]}" -gt 0 ]] || addfiles "$PWD" # no files given: add current dir
+for arg; do addfiles "$arg"; done  # add remaining files after --
+if [[ "${#files[@]}" -eq 0 ]]; then addfiles "$PWD"; fi  # no files given: add current dir
 
 # loop the files
 prevdir=""
@@ -89,7 +91,7 @@ match=""
 for video in "${files[@]}"; do
 
 	# File exists? (can be an umatched glob or empty dir)
-	[[ -f "$video" ]] || continue
+	if ! [[ -f "$video" ]]; then continue; fi
 
 	# Split full filename in file, title, ext and dir (with trailing '/')
 	file="${video##*/}"
@@ -106,7 +108,7 @@ for video in "${files[@]}"; do
 
 	# Has a matching subtitle already?
 	subtitle="${video%."$ext"}.srt"
-	[[ -f "$subtitle" ]] && continue
+	if [[ -f "$subtitle" ]]; then continue; fi
 
 	# Populate the unmatched subtitles array for this dir
 	if [[ "$dir" != "$prevdir" ]]; then
@@ -120,18 +122,24 @@ for video in "${files[@]}"; do
 				for f in "${sub%.[Ss][Rr][Tt]}".{avi,mpg,mpeg,mkv,mp4,ogv}; do
 					if [[ -f "$f" ]]; then matchsub=1; break; fi
 				done
-				[[ "$matchsub" ]] || subtitles+=( "$sub" )
+				if [[ -z "$matchsub" ]]; then subtitles+=( "$sub" ); fi
 			fi
 		done
 	fi
 
 	# Are there any avaliable, unmatched subtitles left in this dir?
-	(( s < ${#subtitles[@]} )) || continue
+	if ! (( s < ${#subtitles[@]} )); then continue; fi
 
 	# Rename the first subtitle
-	[[ "$verbose" ]] && printf 'old=%s\tnew=%s\n' "${subtitles[s]}" "${subtitle}"
-	[[ "$undo" ]] && { printundo "$match" "${subtitle}" "${subtitles[s]}" >> "$undo" || fatal "could not write to undo file $undo"; }
-	[[ "$run" ]] && { mv -- "${subtitles[s]}" "${subtitle}" || fatal "could not rename ${subtitles[s]}" ; }
+	if [[ "$verbose" ]]; then printf 'old=%s\tnew=%s\n' "${subtitles[s]}" "${subtitle}"; fi
+	if [[ "$undo" ]]; then
+		printundo "$match" "${subtitle}" "${subtitles[s]}" >> "$undo" ||
+		fatal "could not write to undo file $undo"
+	fi
+	if [[ "$run" ]]; then
+		mv -- "${subtitles[s]}" "${subtitle}" ||
+		fatal "could not rename ${subtitles[s]}"
+	fi
 	match=1
 	(( s++ ))
 
@@ -141,5 +149,3 @@ if [[ "$undo" && "$match" ]]; then
 	printf '\n' >> "$undo" || fatal "could not write to undo file $undo"
 	chmod +x "$undo" || fatal "could not set to executable undo script $undo"
 fi
-
-exit 0
