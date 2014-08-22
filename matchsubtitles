@@ -5,6 +5,8 @@
 # Copyright (C) 2011 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 # License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
 #
+# For updated versions, see https://github.com/MestreLion/scripts/
+#
 # TODO: Sort files array
 # TODO: Support for multiple language subtitles ( *.xx.srt )
 # FIXME: Decent usage explaining options and behaviour
@@ -30,7 +32,12 @@ Options:
 Video files are *.avi, *.mkv, *.mpg, *.mpeg and *.ogv. All other files are ignored
 Files that already have a matching subtitle and subtitles that already have a matching video will be ignored
 For desired results, files in same dir must be given in alphabetical order (use globs for that).
-Example: $self ~/Videos/Lost /shared/csi/miami_s1* '/movies/star wars'
+
+Example:
+	$self --run ~/Videos/Lost /shared/csi/miami_s1* '/movies/star wars'
+
+Copyright (C) 2011 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
 USAGEDOC
 exit
 }
