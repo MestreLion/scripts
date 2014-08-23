@@ -68,7 +68,7 @@ addfiles() {
 	local arg="$1"
 	if [[ -f "$arg" ]]; then files+=( "$arg"       ); return; fi  # add file
 	if [[ -d "$arg" ]]; then files+=( "${arg%/}/"* ); return; fi  # add files in dir
-	fatal "\'$arg\' is not a file or directory"
+	fatal "$(printf '%q' "$arg"): not a file or directory"
 }
 
 #save for log
@@ -88,6 +88,10 @@ while [[ $# -gt 0 ]]; do
 done
 for arg; do addfiles "$arg"; done  # add remaining files after --
 if [[ "${#files[@]}" -eq 0 ]]; then addfiles "$PWD"; fi  # no files given: add current dir
+
+# set the verbose -v option for mv
+v=""
+if ((verbose)); then v="-v"; fi
 
 # loop the files
 prevdir=""
@@ -135,21 +139,27 @@ for video in "${files[@]}"; do
 	if ! (( s < ${#subtitles[@]} )); then continue; fi
 
 	# Rename the first subtitle
-	if ((verbose)); then printf 'old=%s\tnew=%s\n' "${subtitles[s]}" "${subtitle}"; fi
 	if ((run)); then
-		mv -- "${subtitles[s]}" "${subtitle}" ||
+		mv "${v}" -- "${subtitles[s]}" "${subtitle}" ||
 		fatal "could not rename ${subtitles[s]}"
 		if [[ "$undo" ]]; then
 			printundo "$match" "${subtitle}" "${subtitles[s]}" >> "$undo" ||
 			fatal "could not write to undo file $undo"
 		fi
+	elif ((verbose)); then
+		printf '# mv -- %q %q\n' "${subtitles[s]}" "${subtitle}"
 	fi
 	match=1
 	(( s++ ))
 
 done
 
+if ((verbose && match && ! run)); then
+	echo "Dry run, no rename was executed. Use --run to apply"
+fi
+
 if [[ "$undo" ]] && ((match && run)); then
 	printf '\n' >> "$undo" || fatal "could not write to undo file $undo"
 	chmod +x "$undo" || fatal "could not set to executable undo script $undo"
+	if ((verbose)); then echo "undo file created: $undo"; fi
 fi
