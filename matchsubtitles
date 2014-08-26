@@ -90,8 +90,8 @@ for arg; do addfiles "$arg"; done  # add remaining files after --
 if [[ "${#files[@]}" -eq 0 ]]; then addfiles "$PWD"; fi  # no files given: add current dir
 
 # set the verbose -v option for mv
-v=""
-if ((verbose)); then v="-v"; fi
+v=()
+if ((verbose)); then v=("-v"); fi
 
 # loop the files
 prevdir=""
@@ -140,7 +140,7 @@ for video in "${files[@]}"; do
 
 	# Rename the first subtitle
 	if ((run)); then
-		mv "${v}" -- "${subtitles[s]}" "${subtitle}" ||
+		mv "${v[@]}" -- "${subtitles[s]}" "${subtitle}" ||
 		fatal "could not rename ${subtitles[s]}"
 		if [[ "$undo" ]]; then
 			printundo "$match" "${subtitle}" "${subtitles[s]}" >> "$undo" ||
