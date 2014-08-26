@@ -7,7 +7,9 @@
 #
 # For updated versions, see https://github.com/MestreLion/scripts/
 #
-# TODO: Sort files array
+# For an example on how to use it via GUI/File Manager, see the Nautilus action
+# wrapper in `nautilus-scripts/Match subtitles`
+#
 # TODO: Support for multiple language subtitles ( *.xx.srt )
 # FIXME: undo file should handle chained renames of the same file
 
