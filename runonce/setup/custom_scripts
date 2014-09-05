@@ -2,13 +2,12 @@
 
 myname="${0##*/}"
 
-if [ -z "$SCRIPTS" ] ; then
-	for root in {"$HOME",/home/{dados,rodrigo}}{/work,}/scripts; do
-		if [ -d "$root" ] ; then break; fi
-	done
-	[[ "$root" ]] || { echo "could not find scripts root"; exit 1; }
-	SCRIPTS=$root
+
+if [[ ! -d "$1" ]]; then
+	echo "Usage: $myname <scripts root>"
 fi
+
+SCRIPTS=$(readlink -f "$1")
 
 # custom profile
 if ! grep -q "\$SCRIPTS" ~/.profile 2>/dev/null ; then
@@ -57,3 +56,5 @@ if ! [[ -h "$original" ]]; then
 	rmdir "$original" &&
 	ln -s "$(relpath "$custom" "$(dirname "$original")")" "$original"
 fi
+
+echo "NOW IN ~/.profile MANUALLY MOVE ENTRIES THAT SOURCES ~/.bashrc TO AFTER THE SOURCING OF $SCRIPTS/home/profile"

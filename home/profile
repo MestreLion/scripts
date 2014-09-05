@@ -14,16 +14,17 @@
 #
 # Notes:
 #
-#  #!/bin/sh is specified to enforce compliance with /etc/gdm/Xession,
-#  which sources ~/.profile at login. Thus, bashisms are not allowed here.
+#  Bashisms are not allowed here, as /etc/gdm/Xession runs on sh (not bash!)
+#  and sources ~/.profile at login.
 #
-#  If SCRIPTS environment variable is already set in ~/.profile, will be
+#  SCRIPTS environment variable should be defined in ~/.profile instead of here.
 #  respected here. If not, SCRIPTS will be set as either ~/work/scripts or
 #  /home/dados/work/scripts, whichever exists.
 #
 ##############################################################################
 
-export SCRIPTS=/home/rodrigo/work/scripts
+# Fallback only! Should be defined in ~/.profile instead.
+export SCRIPTS=${SCRIPTS:-"$HOME"/work/scripts}
 
 ##############################################################################
 

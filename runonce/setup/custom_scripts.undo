@@ -1,10 +1,10 @@
-#!/bin/bash -x
+#!/bin/bash
 
 # custom profile
-grep -q "\$SCRIPTS" ~/.profile && echo "remove from export SCRIPT to fi"
+grep -q "\$SCRIPTS" ~/.profile && echo "Now manually remove from export SCRIPT to fi!!!"
 
 # custom bashrc
-grep -q "\$SCRIPTS" ~/.bashrc && echo "remove from if SCRIPT to fi"
+grep -q "\$SCRIPTS" ~/.bashrc && echo "Now manually remove from if SCRIPT to fi!!!"
 
 # personal bin
 rmdir "$HOME/.local/bin" 2>/dev/null
