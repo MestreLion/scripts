@@ -5,6 +5,7 @@ myname="${0##*/}"
 
 if [[ ! -d "$1" ]]; then
 	echo "Usage: $myname <scripts root>"
+	exit
 fi
 
 SCRIPTS=$(readlink -f "$1")
