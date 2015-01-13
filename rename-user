@@ -1,0 +1,256 @@
+#!/bin/bash
+#
+# rename-user - rename a user (login name) along with its group and home dir
+#
+#    Copyright (C) 2015 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program. See <http://www.gnu.org/licenses/gpl.html>
+#
+# TODO:
+# - Fix files containing OLDHOME
+# - Fix symlinks pointing to OLDHOME (or inside)
+
+myname="${0##*/}"
+mydir=$(dirname "$(readlink -f "$0")")
+prefix=/home
+verbose=0
+yes=0
+force=0
+movegroup=1
+movehome=1
+homeargs=()
+
+newgroup=""
+newhome=""
+
+fatal()   { [[ "$1" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
+message() { ((verbose)) && printf "%s\n" "$1"; }
+argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1 ; }
+invalid() { argerr "invalid argument: $1" ; }
+missing() { argerr "missing ${2:+$2 }argument${1:+ from $1}." ; }
+
+confirm()
+{
+	local message="$1"
+	local yes=${2:-0}
+	local default=NO
+	local reply
+
+	if ! ((yes)); then
+		read -p "$message (y/n, default $default): " reply
+		reply="${reply:-$default}"
+		case "$reply" in
+		[Yy]*) ;;
+		*    ) message "cancelled by user"; return 2;;
+		esac
+	fi
+	return 0
+}
+
+
+usage() {
+	cat <<-USAGE
+	Usage: $myname [options] NEWNAME [OLDNAME]
+	USAGE
+	if [[ "$1" ]] ; then
+		cat >&2 <<- USAGE
+		Try '$myname --help' for more information.
+		USAGE
+		exit 1
+	fi
+	cat <<-USAGE
+
+	Rename a user, including its home dir and default group.
+	A wrapper to automate usermod/groupmod with extra validations.
+
+	Options:
+	  -h|--help       - show this page.
+	  -v|--verbose    - print more details about what is being done.
+	  -y|--yes        - do not prompt for confirmation.
+	  -f|--force      - allow rename to existing home directory or group.
+	  -D|--no-homedir - do not rename home directory.
+	  -G|--no-group   - do not rename primary group.
+
+	  -d|--homedir PATH
+	                  - move current home directory to a custom PATH.
+	                    By default if its last path component matches OLDNAME
+	                    home is moved to 'basename <current home>/NEWNAME'.
+	                    Ignored if --no-homedir is set.
+
+	  -g|--group NAME
+	                  - rename primary group to custom NAME. By default if
+	                    group name matches OLDNAME it is renamed to NEWNAME.
+	                    Ignored if --no-group is set.
+
+	Notes:
+	- Renaming 'root' or a currently logged in user is not allowed.
+
+	- Renaming to an existing user is not allowed.
+
+	- Moving home directory dir or renaming primary group to existing ones
+	  is only allowed if --force is set.
+
+	- Does not work (yet) for encripted home directories.
+
+	Copyright (C) 2015 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+	USAGE
+	exit 0
+}
+
+# Option handling
+args=()
+for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
+while (( $# )); do
+	case "$1" in
+	-v|--verbose    ) verbose=1            ;;
+	-y|--yes        ) yes=1                ;;
+	-f|--force      ) force=1              ;;
+	-D|--no-homedir ) movehome=0           ;;
+	-G|--no-group   ) movegroup=0          ;;
+	-d|--homedir    ) shift ; newhome="$1" ;;
+	-g|--group      ) shift ; newgroup="$1";;
+	--home=*        ) newhome="${1#*=}"    ;;
+	--group=*       ) newgroup="${1#*=}"   ;;
+	-*              ) invalid "$1"         ;;
+	*               ) args+=( "$1" )       ;;
+	esac
+	shift
+done
+if ((${#args[@]} >= 3)); then invalid "${args[2]}"; fi
+
+
+# Name check
+
+newname=${args[0]}
+oldname=${args[1]:-"$USER"}
+
+if [[ -z "$oldname" ]]; then missing "" "OLDNAME"; fi
+if [[ -z "$newname" ]]; then missing "" "NEWNAME"; fi
+
+if [[ "$oldname" == "root" ]]; then
+	fatal "renaming 'root' is not allowed."
+fi
+
+if cut -d: -f1 /etc/passwd | grep -qxm1 "$newname"; then
+	fatal "new user '$newname' already exists."
+fi
+
+if ! cut -d: -f1 /etc/passwd | grep -qxm1 "$oldname"; then
+	fatal "user '$oldname' does not exist."
+fi
+
+if users | grep -qwm1 "$oldname"; then
+	fatal "user '$oldname' is currently logged in."
+fi
+
+
+# Home check
+
+oldhome=$(awk -F: -v name="$oldname" '$1 == name {print $6; exit}' /etc/passwd)
+
+if ((movehome)); then
+	if [[ -z "$newhome" ]]; then
+		homebase=$(dirname "$oldhome")
+		homedir=$(basename "$oldhome")
+		if [[ "$homedir" == "$oldname" ]]; then
+			newhome="$homebase"/"$newname"
+		else
+			newhome=$oldhome
+		fi
+	fi
+	if [[ "$newhome" != "$oldhome" ]]; then
+		homeargs=(-d "$newhome" -m)
+	else
+		homeargs=()
+		movehome=0
+	fi
+	if !((force)) && ((movehome)) &&
+	  [[ -e "$newhome" ]]; then
+		fatal "new homedir '$newhome' already exists. Use --homedir to set a different one or --force to use it anyway."
+	fi
+else
+	newhome=$oldhome
+	homeargs=()
+fi
+
+
+
+# Group check
+
+oldgroup=$(groups "$oldname" | cut -d' ' -f3)
+
+if ((movegroup)); then
+	if [[ -z "$newgroup" ]]; then
+		if [[ "$oldgroup" == "$oldname" ]]; then
+			newgroup=$newname
+		else
+			movegroup=0
+		fi
+	fi
+	if !((force)) && ((movegroup)) &&
+	  cut -d: -f1 /etc/group | grep -qxm1 "$newgroup"; then
+		fatal "new group '$newgroup' already exists. Use --group to set a different one or --force to use it anyway."
+	fi
+else
+	newgroup=$oldgroup
+fi
+
+message "Old user:"
+message "Login: $oldname"
+message "Group: $oldgroup"
+message "Home:  $oldhome"
+message ""
+message "New user:"
+message "Login: $newname"
+message "Group: $newgroup"
+message "Home:  $newhome"
+message ""
+
+if !((yes)) && ! confirm "Rename user '$oldname' to '$newname'?"; then
+	exit
+fi
+
+echo sudo usermod -l "$newname" "${homeargs[@]}" "$oldname"
+if ((movegroup)); then
+	echo sudo groupmod -n "$newgroup" "$oldgroup"
+fi
+
+message "Listing all files containing old home '$oldhome'. This may take a while..."
+find "$newhome" -lname "$oldhome"   2>/dev/null
+find "$newhome" -lname "$oldhome/*" 2>/dev/null
+grep --color -sr "$oldhome" /
+
+exit
+
+#At the start screen press Ctrl+ALT+F1.
+#Log in using your username and password.
+#Set a password for the "root" account.
+#sudo passwd root
+#Log out.
+#exit
+#Log in using the "root" account and the password you have previously set.
+#Change the username and the home folder to the new name that you want.
+#usermod -l <newname> -d /home/<newname> -m <oldname>
+#Change the group name to the new name that you want.
+#groupmod -n <newgroup> <oldgroup>
+#Lock the "root" account.
+#passwd -l root
+#better yet: passwd -d root
+#If you were using ecryptfs (encrypted home directory).
+#	Mount your encrypted directory using ecryptfs-recover-private and
+#	edit <mountpoint>/.ecryptfs/Private.mnt to reflect your new home directory.
+#Log out.
+#exit
+#press Ctrl+ALT+F7.
