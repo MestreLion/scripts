@@ -227,10 +227,12 @@ if ((movegroup)); then
 	echo sudo groupmod -n "$newgroup" "$oldgroup"
 fi
 
-message "Listing all files containing old home '$oldhome'. This may take a while..."
-find "$newhome" -lname "$oldhome"   2>/dev/null
-find "$newhome" -lname "$oldhome/*" 2>/dev/null
-grep --color -sr "$oldhome" /
+if ((movehome)); then
+	message "Listing all files containing old home '$oldhome'. This may take a while..."
+	find "$newhome" -lname "$oldhome"   2>/dev/null
+	find "$newhome" -lname "$oldhome/*" 2>/dev/null
+	grep --color -sr "$oldhome" /
+fi
 
 exit
 
