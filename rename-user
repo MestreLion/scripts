@@ -222,9 +222,9 @@ if !((yes)) && ! confirm "Rename user '$oldname' to '$newname'?"; then
 	exit
 fi
 
-echo sudo usermod -l "$newname" "${homeargs[@]}" "$oldname"
+sudo usermod -l "$newname" "${homeargs[@]}" "$oldname"
 if ((movegroup)); then
-	echo sudo groupmod -n "$newgroup" "$oldgroup"
+	sudo groupmod -n "$newgroup" "$oldgroup"
 fi
 
 if ((movehome)); then
