@@ -46,25 +46,22 @@ confirm()
 	# For both default parameter and user input,
 	# non-empty garbage will always evaluate to and behave as NO
 	local message="$1"
-	local default="${2:-y}"
-	local silentno="$3"
+	local default="${2:-n}"
+	local silentno="${3:-0}"
 
-	local question="NO" ; [[ "$default" = "y" ]] && question="YES"
+	local question="NO"
+	if [[ "$default" == "y" ]]; then question="YES"; fi
 
-	if [[ -z "$FORCE" ]] ; then
-
+	if ! ((yes)); then
 		read -p "$message (y/n, default $question): " confirm
 		confirm="${confirm:-$default}"
-
 		case "$confirm" in
 		[Yy]*) ;;
-		*    ) [[ "$VERBOSE" && -z "$silentno" ]] && \
-		         printf "%s\n" "$SELF: ${COMMAND:+$COMMAND: }cancelled by user"
-		       return 2 ;;
+		*    ) if ! ((silentno)); then message "cancelled by user"; fi
+		       return 2
+		       ;;
 		esac
-
 	fi
-
 	return 0
 }
 
