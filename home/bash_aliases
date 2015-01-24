@@ -29,3 +29,13 @@ cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
 cmdcat()  { cat  "$(type -P "$1")" ; }
 cmdopen() { open "$(type -P "$1")" ; }
 complete -c cmdlist cmdcat cmdopen
+
+# 1337!
+alias matrix='cmatrix -bsu8'
+
+# Even more 1337!
+matrix-fake() {
+	tr -c "[:digit:]" " " < /dev/urandom |
+	dd cbs=$COLUMNS conv=unblock |
+	GREP_COLOR="1;32" grep --color "[^ ]"
+}
