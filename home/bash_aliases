@@ -14,9 +14,9 @@ alias fstab="gksudo gedit /etc/fstab"
 alias open="xdg-open"
 alias trash="trash-put"
 alias mand="dwww-man"
-
+alias package="dpkg-www"
 complete-copy ls ll la
-complete-copy dwww-man mand
+complete-copy dwww-man mand package
 
 cdl()     { cd "$@" && ll ; }
 md()      { mkdir "$@" && cd "${@: -1}" ; }
@@ -29,6 +29,12 @@ cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
 cmdcat()  { cat  "$(type -P "$1")" ; }
 cmdopen() { open "$(type -P "$1")" ; }
 complete -c cmdlist cmdcat cmdopen
+
+ubuntu-package() {
+	open "http://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"
+}
+complete -F _comp_pkg_names ubuntu-package
+
 
 # 1337!
 alias matrix='cmatrix -bsu8'
