@@ -8,6 +8,21 @@
 #	    . "$SCRIPTS/home/bashrc"
 #	fi
 
+# Advertise 256-color capability when using gnome-terminal.
+# Will only work until gnome-terminal v3.13, as it has removed the
+# setting of COLORTERM variable
+term=terminfo/x/xterm-256color
+if [[ "$COLORTERM" == gnome-terminal ]] &&
+   [[ "$TERM" == xterm ]] &&
+   [[ -r /lib/"$term"       ||  # ncurses-base package
+      -r /usr/share/"$term" ||  # ncurses-term, does not contain xterm-256color
+      -r /etc/"$term"       ||  # empty by default
+      -r "$HOME"/."$term"   ]]  # dir may not exist
+then
+	export TERM=xterm-256color
+fi
+unset term
+
 # enable programmable completion features (you don't need to enable
 # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
 # sources /etc/bash.bashrc).
