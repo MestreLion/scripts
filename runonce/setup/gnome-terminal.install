@@ -1,0 +1,149 @@
+#!/bin/bash -e
+
+# Setup gnome-terminal
+
+# Create a new profile named after USER, titled
+# Enable 256 colors
+# Enable transparency
+# Increase rows and columns
+# Unlimited scroll
+
+# Up to Ubuntu 12.04 (v3.4.11): gconf
+# Some point after: dconf/gsettings
+
+# for gsettings: https://wiki.gnome.org/Apps/Terminal/FAQ
+# list of profile UUIDs: gsettings get org.gnome.Terminal.ProfilesList list
+# default profile UUID: gsettings get org.gnome.Terminal.ProfilesList default
+# change a profile: gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:UUID/ KEY VALUE
+
+setuplib=${1:-$SETUP_LIB}
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib"
+	echo "Usage: ${0##*/} SETUP_LIB"
+	exit 1
+fi
+
+user=${USER,,}
+user=${user^}
+
+version=$(gnome-terminal --version | awk '{print $NF}')
+
+gconftool=gconftool
+gcrootkey=/apps/gnome-terminal
+gclistkey=$gcrootkey/global/profile_list
+gcprofrootkey=$gcrootkey/profiles
+
+gt_gconf_profile_exist() {
+	if ! "$gconftool" --dir-exists "$gcprofrootkey"/"$1"; then
+		return 1
+	fi
+}
+
+gt_gconf_profile_must_exist() {
+	gt_gconf_profile_exist "$1" || fatal "Missing key for profile: $1"
+}
+
+gt_gconf_profile_name() {
+	"$gconftool" --get "$gcprofrootkey"/"$1"/visible_name
+}
+
+gt_gconf_get_free_profile() {
+	local profiles=$("$gconftool" --get-list-size "$gclistkey")
+
+	# Loop existing profiles to:
+	# - Check if new profile already exists
+	# - Get a suitable key name for the new profile
+	local i=-1
+	local newprof=""
+	while ((++i < profiles)); do
+		local profile=$("$gconftool" --get-list-element "$gclistkey" "$i")
+		local profname=$(gt_gconf_profile_name "$profile")
+
+		if [[ "$profname" == "$user" ]]; then
+			message "Profile named '$user' already exists: $profile"
+			exit
+		fi
+
+		gt_gconf_profile_must_exist "$profile"
+
+		if [[ -z "$newprof" ]]; then
+			local testprof=Profile$i
+			if ! gt_gconf_profile_exist "$testprof"; then
+				newprof=$testprof
+			fi
+		fi
+	done
+
+	# Some sanity cheks:
+	# - Profiles key count must match profiles list size
+	# - The 'Default' profile key must exist
+	local profkeys=$("$gconftool" --all-dirs "$gcprofrootkey" | wc -l)
+	if ! [[ "$profkeys" == "$profiles" ]]; then
+		fatal "Profiles list and key count do not match:" \
+			"$profiles / $profkeys"
+	fi
+	gt_gconf_profile_must_exist "Default"
+
+	echo "$newprof"
+}
+
+gt_gconf_clone_default_profile() {
+	local profile=$1
+	local profkey="$gcprofrootkey"/"$profile"
+	local defaultkey="$gcrootkey"/global/default_profile
+	local default=$("$gconftool" --get "$defaultkey")
+	gt_gconf_profile_must_exist "$default"
+
+	local defaultname=$(gt_gconf_profile_name "$default")
+	message "Creating new Gnome Terminal profile based on" \
+		"$default ($defaultname): $profile ($user)"
+
+	# Order of operations is important!
+
+	# Load the new profile key copying from current default
+	"$gconftool" --load <(\
+		"$gconftool" --dump "$gcprofrootkey"/"$default" |
+		sed "/^[ ]*<entrylist/s/$default\">\$/$profile\">/" |
+		sed '/^[ ]*<schema_key/d') &&
+
+	# Change the name
+	"$gconftool" --type string --set "$profkey"/visible_name "$user" &&
+
+	# Delete "encoding" and "icon" keys
+	"$gconftool" --unset "$profkey"/icon &&
+	"$gconftool" --unset "$profkey"/encoding &&
+
+	# Update the profile list - should be *after* changing name
+	"$gconftool" --type list --list-type string --set "$gclistkey" \
+		"$("$gconftool" --get "$gclistkey" | sed "s/]/,$profile]/")" &&
+
+	# Set as default
+	"$gconftool" --type string --set "$defaultkey" "$profile" ||
+
+	false  # trigger bash's `-e`, if active
+}
+
+gt_gconf() {
+	# Get a new profile key
+	local profile=$(gt_gconf_get_free_profile)
+	local profkey="$gcprofrootkey"/"$profile"
+
+	# Create the new profile
+	gt_gconf_clone_default_profile "$profile"
+
+	# Change settings
+	"$gconftool" --type float  --set "$profkey"/background_darkness     0.885125
+	"$gconftool" --type string --set "$profkey"/background_type         transparent
+	"$gconftool" --type int    --set "$profkey"/default_size_columns    180
+	"$gconftool" --type int    --set "$profkey"/default_size_rows       50
+	"$gconftool" --type bool   --set "$profkey"/scrollback_unlimited    true
+	"$gconftool" --type bool   --set "$profkey"/use_custom_default_size true
+	"$gconftool" --type string --set "$profkey"/custom_command \
+		"env TERM=xterm-256color /bin/bash"
+}
+
+if version_lesser "$version" 3.4.11; then
+	gt_gconf
+fi
