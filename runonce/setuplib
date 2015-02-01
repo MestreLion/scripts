@@ -1,0 +1,50 @@
+# Constants and functions be sourced by setup scripts
+
+SETUP_VERBOSE=${SETUP_VERBOSE:-1}
+
+if [[ -z "$SETUP_DISTRO" ]]; then
+	SETUP_DISTRO=$(lsb_release -si)
+	SETUP_DISTRO=${SETUP_DISTRO,,}
+fi
+
+if [[ -z "$SETUP_RELEASE" ]]; then
+	SETUP_RELEASE=$(lsb_release -sr)
+	SETUP_RELEASE=${SETUP_RELEASE//\./}
+fi
+
+message() { ((SETUP_VERBOSE)) && echo "$@"; }
+fatal()   { [[ "$1" ]] && echo "${0##*/}: error: $1" >&2 ; exit ${2:-1} ; }
+
+version_sort() {
+	# print one argument per line sorted on version ordering
+	printf "%s\n" "$@" | LC_ALL=C sort --version-sort
+}
+
+version_compare() {
+	# Usage: version_compare <greater|lesser> version [versions...]
+	# Return 0 if version is the greatest (or the least) of all versions,
+	# non-zero otherwise
+	if [[ "$1" == "greater" ]]; then
+		local cmd=(tail -n1)
+	else
+		local cmd=(head -n1)
+	fi
+	shift
+	if ! [[ "$(version_sort "$@" | "${cmd[@]}")" == "$1" ]]; then
+		return 1
+	fi
+}
+
+version_greater() {
+	# Usage: version_greater <version> <reference>
+	# Return 0 if version is greater or equal than reference,
+	# non-zero otherwise
+	if ! version_compare "greater" "$1" "$2"; then return 1; fi
+}
+
+version_lesser() {
+	# Usage: version_lesser <version> <reference>
+	# Return 0 if version is lesser or equal than reference,
+	# non-zero otherwise
+	if ! version_compare "lesser" "$1" "$2"; then return 1; fi
+}
