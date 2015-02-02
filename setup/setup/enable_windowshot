@@ -18,7 +18,7 @@ dir="apps/metacity/global_keybindings"
 # Reference file: /etc/gconf/2/path
 gconftool-2 --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.defaults --type string --set /desktop/gnome/interface/icon_theme Mint-X
 
-/var/lib/gconf/defaults/%gconf-tree.xml 
+/var/lib/gconf/defaults/%gconf-tree.xml
 <entry name="run_command_window_screenshot" mtime="1322106668" type="schema" stype="string" owner="metacity" gettext_domain="metacity">
 <stringvalue>&lt;Alt&gt;Print</stringvalue>
 </entry>
@@ -41,6 +41,3 @@ sudo mkdir -p "${target}" && sudo cp --no-preserve=all "${HOME}/.gconf/${dir}/%g
 #		<stringvalue>&lt;Control&gt;Print</stringvalue>
 #	</entry>
 #</gconf>
-
-
-

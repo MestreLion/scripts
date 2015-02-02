@@ -9,4 +9,3 @@ cat > ~/.xchat2/voicekill.pl <<EOF
 Xchat::register( "Hide Voice", "0.1" );
 Xchat::hook_print( "Channel Voice", sub { return Xchat::EAT_XCHAT });
 EOF
-

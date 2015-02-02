@@ -15,6 +15,3 @@ sudo mkdir -p "${target}" && sudo cp --no-preserve=all "${HOME}/.gconf/${dir}/%g
 #		<stringvalue>&lt;Control&gt;Print</stringvalue>
 #	</entry>
 #</gconf>
-
-
-

@@ -13,4 +13,3 @@ if [ -f "$newfile" ] ; then rm "$newfile" ; fi
 if [ -f "$oldfile" ] ; then rm "$oldfile" ; fi
 
 unset file newfile oldfile
-

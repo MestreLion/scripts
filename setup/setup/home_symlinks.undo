@@ -10,4 +10,3 @@
 [[ -d "$HOME"/.templates   ]] && mv "$HOME"/{.templates,Templates}
 [[ -d "$HOME"/.publicshare ]] && mv "$HOME"/{.publicshare,Public}
 [[ -f "$HOME/examples.desktop" ]] || cp /etc/skel/examples.desktop "$HOME"
-
