@@ -131,3 +131,33 @@ xdg-data-cat()
 	cat "${xdg_data_list_RESULT[@]}"
 	unset xdg_data_list_RESULT
 }
+
+# emulate sed's --in-place for commands that lack it, such as awk
+# Usage: inplace <command> [cmdargs...] -- FILE(s)...
+# Note the the mandatory '--' to separate the command from list of files!
+inplace() {
+	local cmd=()
+	local outfile
+	local tmpfile
+
+	while (( $# )); do
+		case "$1" in
+		--) shift; break;;
+		*) cmd+=( "$1" );;
+		esac
+		shift
+	done
+
+	if ! (( $# && ${#cmd[@]} )); then
+		fatal "usage: inplace <command> [cmdargs...] -- FILE(s)..."
+	fi
+
+	for outfile; do
+		tmpfile=$(mktemp) || fatal
+		trap 'rm -f -- "$tmpfile"' EXIT
+
+		"${cmd[@]}" -- "$outfile" > "$tmpfile" && {
+		chmod --reference "$outfile" "$tmpfile" # preserve permissions, GNU-only
+		mv "$tmpfile" -- "$outfile"; }
+	done
+}
