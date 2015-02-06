@@ -20,8 +20,6 @@
 
 exec 3> /dev/null # to avoid harcoding /dev/null everywhere. For tools' stderr.
 
-SELF="${0##*/}" # buitin $(basename $0)
-
 
 # _TestRequirements() { #TODO }
 
@@ -34,7 +32,6 @@ required()
 	fi
 }
 
-
 testroot()
 {
 	# simple root test
@@ -45,9 +42,9 @@ confirm()
 {
 	# For both default parameter and user input,
 	# non-empty garbage will always evaluate to and behave as NO
-	local message="$1"
-	local default="${2:-n}"
-	local silentno="${3:-0}"
+	local message=${1:-"Confirm?"}
+	local default=${2:-n}
+	local silentno=${3:-0}
 
 	local question="NO"
 	if [[ "$default" == "y" ]]; then question="YES"; fi
@@ -57,7 +54,7 @@ confirm()
 		confirm="${confirm:-$default}"
 		case "$confirm" in
 		[Yy]*) ;;
-		*    ) if ! ((silentno)); then message "cancelled by user"; fi
+		*    ) if ! ((silentno)); then echo "cancelled by user"; fi
 		       return 2
 		       ;;
 		esac
@@ -71,8 +68,10 @@ fatal()
 	local errorcode="${2:-1}"
 	local dump="$3"
 
-	[[ "$dump"    ]] && printf "%s\n" "$dump" >&2
-	[[ "$message" ]] && printf "%s\n" "$SELF: ${COMMAND:+$COMMAND: }${message/%[[:punct:]]/}" >&2
+	if [[ "$dump"    ]]; then printf "%s\n" "$dump" >&2; fi
+	if [[ "$message" ]]; then
+		printf "%s\n" "${0##*/}: error: $message" >&2
+	fi
 
 	exit $errorcode
 }
@@ -83,7 +82,7 @@ fatalgui()
 	local errorcode="${2:-1}"
 	local dump="$3"
 
-	zenity --error --title="$SELF_GUI" \
+	zenity --error --title="${0##*/}" \
 	       --text="${message:+$message\n\n}${dump:+$dump\n\n}"
 	             #"Exiting with error code ${errorcode}"
 
