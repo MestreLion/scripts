@@ -1,5 +1,8 @@
 # Constants and functions be sourced by setup scripts
 
+#   Copyright (C) 2015 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#   License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+
 SETUP_VERBOSE=${SETUP_VERBOSE:-1}
 
 if [[ -z "$SETUP_DISTRO" ]]; then
