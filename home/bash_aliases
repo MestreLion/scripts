@@ -35,6 +35,7 @@ ubuntu-package() {
 }
 complete -F _comp_pkg_names ubuntu-package
 
+compile() { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
 
 # 1337!
 alias matrix='cmatrix -bsu8'

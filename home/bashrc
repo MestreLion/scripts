@@ -58,6 +58,9 @@ PS1="${termcolor[GREEN]}\u@\h ${termcolor[BLUE]}\w "\
 # A.K.A 'why echo "Hello World!" do not work?'
 set +o histexpand # same as set +H
 
+# Create core dump files on segmentation fault. File `core` at current process dir
+ulimit -c unlimited
+
 relpath() { python -c "import os,sys;print os.path.relpath(*sys.argv[1:3])" "$@"; }
 mv-link() (
 	local newdir=$1
