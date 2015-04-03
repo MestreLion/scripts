@@ -19,7 +19,7 @@ if [[ "$COLORTERM" == gnome-terminal ]] &&
       -r /etc/"$term"       ||  # empty by default
       -r "$HOME"/."$term"   ]]  # dir may not exist
 then
-	export TERM=xterm-256color
+	export TERM=gnome-256color
 fi
 unset term
 
