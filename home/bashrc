@@ -50,7 +50,7 @@ termcolor[BLUE]="\[\033[1;34m\]"   # $(tput bold; tput setaf 4)
 termcolor[WHITE]="\[\033[1;37m\]"  # $(tput bold; tput setaf 7)
 termcolor[RESET]="\[\033[00m\]"    # $(tput sgr0)
 
-PS1="${termcolor[GREEN]}\u@\h ${termcolor[BLUE]}\w "\
+PS1="${termcolor[RESET]}${termcolor[GREEN]}\u@\h ${termcolor[BLUE]}\w "\
 "${termcolor[RED]}\$(git branch 2>/dev/null | grep '^*' | cut -c 3- | sed 's/.*/& /')"\
 "${termcolor[BLUE]}\$${termcolor[RESET]} "
 
