@@ -1,0 +1,40 @@
+#!/bin/bash -x
+
+myname="${0##*/}"
+
+usage() {
+	msg="$1\nUsage: $myname <FILE> <FILE> [FILE]\n"
+	if [[ "$TERM" == "dumb" ]] && type zenity >/dev/null 2>&1 ; then
+		msg="${msg//&/&amp;}"
+		msg="${msg//</&lt;}"
+		zenity --info --no-wrap --text "$msg"
+	else
+		printf "%b" "$msg" >&2
+	fi
+	exit 1
+}
+
+srttext() (
+	local regex='/^[0-9]\+[\r\t ]*$/d;/^[0-9].*[0-9] --> [0-9]/d'
+	sed "$regex" "$1"
+)
+
+case $# in
+	2|3)
+		tempdir=$(mktemp -d) || exit 1
+		trap 'rm -rf -- "$tempdir"' EXIT
+		i=0
+
+		while (( $# )) ; do
+			if ! [[ -f "$1" ]]; then
+				usage "'$1' is not a file"
+			fi
+			tempfile="${tempdir}/$((++i)) ${1//\//_}"
+			srttext "$1" > "$tempfile"
+			shift
+		done
+	;;
+	*) usage "$myname requires either 2 or 3 arguments";;
+esac
+
+meld "$tempdir"/*
