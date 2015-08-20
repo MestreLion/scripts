@@ -1,0 +1,81 @@
+#!/bin/bash -e
+
+# Master setup script
+
+#   Copyright (C) 2015 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#   License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+
+# Design:
+#
+# - Assumes git scripts repository was already cloned to final destination,
+#   and this script is located there.
+#
+# - Running any script twice, be it an installer or uninstaller, should be a
+#   no-op or harmeless.
+#
+# - Platform scripts for each distro/release are named
+#   ./<distro><release>/<distro><release>.{un,}install
+#
+# - Uninstall script may be a symlink to its corresponding install, action will
+#   be determined by script name $0.
+#
+# - Each platform dir has a setup.d/ with setup scripts, some are symlinks to
+#   the common setup repository at ./setup. They are also named *.{un,}install
+#
+# - SETUP_LIB and SCRIPTS are hardcoded and exported here.
+#   SETUP_LIB as '<mydir>/setuplib' and SCRIPTS as '<mydir>/../', both converted
+#   to full paths via `readlink -f`
+#
+# - Platform scripts get SETUP_LIB and SCRIPTS via environment or argument.
+#   If the latter, export. Allows them to be run directly, bypassing this master
+#   script.
+#
+# - SETUP_DISTRO and SETUP_RELEASE are hardcoded and exported by each platform
+#   script. May be needed by setup./ scripts for actions that are platform-
+#   dependent.
+#
+# - ./setuplib is sourced by setup scripts, contains common functions,
+#   and is able to detect and set SETUP_DISTRO and SETUP_RELEASE if absent.
+#
+# - ./setuplib however is not able to define SCRIPTS. Hardcoding a relative path
+#   is not desirable as scripts may be symlinks and run from multiple locations.
+#   It does require SCRIPTS to be set, as it sources commonlib.
+#
+# - Setup scripts get SETUP_LIB via environment or argument, and SCRIPTS via
+#   environment only, to keey their command-line handling simple and uniform.
+#   Allows them to be run later, individually.
+#
+# - First time installs will have SCRIPTS set via master/platform scripts,
+#   and later individual runs will have SCRIPTS permanently in environment, as
+#   it is part of home/{profile,bashrc} loading mechanism.
+
+
+distro=${1:-$(lsb_release -si)}
+release=${2:-$(lsb_release -sr)}
+
+if [[ -z "$distro" || -z "$release" ]]; then
+	echo "Usage: ${0##*/} [distro] [release]"
+	exit
+fi
+
+distro=${distro,,}
+release=${release//\./}
+
+mydir=$(dirname "$(readlink -f "$0")")
+scripts=$(readlink -f "$mydir"/..)
+
+source $scripts/reference/commonlib
+
+cat <<-EOF
+	Distro:  $distro
+	Release: $release
+	Scripts: $scripts
+
+EOF
+
+if ! confirm; then exit; fi
+
+export SCRIPTS=$scripts
+export SETUP_LIB=$mydir/setuplib
+
+"${mydir}"/"${distro}${release}"/"${distro}${release}".install
