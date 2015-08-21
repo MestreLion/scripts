@@ -13,8 +13,9 @@
 # - Running any script twice, be it an installer or uninstaller, should be a
 #   no-op or harmeless.
 #
-# - Platform scripts for each distro/release are named
-#   ./<distro><release>/<distro><release>.{un,}install
+# - Platform scripts are named ./<platform>/<platform>.{un,}install
+#   where <platform> can be <distro><release> for auto-detection, or some tag
+#   like `netbook`, `friends`, etc
 #
 # - Uninstall script may be a symlink to its corresponding install, action will
 #   be determined by script name $0.
@@ -31,7 +32,7 @@
 #   script.
 #
 # - SETUP_DISTRO and SETUP_RELEASE are hardcoded and exported by each platform
-#   script. May be needed by setup./ scripts for actions that are platform-
+#   script. May be needed by setup.d/ scripts for actions that are platform-
 #   dependent.
 #
 # - ./setuplib is sourced by setup scripts, contains common functions,
@@ -50,16 +51,18 @@
 #   it is part of home/{profile,bashrc} loading mechanism.
 
 
-distro=${1:-$(lsb_release -si)}
-release=${2:-$(lsb_release -sr)}
-
-if [[ -z "$distro" || -z "$release" ]]; then
-	echo "Usage: ${0##*/} [distro] [release]"
-	exit
+if [[ "$1" ]]; then
+	platform=$1
+else
+	distro=$(lsb_release -si)
+	release=$(lsb_release -sr)
+	platform=${distro,,}${release//\./}
 fi
 
-distro=${distro,,}
-release=${release//\./}
+if [[ -z "$platform" ]]; then
+	echo "Usage: ${0##*/} [platform]"
+	exit
+fi
 
 mydir=$(dirname "$(readlink -f "$0")")
 scripts=$(readlink -f "$mydir"/..)
@@ -67,9 +70,8 @@ scripts=$(readlink -f "$mydir"/..)
 source $scripts/reference/commonlib
 
 cat <<-EOF
-	Distro:  $distro
-	Release: $release
-	Scripts: $scripts
+	Platform: $platform
+	Scripts:  $scripts
 
 EOF
 
@@ -78,4 +80,4 @@ if ! confirm; then exit; fi
 export SCRIPTS=$scripts
 export SETUP_LIB=$mydir/setuplib
 
-"${mydir}"/"${distro}${release}"/"${distro}${release}".install
+"${mydir}"/"${platform}"/"${platform}".install
