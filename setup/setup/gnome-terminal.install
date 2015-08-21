@@ -17,13 +17,20 @@
 # change a profile: gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:UUID/ KEY VALUE
 
 setuplib=${1:-$SETUP_LIB}
+cols=${2:-${SETUP_GNOME_TERMINAL_COLS:-180}}
+rows=${3:-${SETUP_GNOME_TERMINAL_ROWS:-50}}
+
+usage() { echo "Usage: ${0##*/} SETUP_LIB [COLS] [ROWS]" >&2; exit 1; }
+
 if [[ -r "$setuplib" ]]; then
 	source "$setuplib"
 else
-	echo "Setup library not found! $setuplib"
-	echo "Usage: ${0##*/} SETUP_LIB"
-	exit 1
+	echo "Setup library not found! $setuplib" >&2
+	usage
 fi
+
+integer "$cols" "COLS" || usage
+integer "$rows" "ROWS" || usage
 
 user=${USER,,}
 user=${user^}
@@ -136,8 +143,8 @@ gt_gconf() {
 	# Change settings
 	"$gconftool" --type float  --set "$profkey"/background_darkness     0.885125
 	"$gconftool" --type string --set "$profkey"/background_type         transparent
-	"$gconftool" --type int    --set "$profkey"/default_size_columns    180
-	"$gconftool" --type int    --set "$profkey"/default_size_rows       50
+	"$gconftool" --type int    --set "$profkey"/default_size_columns    "$cols"
+	"$gconftool" --type int    --set "$profkey"/default_size_rows       "$rows"
 	"$gconftool" --type bool   --set "$profkey"/scrollback_unlimited    true
 	"$gconftool" --type bool   --set "$profkey"/use_custom_default_size true
 	"$gconftool" --type string --set "$profkey"/custom_command \
