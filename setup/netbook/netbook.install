@@ -1,0 +1,38 @@
+#!/bin/bash -e
+
+export SCRIPTS=${SCRIPTS:-$(    readlink -f "$1")}
+export SETUP_LIB=${SETUP_LIB:-$(readlink -f "$2")}
+export SETUP_DISTRO=ubuntu
+export SETUP_RELEASE=1204
+
+abort() {
+	[[ "$1" ]] && echo "$1" >&2
+	echo "Usage: ${0##*/} SCRIPTS SETUP_LIB" >&2
+	exit 1
+}
+
+if ! [[ -d "$SCRIPTS" ]]; then
+	abort "Scripts dir not found: '$SCRIPTS'"
+fi
+
+if ! [[ -r "$SETUP_LIB" ]]; then
+	abort "Setup library not found: '$SETUP_LIB'"
+fi
+
+sudo apt-get install \
+	git{,g} \
+	gedit-{,developer-}plugins \
+	meld nautilus-compare \
+	{d,dpkg-}www \
+	trash-cli
+
+
+export SETUP_GNOME_TERMINAL_COLS=100
+export SETUP_GNOME_TERMINAL_ROWS=30
+
+
+mydir=$(dirname "$(readlink -f "$0")")
+shopt -s nullglob
+for script in "$mydir"/setup.d/*.install; do
+	"$script"
+done
