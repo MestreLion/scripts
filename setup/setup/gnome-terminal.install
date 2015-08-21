@@ -64,13 +64,16 @@ gt_gconf_get_free_profile() {
 	# - Get a suitable key name for the new profile
 	local i=-1
 	local newprof=""
+	local profile
+	local profname
 	while ((++i < profiles)); do
-		local profile=$("$gconftool" --get-list-element "$gclistkey" "$i")
-		local profname=$(gt_gconf_profile_name "$profile")
+		profile=$("$gconftool" --get-list-element "$gclistkey" "$i")
+		profname=$(gt_gconf_profile_name "$profile")
 
 		if [[ "$profname" == "$user" ]]; then
-			message "Profile named '$user' already exists: $profile"
-			exit
+			# should exit gracefully, so repeated installs are no-op
+			echo "Profile named '$user' already exists: $profile" >&2
+			return
 		fi
 
 		gt_gconf_profile_must_exist "$profile"
@@ -86,7 +89,8 @@ gt_gconf_get_free_profile() {
 	# Some sanity cheks:
 	# - Profiles key count must match profiles list size
 	# - The 'Default' profile key must exist
-	local profkeys=$("$gconftool" --all-dirs "$gcprofrootkey" | wc -l)
+	local profkeys
+	profkeys=$("$gconftool" --all-dirs "$gcprofrootkey" | wc -l)
 	if ! [[ "$profkeys" == "$profiles" ]]; then
 		fatal "Profiles list and key count do not match:" \
 			"$profiles / $profkeys"
@@ -100,10 +104,13 @@ gt_gconf_clone_default_profile() {
 	local profile=$1
 	local profkey="$gcprofrootkey"/"$profile"
 	local defaultkey="$gcrootkey"/global/default_profile
-	local default=$("$gconftool" --get "$defaultkey")
+	local default
+	local defaultname
+
+	default=$("$gconftool" --get "$defaultkey")
 	gt_gconf_profile_must_exist "$default"
 
-	local defaultname=$(gt_gconf_profile_name "$default")
+	defaultname=$(gt_gconf_profile_name "$default")
 	message "Creating new Gnome Terminal profile based on" \
 		"$default ($defaultname): $profile ($user)"
 
@@ -134,8 +141,11 @@ gt_gconf_clone_default_profile() {
 
 gt_gconf() {
 	# Get a new profile key
-	local profile=$(gt_gconf_get_free_profile)
-	local profkey="$gcprofrootkey"/"$profile"
+	local profile
+	local profkey
+	profile=$(gt_gconf_get_free_profile)
+	if [[ -z "$profile" ]]; then return; fi  # exit gracefully
+	profkey="$gcprofrootkey"/"$profile"
 
 	# Create the new profile
 	gt_gconf_clone_default_profile "$profile"
