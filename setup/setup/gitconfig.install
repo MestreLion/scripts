@@ -1,0 +1,49 @@
+#/bin/bash -e
+
+# Create ~/.gitconfig
+
+gitconfig="$HOME"/.gitconfig
+if [[ -f "$gitconfig" ]]; then
+	exit
+fi
+
+template=${SCRIPTS#$HOME}
+if [[ "${HOME}${template}" == "$SCRIPTS" ]]; then
+	template="~${template}"
+else
+	template=$SCRIPTS
+fi
+
+cat > "$gitconfig" <<_EOF_
+[user]
+	name = MestreLion
+	email = linux@rodrigosilva.com
+	
+[color]
+	diff = auto
+	status = auto
+	branch = auto
+	interactive = auto
+	ui = auto
+
+[alias]
+	lol  = log --graph --decorate --oneline
+	lola = log --graph --decorate --oneline  --all
+	lop  = log --patch-with-stat
+	st = status --untracked-files=no
+	at = add -u
+
+[apply]
+	whitespace = fix
+
+[init]
+	templatedir = $(printf '%q' "$template")/git_template
+
+[credential]
+	helper = cache --timeout=604800
+
+[core]
+	whitespace = trailing-space,space-before-tab,cr-at-eol
+_EOF_
+
+chmod 600 "$gitconfig"
