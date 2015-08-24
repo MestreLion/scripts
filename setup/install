@@ -52,7 +52,7 @@
 
 
 if [[ "$1" ]]; then
-	platform=$1
+	platform=${1%/}
 else
 	distro=$(lsb_release -si)
 	release=$(lsb_release -sr)
@@ -81,3 +81,5 @@ export SCRIPTS=$scripts
 export SETUP_LIB=$mydir/setuplib
 
 "${mydir}"/"${platform}"/"${platform}".install
+
+echo "Done!"
