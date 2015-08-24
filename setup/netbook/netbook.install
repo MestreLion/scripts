@@ -4,6 +4,7 @@ export SCRIPTS=${SCRIPTS:-$(    readlink -f "$1")}
 export SETUP_LIB=${SETUP_LIB:-$(readlink -f "$2")}
 export SETUP_DISTRO=ubuntu
 export SETUP_RELEASE=1204
+export SETUP_PROFILE=netbook
 
 abort() {
 	[[ "$1" ]] && echo "$1" >&2
@@ -21,15 +22,23 @@ fi
 
 sudo apt-get install \
 	git{,g} \
-	gedit-{,developer-}plugins \
+	bzr gedit-{,developer-}plugins \
 	meld nautilus-compare \
-	{d,dpkg-}www \
-	trash-cli
+	trash-cli \
+	curl \
+	gnome-cards-data
 
+nautilus -q  # required by nautilus-compare
+
+# TODO
+# - enable extra repos
+# - skype
+# - gconf nautilus, gedit
+# - setup scripts
+# - dropbox
 
 export SETUP_GNOME_TERMINAL_COLS=100
 export SETUP_GNOME_TERMINAL_ROWS=30
-
 
 mydir=$(dirname "$(readlink -f "$0")")
 shopt -s nullglob
