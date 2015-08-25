@@ -57,3 +57,7 @@ version_lesser() {
 	# non-zero otherwise
 	if ! version_compare "lesser" "$1" "$2"; then return 1; fi
 }
+
+is_online() {
+	ping -c 1 www.google.com >/dev/null 2>&1
+}
