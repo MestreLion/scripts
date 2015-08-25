@@ -16,13 +16,16 @@ if ! [[ -d "$SCRIPTS" ]]; then
 	abort "Scripts dir not found: '$SCRIPTS'"
 fi
 
-if ! [[ -r "$SETUP_LIB" ]]; then
+if [[ -r "$SETUP_LIB" ]]; then
+	source "$SETUP_LIB"
+else
 	abort "Setup library not found: '$SETUP_LIB'"
 fi
 
 source "$SETUP_LIB"
 
 if is_online; then
+	message "Installing packages..."
 	sudo apt-get install -y \
 		git{,g} \
 		bzr gedit-{,developer-}plugins \
@@ -37,7 +40,6 @@ fi
 # TODO
 # - gconf nautilus, gedit, aisleriot
 # - pin/unpin launcher apps
-# - dropbox
 # - IP, /etc/hosts
 # - keyring desktop, casa
 

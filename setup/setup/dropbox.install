@@ -1,0 +1,37 @@
+#!/bin/bash -eu
+
+# Install Dropbox via website download, as apt package nautilus-dropbox
+#  freezes after 100% download
+
+setuplib=${1:-$SETUP_LIB}
+myname="${0##*/}"
+
+url='https://www.dropbox.com/download?dl=packages/ubuntu/dropbox_2015.02.12_i386.deb'
+deskfile=${XDG_CONFIG_HOME:-"$HOME"/.config}/autostart/dropbox.desktop
+autostart='X-GNOME-Autostart-enabled'
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found: '$setuplib'" >&2
+	echo "Usage: $myname SETUP_LIB" >&2
+	exit 1
+fi
+
+if is_online && ! [[ -f '/usr/bin/dropbox' ]]; then
+	tmpdir=$(mktemp -d)
+	trap 'rm -rf -- "$tmpdir"' EXIT
+	wget --timestamping --content-disposition -P "$tmpdir" "$url"
+	message "Installing Dropbox..."
+	sudo dpkg -i "$tmpdir"/*.deb
+
+	message "After GUI install, press ENTER to disable auto-start"
+	read -rs
+	if [[ -f "$deskfile" ]]; then
+		if grep -q "$autostart" "$deskfile"; then
+			sed -i "/^$autostart/s/true/false/" "$deskfile"
+		else
+			echo "$autostart=false" >> "$deskfile"
+		fi
+	fi
+fi
