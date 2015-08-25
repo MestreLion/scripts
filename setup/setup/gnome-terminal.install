@@ -72,7 +72,7 @@ gt_gconf_get_free_profile() {
 
 		if [[ "$profname" == "$user" ]]; then
 			# should exit gracefully, so repeated installs are no-op
-			echo "Profile named '$user' already exists: $profile" >&2
+			# echo "Profile named '$user' already exists: $profile" >&2
 			return
 		fi
 

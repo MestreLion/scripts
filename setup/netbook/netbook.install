@@ -20,15 +20,18 @@ if ! [[ -r "$SETUP_LIB" ]]; then
 	abort "Setup library not found: '$SETUP_LIB'"
 fi
 
-sudo apt-get install \
-	git{,g} \
-	bzr gedit-{,developer-}plugins \
-	meld nautilus-compare \
-	trash-cli \
-	curl \
-	gnome-cards-data
+source "$SETUP_LIB"
 
-nautilus -q  # required by nautilus-compare
+if is_online; then
+	sudo apt-get install \
+		git{,g} \
+		bzr gedit-{,developer-}plugins \
+		meld nautilus-compare \
+		trash-cli \
+		curl \
+		gnome-cards-data
+	nautilus -q  # required by nautilus-compare
+fi
 
 # TODO
 # - enable extra repos

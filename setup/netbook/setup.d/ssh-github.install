@@ -22,7 +22,7 @@ if ! [[ -r "$sshfile" ]]; then
 fi
 
 # Check if key is new
-if curl -sS "$ghurl"/users/"$ghuser"/keys | python -c '
+if is_online && curl -sS "$ghurl"/users/"$ghuser"/keys | python -c '
 import sys, json
 key=[_["id"] for _ in json.load(sys.stdin) if sys.argv[1].startswith(_["key"])]
 if key: sys.exit(1)  # print key[0]
