@@ -15,6 +15,7 @@ if [[ -z "$SETUP_RELEASE" ]]; then
 	SETUP_RELEASE=${SETUP_RELEASE//\./}
 fi
 
+relpath() { python -c "import sys, os; print os.path.relpath(*sys.argv[1:])" "$@"; }
 message() { ((SETUP_VERBOSE)) && echo "$@"; }
 fatal()   { [[ "$1" ]] && echo "${0##*/}: error: $1" >&2 ; exit ${2:-1} ; }
 integer() {

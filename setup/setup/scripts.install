@@ -1,0 +1,74 @@
+#!/bin/bash -e
+
+setuplib=${1:-$SETUP_LIB}
+myname="${0##*/}"
+
+usage() { echo "Usage: SCRIPTS=<SCRIPTS> $myname SETUP_LIB" >&2; exit 1; }
+
+if ! [[ -d "$SCRIPTS" ]]; then
+	echo "Scripts dir not found: '$SCRIPTS'" >&2
+	usage
+fi
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found: '$setuplib'" >&2
+	usage
+fi
+
+# custom profile
+if ! grep -q "\$SCRIPTS" "$HOME"/.profile 2>/dev/null ; then
+	# FIXME: Patch probably requires ~/.profile to exist
+	patch -p1 -u "$HOME"/.profile <<-_EOF_
+		--- a/$HOME/.profile	2015-01-01 00:00:00.0 +0
+		+++ b/$HOME/.profile	2015-01-01 00:00:00.0 +0
+		@@ -8,6 +8,12 @@
+		 # for ssh logins, install and configure the libpam-umask package.
+		 #umask 022
+		 
+		+# Added by $myname
+		+export SCRIPTS=${SCRIPTS/$HOME/\$HOME}
+		+if [ -f "\$SCRIPTS/home/profile" ] ; then
+		+    . "\$SCRIPTS/home/profile"
+		+fi
+		+
+		 # if running bash
+		 if [ -n "\$BASH_VERSION" ]; then
+		     # include .bashrc if it exists
+	_EOF_
+fi
+
+# custom bashrc
+if ! grep -q "\$SCRIPTS" "$HOME"/.bashrc 2>/dev/null ; then
+	cat >> "$HOME"/.bashrc <<-_EOF_
+
+		# Added by $myname
+		if [ -f "\$SCRIPTS/home/bashrc" ] ; then
+		    . "\$SCRIPTS/home/bashrc"
+		fi
+	_EOF_
+fi
+
+# custom bash_completion
+if ! grep -q "\$SCRIPTS" "$HOME"/.bash_completion 2>/dev/null ; then
+	cat >> "$HOME"/.bash_completion <<-_EOF_
+
+		# Added by $myname
+		if [ -f "\$SCRIPTS/home/bash_completion" ] ; then
+		    . "\$SCRIPTS/home/bash_completion"
+		fi
+	_EOF_
+fi
+
+# personal bin
+mkdir -p "$HOME/.local/bin"
+
+# Nautilus scripts
+original=$HOME/.gnome2/nautilus-scripts
+custom=$SCRIPTS/nautilus-scripts
+if ! [[ -h "$original" ]]; then
+	mkdir -p "$original"
+	rmdir "$original" &&
+	ln -s "$(relpath "$custom" "$(dirname "$original")")" "$original"
+fi
