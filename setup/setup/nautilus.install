@@ -1,0 +1,14 @@
+#!/bin/bash -e
+
+# Nautilus preferences
+
+# For the future...
+# version=$(nautilus --version | awk '{print $NF}')  # Ubuntu 12.04: 3.4.2
+
+gsrootpath=org.gnome.nautilus
+
+# Change settings
+gsettings set "$gsrootpath".preferences   default-folder-viewer  'list-view'
+gsettings set "$gsrootpath".preferences   date-format            'iso'
+gsettings set "$gsrootpath".window-state  start-with-status-bar  true
+

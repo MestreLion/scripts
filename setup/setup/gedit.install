@@ -1,0 +1,38 @@
+#!/bin/bash -e
+
+# Gedit plugins and preferences
+
+gs_add_list() {
+	local path=$1
+	local key=$2
+	shift; shift
+	local list=$(gsettings get "$path" "$key")
+	local newlist
+	newlist=$(python -c "
+import sys, json
+if len(sys.argv) > 1:
+	l=json.loads(sys.argv[1].replace(\"'\", '\"'))
+else:
+	l=[]
+print repr([str(_) for _ in l if _ not in sys.argv[2:]] + sys.argv[2:])
+" "$list" "$@")
+	gsettings set "$path" "$key" "$newlist"
+}
+
+gsrootpath=org.gnome.gedit
+gsprefpath=${gsrootpath}.preferences
+
+# Preferences
+gsettings set "$gsprefpath".editor  auto-indent             true
+gsettings set "$gsprefpath".editor  auto-save               true
+gsettings set "$gsprefpath".editor  bracket-matching        true
+gsettings set "$gsprefpath".editor  create-backup-copy      false
+gsettings set "$gsprefpath".editor  display-line-numbers    true
+gsettings set "$gsprefpath".editor  display-right-margin    true
+gsettings set "$gsprefpath".editor  highlight-current-line  true
+gsettings set "$gsprefpath".editor  scheme                  'cobalt'
+gsettings set "$gsprefpath".ui      max-recents             20
+
+# Plugins
+gs_add_list org.gnome.gedit.plugins active-plugins changecase drawspaces
+

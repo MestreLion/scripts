@@ -1,0 +1,33 @@
+#!/bin/bash -e
+
+myname="${0##*/}"
+userdirs=${XDG_CONFIG_HOME:-"$HOME"/.config}/user-dirs.dirs
+
+# change templates and publicshare
+if grep -q '/Public' "$userdirs"; then
+	cp "$userdirs"{,."$myname".bak}
+	sed -i '/^XDG_TEMPLATES_DIR=/s/Templates/.templates/'  "$userdirs"
+	sed -i '/^XDG_PUBLICSHARE_DIR=/s/Public/.publicshare/' "$userdirs"
+fi
+if [[ -d "$HOME"/Templates ]]; then mv "$HOME"/{Templates,.templates} ; fi
+if [[ -d "$HOME"/Public    ]]; then mv "$HOME"/{Public,.publicshare}  ; fi
+
+# delete examples
+rm -f "$HOME/examples.desktop"
+
+# gtk bookmarks
+if ! grep -q '^sftp' "$HOME"/.gtk-bookmarks; then
+	cat >> "$HOME"/.gtk-bookmarks <<-_EOF_
+		file://$HOME/candido
+		sftp://rodrigo@desktop/home/rodrigo desktop
+		sftp://rodrigo@casa/home/rodrigo casa
+		file://$HOME/work
+		file://$SCRIPTS
+		file://$SCRIPTS/setup/netbook
+	_EOF_
+fi
+
+# UCAM
+if ! [[ -h "$HOME"/candido ]]; then ln -s Dropbox/Candido "$HOME"/candido; fi
+
+nautilus -q
