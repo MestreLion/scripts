@@ -1,0 +1,34 @@
+#!/bin/bash -eu
+
+# Installs Skype, enabling the "extra" repository if needed, and
+#  fix its .desktop file to avoid a WARNING in ~/.xsession-errors about
+#  malformed Icon key in ~/.config/autostart/skype.desktop
+
+setuplib=${1:-$SETUP_LIB}
+myname="${0##*/}"
+deskfile=/usr/share/applications/skype.desktop
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found: '$setuplib'" >&2
+	echo "Usage: $myname SETUP_LIB" >&2
+	exit 1
+fi
+
+if is_online; then
+	aptsources=/etc/apt/sources.list
+	if grep -q '^# deb http.*precise partner$' "$aptsources"; then
+		message "Enabling partner repository..."
+		sudo cp "$aptsources"{,."$myname".bak}
+		sudo sed -i '/^# deb http.*partner$/s/# //' "$aptsources"
+		sudo apt-get update
+	fi
+	message "Installing Skype..."
+	sudo apt-get install -y skype
+fi
+
+if grep -q '^Icon=.*\.png$' "$deskfile" 2>/dev/null; then
+	message "Fixing Skype icon..."
+	sudo sed -i."$myname".bak '/^Icon=/s/\.png$//' "$deskfile"
+fi
