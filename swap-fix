@@ -119,3 +119,5 @@ else
 	message "updating $resume"
 	echo "RESUME=LABEL=$label" > "$resume"
 fi
+
+swapon -a
