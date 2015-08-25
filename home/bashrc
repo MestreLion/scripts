@@ -11,6 +11,7 @@
 # Advertise 256-color capability when using gnome-terminal.
 # Will only work until gnome-terminal v3.13, as it has removed the
 # setting of COLORTERM variable
+# OBS: gnome-256color terminfo is in ncurses-term package
 term=terminfo/x/xterm-256color
 if [[ "$COLORTERM" == gnome-terminal ]] &&
    [[ "$TERM" == xterm ]] &&
@@ -19,7 +20,7 @@ if [[ "$COLORTERM" == gnome-terminal ]] &&
       -r /etc/"$term"       ||  # empty by default
       -r "$HOME"/."$term"   ]]  # dir may not exist
 then
-	export TERM=gnome-256color
+	export TERM=${term##*/}
 fi
 unset term
 
