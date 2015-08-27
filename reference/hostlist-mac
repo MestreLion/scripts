@@ -17,7 +17,8 @@ fileout_path='./macs'
 ipblocks=51
 
 # make temp file
-tmpfile=$(tempfile)
+tmpfile=$(mktemp)
+trap 'rm -f -- "$tmpfile"' EXIT
 
 # get local address
 ip_addr_str=$(ip route list|grep 'src')
@@ -122,6 +123,3 @@ do
     $fileout && printf "${i}\t${mac}\n">>$fileout_path
 
 done
-
-# cleanup
-rm ${tmpfile}
