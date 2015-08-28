@@ -3,6 +3,7 @@
 # monitor-switch - switch outputs using xrand
 #
 #    Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#		   2015 Jarno Suni <8@iki.fi>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -29,24 +30,97 @@ if [[ -f "$config" ]]; then
 	source "$config"
 fi
 
+hex_to_ascii() {
+	echo -n $(xxd -r -p <<<$1)
+}
+
+ascii_to_hex() {
+	echo -n $(xxd -p <<<"$1")
+}
+
 print_monitors() {
-	while read -r output conn hex; do
-		echo "# $output	$conn	$(xxd -r -p <<<"$hex")"
-	done < <(xrandr --prop | awk '
-	!/^[ \t]/ {
-		if (output && hex) print output, conn, hex
-		output=$1
-		hex=""
-	}
-	/ConnectorType:/ {conn=$2}
-	/[:.]/ && h {
-		sub(/.*000000fc00/, "", hex)
-		hex = substr(hex, 0, 26) "0a"
-		sub(/0a.*/, "", hex)
-		h=0
-	}
-	h {sub(/[ \t]+/, ""); hex = hex $0}
-	/EDID.*:/ {h=1}')
+	declare -r us=';' # separator string;
+	# If EDID has more than one field with same tag, concatenate them,
+	# but add this string in between.
+	declare -r fs=$'\x1f' # Field separator for internal use;
+	# must be a character that does not occur in data fields.
+	declare -r invalid_edid_tag='--bad EDID--'
+	# If base EDID is invalid, don't try to extract information from it,
+	# but assign this string to the fields.
+	declare -r format="%-12s%-12s%-28s%-28s\n"
+	declare OIFS=$IFS; # save old IFS
+	IFS=$fs
+	printf "$format" "Output" "Connection" "Name" "Data"
+	printf '%0.s–' {1..80}; printf '\n'
+	while read -r output conn hexn hexd; do
+		printf "$format" "'$output'" "'$conn'" "'$(hex_to_ascii "$hexn")'" "'$(hex_to_ascii "$hexd")'"
+	done < <(xrandr --prop | gawk -v gfs="$fs" '
+		function print_fields() {
+			print output, conn, hexn, hexd
+			conn=""; hexn=""; hexd=""
+		}
+		function append_hex_field(src_hex,position,app_hex,  n) {
+					 n=substr(src_hex,position+10,26)
+					 sub(/0a.*/, "", n)
+					 # EDID specification says field ends by 0x0a
+					 # (\n), if it is shorter than 13 bytes.
+					 #sub(/(20)+$/, "", n)
+					 # strip whitespace at the end of ascii string
+					 if (n && app_hex) return app_hex sp n
+					  else return app_hex n
+		}
+		function get_hex_edid(  hex) {
+			getline
+			while (/^[ \t]*[[:xdigit:]]+$/) {
+				sub(/[ \t]*/, "")
+				hex = hex $0
+				getline
+			}
+			return hex
+		}
+		function valid_edid(hex,  a, sum) {
+			if (length(hex)<256) return 0
+			for ( a=1; a<=256; a+=2 ) {
+				sum+=strtonum("0x" substr(hex,a,2))
+				# this requires --non-decimal-data for gawk:
+				#sum+=sprintf("%d", "0x" substr(hex,a,2))
+			}
+			if (sum % 256) return 0
+			return 1
+		}
+		BEGIN {
+			OFS=gfs
+		}
+		/[^[:blank:]]+ connected/ {
+			if (notfirst) print_fields()
+			notfirst=1
+			output=$1
+		}
+		/^[[:blank:]]*EDID.*:/ {
+			hex=get_hex_edid()
+			if (valid_edid(hex)) {
+				for ( c=109; c<=217; c+=36 ) {
+					switch (substr(hex,c,10)) {
+						case "000000fc00" :
+						 hexn=append_hex_field(hex,c,hexn)
+						 break
+						case "000000fe00" :
+						 hexd=append_hex_field(hex,c,hexd)
+						 break
+					}
+				}
+			} else {
+			  # set special value to denote invalid EDID
+			  hexn=iet; hexd=iet
+			}
+		}
+		/ConnectorType:/ {
+			conn=$2
+		}
+		END {
+			print_fields()
+		}' sp=`ascii_to_hex $us` iet=`ascii_to_hex $invalid_edid_tag`)
+	IFS="$OIFS"
 }
 
 # if there's no pre-defined monitors list, read from xrandr
