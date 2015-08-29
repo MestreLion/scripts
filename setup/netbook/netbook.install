@@ -29,7 +29,9 @@ if is_online; then
 	sudo apt-get install -y \
 		git{,g} \
 		bzr gedit-{,developer-}plugins \
+		openssh-server \
 		meld nautilus-compare \
+		nautilus-open-terminal \
 		trash-cli \
 		curl \
 		gnome-cards-data \
