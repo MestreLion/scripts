@@ -161,3 +161,12 @@ inplace() {
 		mv "$tmpfile" -- "$outfile"; }
 	done
 }
+
+unzip_toplevels() {
+	unzip -l "$1" |
+	sed 's/^[^:]*:..   //' |
+	egrep -o '^[^/]+/?' |
+	LC_ALL=C uniq |
+	tail -n +4 |
+	head -n -2
+}
