@@ -54,7 +54,7 @@ print_monitors() {
 	printf '%0.s–' {1..80}; printf '\n'
 	while read -r output conn hexn hexd; do
 		printf "$format" "'$output'" "'$conn'" "'$(hex_to_ascii "$hexn")'" "'$(hex_to_ascii "$hexd")'"
-	done < <(xrandr --prop | gawk -v gfs="$fs" '
+	done < <(xrandr --prop | awk -v gfs="$fs" --posix '
 		function print_fields() {
 			print output, conn, hexn, hexd
 			conn=""; hexn=""; hexd=""
@@ -81,9 +81,11 @@ print_monitors() {
 		function valid_edid(hex,  a, sum) {
 			if (length(hex)<256) return 0
 			for ( a=1; a<=256; a+=2 ) {
-				sum+=strtonum("0x" substr(hex,a,2))
-				# this requires --non-decimal-data for gawk:
-				#sum+=sprintf("%d", "0x" substr(hex,a,2))
+				# this requires gawk
+				#sum+=strtonum("0x" substr(hex,a,2))
+
+				# this requires --non-decimal-data or --posix for gawk:
+				sum+=sprintf("%d", "0x" substr(hex,a,2))
 			}
 			if (sum % 256) return 0
 			return 1
@@ -100,14 +102,9 @@ print_monitors() {
 			hex=get_hex_edid()
 			if (valid_edid(hex)) {
 				for ( c=109; c<=217; c+=36 ) {
-					switch (substr(hex,c,10)) {
-						case "000000fc00" :
-						 hexn=append_hex_field(hex,c,hexn)
-						 break
-						case "000000fe00" :
-						 hexd=append_hex_field(hex,c,hexd)
-						 break
-					}
+					tag=substr(hex,c,10)
+					if (tag=="000000fc00") hexn=append_hex_field(hex,c,hexn)
+					 else if (tag=="000000fe00") hexd=append_hex_field(hex,c,hexd)
 				}
 			} else {
 			  # set special value to denote invalid EDID
@@ -119,7 +116,7 @@ print_monitors() {
 		}
 		END {
 			print_fields()
-		}' sp=$(ascii_to_hex $us) iet=$(ascii_to_hex $invalid_edid_tag))
+		}' sp=$(ascii_to_hex $us) iet=$(ascii_to_hex $invalid_edid_tag) 2>/dev/null)
 	IFS="$OIFS"
 }
 
