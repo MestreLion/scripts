@@ -31,11 +31,11 @@ if [[ -f "$config" ]]; then
 fi
 
 hex_to_ascii() {
-	echo -n $(xxd -r -p <<<$1)
+	echo -n "$1" | xxd -r -p
 }
 
 ascii_to_hex() {
-	echo -n $(xxd -p <<<"$1")
+	echo -n "$1" | xxd -p
 }
 
 print_monitors() {
