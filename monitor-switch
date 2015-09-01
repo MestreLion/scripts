@@ -119,7 +119,7 @@ print_monitors() {
 		}
 		END {
 			print_fields()
-		}' sp=`ascii_to_hex $us` iet=`ascii_to_hex $invalid_edid_tag`)
+		}' sp=$(ascii_to_hex $us) iet=$(ascii_to_hex $invalid_edid_tag))
 	IFS="$OIFS"
 }
 
