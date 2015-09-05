@@ -26,6 +26,7 @@ self="${0##*/}"
 
 # default settings
 config="${HOME}/.ssh/known_hosts2"
+verbose=0
 
 usage()
 {
@@ -74,6 +75,9 @@ done
 myip=$(ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | cut -d' ' -f1)
 subnet=${myip%.*}
 
+if ((verbose)); then
+	echo "Probing the network, this might take around 10 seconds..."
+fi
 hosts=$(
 	{
 	for ip in {1..254} ; do
