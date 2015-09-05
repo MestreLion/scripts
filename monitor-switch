@@ -3,7 +3,7 @@
 # monitor-switch - switch outputs using xrand
 #
 #    Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
-#				   2015 Jarno Suni <8@iki.fi>
+#                  2015 Jarno Suni <8@iki.fi>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -40,21 +40,26 @@ ascii_to_hex() {
 
 print_monitors() {
 	declare -r us=';' # separator string;
-    # If EDID has more than one field with same tag, concatenate them,
-    # but add this string in between.
+	# If EDID has more than one field with same tag, concatenate them,
+	# but add this string in between.
 	declare -r fs=$'\x1f' # Field separator for internal use;
-    # must be a character that does not occur in data fields.
-    declare -r invalid_edid_tag='--bad EDID--'
-    # If base EDID is invalid, don't try to extract information from it,
-    # but assign this string to the fields.
-    declare -r format="%-12s%-12s%-28s%-28s\n"
+	# must be a character that does not occur in data fields.
+	declare -r invalid_edid_tag='--bad EDID--'
+	# If base EDID is invalid, don't try to extract information from it,
+	# but assign this string to the fields.
+	declare -r format="%-12s%-12s%-28s%-28s\n"
+	# awk option for portability
+	declate -r awk_option=$(awk -Wversion &>/dev/null && printf -- "-Wposix")
+	# $(awk -Wversion &>/dev/null && printf -- "-Wposix")
+	# or
+	#$(awk -Wversion 2>/dev/null | awk '{if (match($0,/^GNU/)){printf "--non-decimal-data";exit}else{exit}}')
 	declare OIFS=$IFS; # save old IFS
 	IFS=$fs
 	printf "$format" "Output" "Connection" "Name" "Data"
 	printf '%0.s–' {1..80}; printf '\n'
 	while read -r output conn hexn hexd; do
 		printf "$format" "'$output'" "'$conn'" "'$(hex_to_ascii "$hexn")'" "'$(hex_to_ascii "$hexd")'"
-	done < <(xrandr --prop | awk -v gfs="$fs" -W posix '
+	done < <(xrandr --prop | awk -v gfs="$fs" $awk_option '
 		function print_fields() {
 			print output, conn, hexn, hexd
 			conn=""; hexn=""; hexd=""
