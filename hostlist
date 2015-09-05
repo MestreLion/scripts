@@ -25,7 +25,7 @@ exec 3> /dev/null
 self="${0##*/}"
 
 # default settings
-config="${HOME}/ssh/known_hosts2"
+config="${HOME}/.ssh/known_hosts2"
 
 usage()
 {
