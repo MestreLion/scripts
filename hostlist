@@ -76,11 +76,23 @@ subnet=${myip%.*}
 
 hosts=$(
 	{
-		for ip in {1..254} ; do
-			{ ping -n -c 1 -W 1 "${subnet}.${ip}" >&3 && { getent hosts "${subnet}.${ip}" | awk '{print $2}' ; } ; } &
-		done
-		smbtree -NS | awk -F '\t' '$2{ gsub(/^\\\\| +/,"",$2); print tolower($2) }'
-		avahi-browse --terminate --parsable --no-db-lookup --resolve _workstation._tcp | awk -F ';' '$1=="="{ print $(NF-3) }'
+	for ip in {1..254} ; do
+		{
+		# ping opts: numeric (no lookup), count = 5, timeout = 3
+		# also supress spurious error message:
+		# "WARNING: kernel is not very fresh, upgrade is recommended"
+		# See http://askubuntu.com/questions/290110/
+		ping -n -c 5 -W 3 "${subnet}.${ip}" >&3 2>&3 &&
+			{
+			getent hosts "${subnet}.${ip}" |
+				awk '{ gsub(/\..*/,"", $2); print $2}'
+			}
+		} &
+	done
+	smbtree -NS |
+		awk -F '\t' '$2{ gsub(/^\\\\| +/,"",$2); print tolower($2) }'
+	avahi-browse --terminate --parsable --no-db-lookup --resolve _workstation._tcp |
+		awk -F ';' '$1=="="{ print $(NF-3) }'
 	} | sort -u | awk '$0 != prev".local" { print ; prev=$0 }'
 )
 
