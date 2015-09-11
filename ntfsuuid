@@ -25,8 +25,6 @@
 # TODO: Document error messages
 # TODO: Allow volume LABEL instead of /dev/sdxy
 # TODO: reconsider getopts http://mywiki.wooledge.org/BashFAQ/035
-# TODO: reconsider UPPER CASE variables (UUID conflict)
-# TODO: consider dropping the lame, redundant "return $?" (==return)
 # FIXME: Revert byte order in UUID
 
 exec 3> /dev/null # to avoid harcoding /dev/null everywhere. For tools' stderr.
@@ -137,12 +135,15 @@ _Confirm()
 		# can be improved with smarter setting of default value
 		read -p "$message (y/n, default YES): " confirm
 		case "x$confirm" in
-			x[Yy]*|x) ;;
-			*) if [[ -n "$VERBOSE" ]] ; then echo "$SELF: $COMMAND: cancelled by user" ; fi ; return 2 ;;
+			x[Yy]*|x) return 0;;
+			*)
+				if [[ -n "$VERBOSE" ]] ; then
+					echo "$SELF: $COMMAND: cancelled by user"
+				fi
+				return 2
+			;;
 		esac
 	fi
-
-	return 0
 }
 
 _PrintFlags()
@@ -178,8 +179,6 @@ Uuid_Generate()
 	else
 		echo "$NTFSUUID"
 	fi
-
-	return 0
 }
 
 Uuid_Read()
@@ -199,8 +198,6 @@ Uuid_Read()
 	else
 		echo "$NTFSUUID"
 	fi
-
-	return 0
 }
 
 Uuid_Set()
@@ -309,7 +306,7 @@ Uuid_Copy()
 		if [[ -n "$VERBOSE" ]] ; then echo "UUID $NTFSUUID copied from $input to $output" ; fi
 		return 0
 	else
-		echo "error: $COMMAND: $result (permission denied?)"
+		echo "error: $COMMAND ended with status $result (permission denied?)"
 		return $result
 	fi
 }
