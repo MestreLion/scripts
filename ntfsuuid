@@ -220,8 +220,8 @@ Uuid_Set()
 			fi
 		else
 			# Binary format
-			if [[ ${#UUID} -ne 8 ]] ; then
-				echo "error: $NTFSUUID: invalid UUID. Binary format must be 8-bytes long"
+			if [[ ${#NTFSUUID} -ne 8 ]] ; then
+				echo "error: $NTFSUUID: invalid UUID. Binary format must be 8 bytes long"
 				return 22
 			fi
 
@@ -230,11 +230,16 @@ Uuid_Set()
 
 			# Convert to hexadecimal string
 			NTFSUUID=$(echo "$NTFSUUID" | xxd -len 8 -plain)
-		 fi
+		fi
+
 	fi
 
 	# Adjust UUID case
-	if [[ -n "$LOWER" ]] ; then NTFSUUID="${UUID,,}" ; else NTFSUUID="${UUID^^}" ; fi
+	if [[ "$LOWER" ]]; then
+		NTFSUUID="${NTFSUUID,,}"
+	else
+		NTFSUUID="${NTFSUUID^^}"
+	fi
 
 	# All input data is set, print debug info
 	if [[ -n "$DEBUG" ]] ; then _PrintFlags ; fi
@@ -248,8 +253,10 @@ Uuid_Set()
 
 	# Set the UUID
 	if [[ -z "$TEST" ]] ; then
-		echo "$NTFSUUID" | xxd -r -plain | sudo dd of="$DEVICE" bs=8 count=1 seek=9 \
-		                                       conv=notrunc status=noxfer 2>&3
+		echo "$NTFSUUID" |
+		xxd -r -plain |
+		sudo dd of="$DEVICE" bs=8 count=1 seek=9 \
+			conv=notrunc status=noxfer 2>&3
 		result=$?
 	fi
 
