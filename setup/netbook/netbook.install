@@ -40,10 +40,16 @@ if is_online; then
 fi
 
 # TODO
-# - gconf nautilus, gedit, aisleriot
+# - gconf nautilus (always display text scripts)
+# - firefox
+# - dropbox: disabling auto-start is done via GUI, but create it disabled
 # - pin/unpin launcher apps
 # - IP, /etc/hosts
-# - keyring desktop, casa
+# - keyring desktop, casa (or ssh-copy-id)
+# - clock date/time format
+# - fstab tmpfs for /tmp
+# - colored messages
+# - improve error handling
 
 
 export SETUP_GNOME_TERMINAL_COLS=100
@@ -52,5 +58,6 @@ export SETUP_GNOME_TERMINAL_ROWS=30
 mydir=$(dirname "$(readlink -f "$0")")
 shopt -s nullglob
 for script in "$mydir"/setup.d/*.install; do
+	message "Executing $script"
 	"$script"
 done
