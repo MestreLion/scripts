@@ -18,7 +18,7 @@ urlkey=remote.origin.url
 # Generate SSH keys
 if ! [[ -r "$sshfile" ]]; then
 	message "Generating SSH keys"
-	ssh-keygen -t rsa -b 4096 -f "$sshfile"
+	ssh-keygen -t rsa -b 4096 -f "${sshfile%.pub}"
 fi
 
 # Check if key is new
