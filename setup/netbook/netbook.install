@@ -35,6 +35,8 @@ if is_online; then
 		trash-cli \
 		curl \
 		gnome-cards-data \
+		openjdk-7-jdk icedtea-7-plugin \
+		imagemagik \
 	;
 	nautilus -q  # required by nautilus-compare
 fi
