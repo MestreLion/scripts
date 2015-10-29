@@ -2,9 +2,6 @@
 
 # Remove old kernels but keep the first, the current and the previous
 
-#FIXME: 2.6.38-8.xx is sorted *after* 2.6.38-16.xx
-#       must use a smarter numeric sorting
-
 myname="${0##*/}"
 verbose=1
 keepfirst=1
@@ -53,7 +50,13 @@ while (( $# )); do
 done
 
 export current=$(uname -r | cut -d- -f-2)
-list=$(dpkg --list "linux-*" | grep -E "^ii  linux-(headers|image)-[2-5]\." | cut -d' ' -f3 | grep -v "$current")
+list=$(
+	dpkg --list "linux-*" |
+	grep -E "^ii  linux-(headers|image)-[2-5]\." |
+	cut -d' ' -f3 |
+	sort -V |
+	grep -v "$current"
+)
 
 message "Removing all kernels but keeping:"
 
