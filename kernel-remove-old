@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -ue
 #
 # Remove old kernels but keep the first, the current and the previous
 #
@@ -22,7 +22,8 @@ verbose=1
 keepfirst=1
 keepprevious=1
 
-message() { ((verbose)) && printf "%s\n" "$1"; }
+fatal()   { [[ "${1:-}" ]] && echo "$myname: $@" >&2 ; exit 1; }
+message() { if ((verbose)); then printf "%s\n" "${1:-}"; fi; }
 argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1 ; }
 invalid() { argerr "invalid option: $1" ; }
 usage() {
@@ -104,4 +105,5 @@ message
 
 sudo apt-get purge $aptlist &&
 message "Done, success!" ||
-echo "Opps, something went wrong, better check the output!"
+fatal "Error removing packages, check the output!" \
+	"(have you cancelled the operation?)"
