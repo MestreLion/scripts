@@ -93,9 +93,15 @@ if ((${#keep[@]})); then
 else
 	keep=('')
 fi
+aptlist=$(grep "${keep[@]}" <<< "$list")
+msglist=$(cut -d- -f3,4 <<< "$aptlist" | sort -u)
 
 message "Current : $current"
+message
+message "Kernels to be removed:"
+message "$msglist"
+message
 
-sudo apt-get purge $(grep "${keep[@]}" <<< "$list") &&
+sudo apt-get purge $aptlist &&
 message "Done, success!" ||
 echo "Opps, something went wrong, better check the output!"
