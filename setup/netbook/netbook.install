@@ -37,6 +37,8 @@ if is_online; then
 		gnome-cards-data \
 		openjdk-7-jdk icedtea-7-plugin \
 		imagemagik \
+		p7zip unrar \
+		powertop \
 	;
 	nautilus -q  # required by nautilus-compare
 fi
