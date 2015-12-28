@@ -1,0 +1,44 @@
+#!/bin/bash
+
+myname=${0##*/}
+
+usage() {
+	echo "$myname: prints info about a Hard Disk" >&2
+	echo "Usage: $myname DEVICE" >&2
+	echo "Example: $myname /dev/sda" >&2
+	exit "${1:-0}"
+}
+
+if [[ -z "${1:-}" ]] || (( $# > 1 )); then
+	usage
+fi
+
+
+case "$1" in
+	-h|--help) usage;;
+	*) device=$1;;
+esac
+
+if ! [[ -b "$device" ]]; then
+	echo "$myname: error: '$device' is not a block device" >&2
+	usage 1
+fi
+
+# --------------
+
+printcmd() {
+	echo "-----------------------------------------------------------------"
+	echo "\$ $@"
+	echo
+}
+
+echo "hdinfo $device"
+
+printcmd fdisk p,x,p,d
+printf 'p\nx\np\nd\nq\n' | sudo fdisk "$device"
+
+printcmd hdparm -iI
+sudo hdparm -iI "$device"
+
+printcmd parted print
+sudo parted "$device" print
