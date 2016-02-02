@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -ue
 #
 # progname - short desciption
 #
@@ -64,7 +64,7 @@ usage() {
 	  -h|--help     - show this page.
 	  -v|--verbose  - print more details about what is being done.
 
-	Copyright (C) 2015 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	Copyright (C) 2016 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
 	USAGE
 	exit 0
@@ -77,7 +77,7 @@ while (( $# )); do
 	case "$1" in
 	-v|--verbose  ) verbose=1                      ;;
 	--var=*       ) var="${1#*=}"                  ;;
-	--var         ) shift ; var="$1"               ;;
+	--var         ) shift ; var="${1:-}"           ;;
 	--            ) shift ; break                  ;;
 	-*            ) invalid "$1"                   ;;
 	-*            ) opts+=( "$1" )                 ;;
