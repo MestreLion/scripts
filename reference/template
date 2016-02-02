@@ -24,6 +24,12 @@ myname="${0##*/}"
 mydir=$(dirname "$(readlink -f "$0")")
 verbose=0
 
+bold()    { if ! [[ "$TERM" = dumb ]]; then tput bold; fi; printf '%s' "$@"
+            if ! [[ "$TERM" = dumb ]]; then tput sgr0; fi; }
+red()     { if ! [[ "$TERM" = dumb ]]; then tput setaf 1; fi; bold "$@"; }
+green()   { if ! [[ "$TERM" = dumb ]]; then tput setaf 2; fi; bold "$@"; }
+
+
 fatal()   { [[ "${1:-}" ]] && echo "$myname: error: $@" >&2 ; exit 1; }
 fatal()   { [[ "${1:-}" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
 message() { if ((verbose)); then printf "%s\n" "${1:-}"; fi; }
@@ -37,7 +43,8 @@ integer() { [[ "$1" ]] || missing "${2:-}" "${3-NUM}"; [[ "$1" != *[!0-9]* ]] ||
             argerr "'$1'${2:+ in $2} is not an integer."; }
 numeric() { [[ "$1" ]] || missing "${2:-}" "${3-NUM}"; re='^[0-9]+([.][0-9]+)?$'
             [[ "$1" =~ $re ]] || argerr "'${1:-}'${2:+ in $2} is not a number."; }
-
+cmdpath() { type -P "$1"; }
+ppath()   { printf '%q' "$@"; }
 
 usage() {
 	cat <<-USAGE
