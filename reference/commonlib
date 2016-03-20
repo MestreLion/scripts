@@ -142,6 +142,8 @@ xdg-data-cat()
 # emulate sed's --in-place for commands that lack it, such as awk
 # Usage: inplace <command> [cmdargs...] -- FILE(s)...
 # Note the the mandatory '--' to separate the command from list of files!
+# Command will be executed as '<command> -- <FILE>', and must output to stdin
+# Directories and non-existing files will be skipped with a warning in stderr
 inplace() {
 	local cmd=()
 	local outfile
@@ -160,6 +162,14 @@ inplace() {
 	fi
 
 	for outfile; do
+		if [[ -d "$outfile" ]]; then
+			echo "Is a directory: $outfile" >&2
+			continue
+		elif ! [[ -f "$outfile" ]]; then
+			echo "No such file: $outfile" >&2
+			continue
+		fi
+
 		tmpfile=$(mktemp) || fatal
 		trap 'rm -f -- "$tmpfile"' EXIT
 
