@@ -78,15 +78,22 @@ fatal()
 
 fatalgui()
 {
-	local message="$1"
+	local msg="${1:-}"
 	local errorcode="${2:-1}"
 	local dump="$3"
+
+	# Not a true "HTMLencode" but should cover most cases...
+	local message="${msg:-Error on execution!}"
+	message="${message//&/&amp;}"
+	message="${message//</&lt;}"
+	message="${message//>/&gt;}"
 
 	zenity --error --title="${0##*/}" \
 	       --text="${message:+$message\n\n}${dump:+$dump\n\n}"
 	             #"Exiting with error code ${errorcode}"
 
-	fatal "$message" "$errorcode" "$dump"
+	# Also output original message
+	fatal "$msg" "$errorcode" "$dump"
 }
 
 min() { (( $1 < $2 )) && printf "%d" "$1" || printf "%d" "$2"; }
