@@ -1,0 +1,50 @@
+#!/bin/bash
+
+commonlib=$SCRIPTS/reference/commonlib
+if [[ -f "$commonlib" ]]; then
+	source "$commonlib"
+else
+	# This is a *nautilus* script, so we can assume GUI and zenity
+	zenity --error --text "Required commonlib not found. Is \$SCRIPTS set?"
+	exit
+fi
+
+formatjson() {
+	local infile=$1
+	local INDENT=1
+	if [[ "$infile" == '--' ]]; then
+		infile=$2
+	fi
+	set -o pipefail
+	{
+	python - "$infile" <<-EOF
+		import json
+		import sys
+
+		infile = sys.argv[1] if len(sys.argv) > 1 else None
+
+		if infile and not infile == "-":
+		    with open(infile, "r") as fd:
+		        data = json.load(fd, strict=False)
+		else:
+		    data = json.load(sys.stdin, strict=False)
+
+		json.dump(
+		    data,
+		    sys.stdout,
+		    sort_keys=True,
+		    indent=$INDENT,
+		    separators=(",",": ")
+		)
+	EOF
+	} |
+	unexpand --tabs="$INDENT" --first-only |
+	sed 's/^\t//'
+}
+
+result=$(inplace formatjson -- "$@" 2>&1)
+if [[ "$result" ]]; then
+	#zenity --error --title "Errors were found" --text "$result"
+	fatalgui "$result"
+	exit 1
+fi
