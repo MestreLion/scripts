@@ -10,29 +10,37 @@ else
 fi
 
 formatjson() {
-	local infile=$1
+	local bsort=$1
+	local infile=$2
 	local INDENT=1
 	if [[ "$infile" == '--' ]]; then
-		infile=$2
+		infile=$3
 	fi
 	set -o pipefail
 	{
-	python - "$infile" <<-EOF
+	python - "$bsort" "$infile" <<-EOF
 		import json
 		import sys
+		import collections
 
-		infile = sys.argv[1] if len(sys.argv) > 1 else None
+		bsort   = bool(int(sys.argv[1])) if len(sys.argv) > 1 else False
+		infile  = sys.argv[2]            if len(sys.argv) > 2 else None
 
 		if infile and not infile == "-":
 		    with open(infile, "r") as fd:
-		        data = json.load(fd, strict=False)
+		        data = json.load(
+		            fd,
+		            strict=False,
+		            object_pairs_hook=collections.OrderedDict)
 		else:
-		    data = json.load(sys.stdin, strict=False)
+		    data = json.load(sys.stdin,
+		                     strict=False,
+		                     object_pairs_hook=collections.OrderedDict)
 
 		json.dump(
 		    data,
 		    sys.stdout,
-		    sort_keys=True,
+		    sort_keys=bsort,
 		    indent=$INDENT,
 		    separators=(",",": ")
 		)
@@ -42,7 +50,17 @@ formatjson() {
 	sed 's/^\t//'
 }
 
-result=$(inplace formatjson -- "$@" 2>&1)
+files=()
+bsort=0
+while (( $# )); do
+	case "$1" in
+	--sort) bsort=1;;
+	*) files+=( "$1" );;
+	esac
+	shift
+done
+
+result=$(inplace formatjson "$bsort" -- "${files[@]}" 2>&1)
 if [[ "$result" ]]; then
 	#zenity --error --title "Errors were found" --text "$result"
 	fatalgui "$result"
