@@ -36,7 +36,6 @@ if [ -f "$SCRIPTS/home/bash_aliases" ] ; then
 fi
 
 if [ -f "$HOME/work/wine-tools/wine-tools-bashrc" ] ; then
-	PATH="$PATH:$HOME/work/wine-tools"
 	source "$HOME/work/wine-tools/wine-tools-bashrc"
 fi
 

@@ -32,13 +32,22 @@ export SCRIPTS=${SCRIPTS:-"$HOME"/work/scripts}
 # Parameters: a single string, ':' separated, cointaining the folders to add
 # This function breaks the string and check each folder to avoid duplicates
 # Note that folders will be prepended in the *reverse* order
-prepend_path()
+prepend_path() { add_path "$1" "${2:-}"   ; }
+append_path()  { add_path "$1" "${2:-}" 1 ; }
+add_path()
 {
 	SAVED_IFS="$IFS"
 	IFS=:
 	for folder in $1 ; do
+		if [ -z "${2:-}" ] && ! [ -d "$folder" ] ; then
+			continue
+		fi
 		if ! $( echo "$PATH" | tr ":" "\n" | grep -qx "$folder" ) ; then
-			PATH=$folder:$PATH
+			if [ "${3:-}" ] ; then
+				PATH=$PATH:$folder
+			else
+				PATH=$folder:$PATH
+			fi
 		fi
 	done
 	IFS="$SAVED_IFS"
@@ -48,7 +57,10 @@ prepend_path()
 ##############################################################################
 
 # Add scripts bin and current folder to PATH
-prepend_path "/usr/local/games:$SCRIPTS:$HOME/.local/bin"
+prepend_path "/usr/local/games:$SCRIPTS:$HOME/.local/bin" 1
+
+# Add some projects
+append_path "$HOME/work/git-tools:$HOME/work/wine-tools:$HOME/work/xdg-tools"
 
 export PATH
 
