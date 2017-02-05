@@ -30,7 +30,7 @@ usage() {
 	cat <<-USAGE
 	Usage: $myname [options]
 	USAGE
-	if [[ "$1" ]] ; then
+	if [[ "${1:-}" ]] ; then
 		cat >&2 <<- USAGE
 		Try '$myname --help' for more information.
 		USAGE
