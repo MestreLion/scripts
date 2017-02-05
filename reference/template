@@ -47,11 +47,12 @@ cmdpath() { type -P "$1"; }
 ppath()   { printf '%q' "$@"; }
 
 usage() {
+	if [[ "${1:-}" ]] ; then exec >&2; fi
 	cat <<-USAGE
 	Usage: $myname [options]
 	USAGE
 	if [[ "${1:-}" ]] ; then
-		cat >&2 <<- USAGE
+		cat <<- USAGE
 		Try '$myname --help' for more information.
 		USAGE
 		exit 1

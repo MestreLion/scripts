@@ -142,7 +142,8 @@ xdg-data-cat()
 # emulate sed's --in-place for commands that lack it, such as awk
 # Usage: inplace <command> [cmdargs...] -- FILE(s)...
 # Note the the mandatory '--' to separate the command from list of files!
-# Command will be executed as '<command> -- <FILE>', and must output to stdin
+# Command will be executed multiple times as '<command> [cmdargs...] -- <FILE>',
+#   and it must output to stdin for inplace() to work correctly.
 # Directories and non-existing files will be skipped with a warning in stderr
 inplace() {
 	local cmd=()
