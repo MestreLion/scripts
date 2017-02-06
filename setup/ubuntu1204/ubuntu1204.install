@@ -23,6 +23,7 @@ sudo apt-get install \
 	git{,g} \
 	gedit-{,developer-}plugins \
 	meld nautilus-compare \
+	apache2 php{5,-doc} \
 	{d,dpkg-}www \
 	trash-cli
 
