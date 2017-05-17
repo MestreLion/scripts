@@ -21,7 +21,7 @@
 # and the contributors of http://mywiki.wooledge.org/
 #
 # TODO: Integrate with common/common lib (SELF, _Confirm, _TestRoot)
-# TODO: Test avaliability of tools (xxd,blkid)
+# TODO: Test avaliability of tools (xxd, blkid, dd)
 # TODO: Document error messages
 # TODO: Allow volume LABEL instead of /dev/sdxy
 # TODO: reconsider getopts http://mywiki.wooledge.org/BashFAQ/035
@@ -95,6 +95,20 @@ EOF
 
 #######################################  Auxiliary Functions
 
+_NTFSUuid()
+{
+	local device="$1"
+	local lower="$2"
+
+	local uuid=$(sudo xxd -plain -s 72 -len 8 "$device")
+
+	if [[ "$lower" ]]; then
+		echo "${uuid,,}"
+	else
+		echo "${uuid^^}"
+	fi
+}
+
 _RandomUuid()
 {
 	local lower=""
@@ -149,7 +163,9 @@ _Confirm()
 _PrintFlags()
 {
 	# Echoing $DEBUG value is redundant, since this will only be printed if = 1
-    cat <<EOF
+	# The missing space before $GETOPT is intentional, as getopt output
+	#   contains a leading space
+	cat <<EOF
 Parsed Options  =$GETOPT
 Debug           = $DEBUG
 Verbose         = $VERBOSE
@@ -183,12 +199,9 @@ Uuid_Generate()
 
 Uuid_Read()
 {
-	local lower=""
-
 	_TestNTFS "$DEVICE" || return $?
 
-	if [[ -z "$LOWER" ]] ; then lower="-u" ; fi
-	NTFSUUID=$(sudo xxd "$lower" -plain -s 72 -len 8 "$DEVICE")
+	NTFSUUID=$(_NTFSUuid "$DEVICE" "$LOWER")
 
 	# All input data is set, print debug info
 	if [[ -n "$DEBUG" ]] ; then _PrintFlags ; fi
@@ -231,19 +244,19 @@ Uuid_Set()
 
 	fi
 
-	# Adjust UUID case
+	# Adjust UUID case, for display messages purposes only
 	if [[ "$LOWER" ]]; then
 		NTFSUUID="${NTFSUUID,,}"
 	else
 		NTFSUUID="${NTFSUUID^^}"
 	fi
 
-	# All input data is set, print debug info
-	if [[ -n "$DEBUG" ]] ; then _PrintFlags ; fi
-	if [[ -n "$binary_uuid" ]] ; then echo "Binary UUID     = $binary_uuid" ; fi
-
 	# Test device
 	_TestNTFS "$DEVICE" || return $?
+
+	# All input data is set, print debug info
+	if [[ -n "$DEBUG"  ]] ; then _PrintFlags ; fi
+	if [[ -n "$BINARY" ]] ; then echo "Binary UUID     = $binary_uuid" ; fi
 
 	# Confirm with user
 	_Confirm "Set $DEVICE UUID to $NTFSUUID?" || return $?
@@ -285,8 +298,7 @@ Uuid_Copy()
 	_TestNTFS "$input" && _TestNTFS "$output" || return $?
 
 	# Read input device's UUID
-	if [[ -z "$LOWER" ]] ; then lower="-u" ; fi
-	NTFSUUID=$(sudo xxd "$lower" -plain -s 72 -len 8 "$input")
+	NTFSUUID=$(_NTFSUuid "$input" "$LOWER")
 
 	# All input data is set, print debug info (with additional DEVICE_OUTPUT parameter)
 	if [[ -n "$DEBUG" ]] ; then _PrintFlags ; echo "Output          = $1" ; fi
@@ -321,7 +333,7 @@ if [[ $# -eq 0 ]] ; then
 fi
 
 GETOPT=$(getopt --alternative --options "vlftbd" --longoptions "verbose,lower,force,test,binary,debug,uuid:,help,generate,read:,set:,copy:" --name "$SELF" -- "$@")
-if [[ $? -gt 0 ]] ; then usage ; exit 1 ; fi # error in getopt
+if [[ $? -gt 0 ]] ; then usage ; exit 1 ; fi  # error in getopt
 eval set -- "$GETOPT"
 
 while true ; do
