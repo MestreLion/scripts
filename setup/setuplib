@@ -15,6 +15,7 @@ if [[ -z "$SETUP_RELEASE" ]]; then
 	SETUP_RELEASE=${SETUP_RELEASE//\./}
 fi
 
+exists()  { type "$1" >/dev/null 2>&1; }
 relpath() { python -c "import sys, os; print os.path.relpath(*sys.argv[1:])" "$@"; }
 message() { ((SETUP_VERBOSE)) && echo "$@"; }
 fatal()   { [[ "$1" ]] && echo "${0##*/}: error: $1" >&2 ; exit ${2:-1} ; }
@@ -22,6 +23,14 @@ integer() {
 	if ! [[ "$1" != *[!0-9]* ]]; then
 		echo "'$1'${2:+ in $2} is not an integer." >&2
 		return 1
+	fi
+}
+
+required() {
+	local cmd=$1
+	local msg=${2:-Missing required command: $cmd}
+	if ! exists "$cmd"; then
+		fatal "$msg"
 	fi
 }
 

@@ -23,11 +23,16 @@ exec 3> /dev/null # to avoid harcoding /dev/null everywhere. For tools' stderr.
 
 # _TestRequirements() { #TODO }
 
+exists()
+{
+	type "$1" >/dev/null 2>&1;
+}
+
 required()
 {
 	local cmd=$1
 	local msg=${2:-Missing required command: $cmd}
-	if ! type "$1" >/dev/null 2>&1; then
+	if ! exists "$cmd"; then
 		fatal "$msg"
 	fi
 }
