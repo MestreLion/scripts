@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+# Display several power and battery-related information and statistics 
+#
+# Copyright (C) 2017 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+
+exists() { type "$1" >/dev/null 2>&1; }
+
+if ! exists acpi; then
+	sudo apt-get install acpi
+fi
+
+cat /proc/acpi/battery/BAT0/{info,state} 2>/dev/null || :
+
+acpi -V
