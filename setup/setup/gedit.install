@@ -2,10 +2,10 @@
 
 # Gedit plugins and preferences
 
-myname="${0##*/}"
-
 setuplib=${1:-$SETUP_LIB}
 recents=${2:-${SETUP_GEDIT_RECENTS:-25}}
+
+myname="${0##*/}"
 
 usage() { echo "Usage: ${0##*/} SETUP_LIB [RECENTS]" >&2; exit 1; }
 
@@ -51,5 +51,7 @@ gsettings set "$gsprefpath".editor  scheme                  'cobalt'
 gsettings set "$gsprefpath".ui      max-recents             "$recents"
 
 # Plugins
-gs_add_list org.gnome.gedit.plugins active-plugins changecase drawspaces
-
+gs_add_list org.gnome.gedit.plugins active-plugins \
+	changecase  \
+	drawspaces  \
+	codecomment
