@@ -58,6 +58,7 @@ fi
 
 export SETUP_GNOME_TERMINAL_COLS=100
 export SETUP_GNOME_TERMINAL_ROWS=30
+export SETUP_GEDIT_RECENTS=20
 
 mydir=$(dirname "$(readlink -f "$0")")
 shopt -s nullglob

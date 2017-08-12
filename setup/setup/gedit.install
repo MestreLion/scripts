@@ -2,6 +2,23 @@
 
 # Gedit plugins and preferences
 
+myname="${0##*/}"
+
+setuplib=${1:-$SETUP_LIB}
+recents=${2:-${SETUP_GEDIT_RECENTS:-25}}
+
+usage() { echo "Usage: ${0##*/} SETUP_LIB [RECENTS]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+integer "$recents" "RECENTS" || usage
+
+
 gs_add_list() {
 	local path=$1
 	local key=$2
@@ -31,7 +48,7 @@ gsettings set "$gsprefpath".editor  display-line-numbers    true
 gsettings set "$gsprefpath".editor  display-right-margin    true
 gsettings set "$gsprefpath".editor  highlight-current-line  true
 gsettings set "$gsprefpath".editor  scheme                  'cobalt'
-gsettings set "$gsprefpath".ui      max-recents             20
+gsettings set "$gsprefpath".ui      max-recents             "$recents"
 
 # Plugins
 gs_add_list org.gnome.gedit.plugins active-plugins changecase drawspaces
