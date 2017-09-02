@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Require wine v2.3+ (PlayOnLinux)
+
+
+#32-bit version.
+
+#Requires a DLL override for "riched20.dll", select "Native (Windows)" (bug 14980) to prevent black font/size labels appearing.
+
+#The registry value "HKCU\Software\Wine\Direct3D\MaxVersionGL" (DWORD) must be set to "30002" (hex) to avoid a blank screen on load.
+
+#[HKEY_CURRENT_USER\Software\Wine\Direct3D]
+#"MaxVersionGL"=dword:00030002
+
+# For MS Office 2013:
+
+#Also, I needed dotnet20, which only installs in 32bit mode.
+
+#Thanks to laurent the fix goes as follows
+
+# env WINEARCH=win32 WINEPREFIX=~/.wine32 winetricks dotnet20 msxml6 corefonts
+
+#Then run env WINEARCH=win32 WINEPREFIX=~/.wine32 winecfg and select windows7 (thanks hhlp)
+
+#Then fix msxml6 (thanks Richard W. @ liberiangeek.net)
+
+#Finally install env WINEARCH=win32 WINEPREFIX=~/.wine32 wine setup.exe
+
