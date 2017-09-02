@@ -32,10 +32,7 @@ sudo apt-get install gedit-plugins
 # Symlinks to /dados
 # Grub customization
 # Nautilus Settings
-# Firefox settings
-	#backspace for history.back (from 2 to 0)
-
-#sudo dwww-index++
+# sudo dwww-index++
 
 # keyboard shortcuts for rotate monitor
 # keyboard delay and speed
