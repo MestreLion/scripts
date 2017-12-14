@@ -15,6 +15,8 @@ alias open="xdg-open"
 alias trash="trash-put"
 alias mand="dwww-man"
 alias package="dpkg-www"
+alias ca="CA.pl"
+
 complete-copy ls ll la
 complete-copy dwww-man mand package
 
@@ -46,3 +48,5 @@ matrix-fake() {
 	dd cbs=$COLUMNS conv=unblock |
 	GREP_COLOR="1;32" grep --color "[^ ]"
 }
+
+dmesgw() { watch -n 0.25 "dmesg $@ | tail -n $((LINES-3))"; }
