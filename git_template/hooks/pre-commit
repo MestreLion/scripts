@@ -44,6 +44,9 @@ fi
 # Fix common issues: trailing whitespace, blank lines at EOF and leading spaces
 # before tab. Due to the nature of diff-index --check the snippet below is NOT
 # protected against filenames containing newlines
+#
+# Only fix files where issues were *introduced* in this commit, but if so fixes
+# the whole file, including pre-existing issues
 git diff-index --cached "$against" -- |
 cut -f2 |
 while IFS= read -r file ; do
