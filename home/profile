@@ -75,6 +75,7 @@ export DEBEMAIL="debian@rodrigosilva.com"
 #Python
 #export PYTHONPATH="$PYTHONPATH":"$HOME"/work
 export PYTHONWARNINGS=default  # re-enable DeprecationWarning's disabled in Python 2.7
+export PYTHONIOENCODING=UTF-8
 
 # PyLint
 export PYLINTHOME=${XDG_CACHE_HOME:-$HOME/.cache}/pylint
