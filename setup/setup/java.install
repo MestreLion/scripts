@@ -1,0 +1,29 @@
+#!/bin/bash -e
+
+# Setup java
+
+# Enable dwww
+
+exists()  { type "$1" >/dev/null 2>&1; }
+
+if ! exists java; then
+	echo "ERROR: java is not installed" >&2
+	exit
+fi
+if ! exists dwww; then exit; fi  # silently
+
+
+conf=/etc/dwww/dwww.conf
+bak=$conf.bak
+
+if ! [[ -e "$bak" ]]; then
+	sudo cp -- "$conf" "$bak"
+fi
+
+sudo sed -i '/^# DWWW_DOCPATH=/s/^# /# @@ Changed by Rodrigo Setup install\n/' "$conf"
+
+while read -r _ _ java; do
+	if ! grep -q "$java" "$conf"; then
+		sudo sed -i "/^DWWW_DOCPATH=/s/'\$/:${java//\//\\/}\/jre\/man'/" "$conf"
+	fi
+done < <(update-java-alternatives --list)
