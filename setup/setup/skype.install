@@ -20,8 +20,8 @@ if ! version_greater "$(package_version libc6)" '2.17'; then
 fi
 
 # New releases
-if package_version 'skype'; then
-	sudo apt-get purge skype
+if package_exists 'skype'; then
+	sudo apt-get purge 'skype'
 fi
 
 deb="skypeforlinux-64.deb"  # No 32 bits available

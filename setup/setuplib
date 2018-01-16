@@ -86,6 +86,10 @@ package_version() {
 	dpkg-query --showformat='${Version}' --show "$1" 2>/dev/null
 }
 
+package_exists() {
+	package_version "$1" >/dev/null
+}
+
 is_online() {
 	ping -c 1 www.google.com >/dev/null 2>&1
 }
