@@ -6,7 +6,6 @@
 
 setuplib=${1:-$SETUP_LIB}
 myname="${0##*/}"
-deskfile=/usr/share/applications/skype.desktop
 
 if [[ -r "$setuplib" ]]; then
 	source "$setuplib"
@@ -16,19 +15,25 @@ else
 	exit 1
 fi
 
-if is_online; then
-	aptsources=/etc/apt/sources.list
-	if grep -q '^# deb http.*precise partner$' "$aptsources"; then
-		message "Enabling partner repository..."
-		sudo cp "$aptsources"{,."$myname".bak}
-		sudo sed -i '/^# deb http.*partner$/s/# //' "$aptsources"
-		sudo apt-get update
+# Older versions (up to Ubuntu 12.04)
+if ! version_greater "$(package_version libc6)" '2.17'; then
+	deskfile=/usr/share/applications/skype.desktop
+	if is_online; then
+		aptsources=/etc/apt/sources.list
+		if grep -q "^# deb http.*$SETUP_CODENAME partner\$" "$aptsources"; then
+			message "Enabling partner repository..."
+			sudo cp "$aptsources"{,."$myname".bak}
+			sudo sed -i '/^# deb http.*partner$/s/# //' "$aptsources"
+			sudo apt-get update
+		fi
+		message "Installing Skype..."
+		sudo apt-get install -y skype
 	fi
-	message "Installing Skype..."
-	sudo apt-get install -y skype
-fi
 
-if grep -q '^Icon=.*\.png$' "$deskfile" 2>/dev/null; then
-	message "Fixing Skype icon..."
-	sudo sed -i."$myname".bak '/^Icon=/s/\.png$//' "$deskfile"
+	if grep -q '^Icon=.*\.png$' "$deskfile" 2>/dev/null; then
+		message "Fixing Skype icon..."
+		sudo sed -i."$myname".bak '/^Icon=/s/\.png$//' "$deskfile"
+	fi
+
+	exit
 fi
