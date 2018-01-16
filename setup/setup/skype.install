@@ -24,7 +24,7 @@ if package_version 'skype'; then
 	sudo apt-get purge skype
 fi
 
-deb="skypeforlinux-${SETUP_BITS}.deb"
+deb="skypeforlinux-64.deb"  # No 32 bits available
 url="https://repo.skype.com/latest/${deb}"  # also "https://go.skype.com/${deb}"
 path=$(mktemp -d)
 archive=$path/$deb
