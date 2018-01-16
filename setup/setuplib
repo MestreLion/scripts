@@ -5,23 +5,23 @@
 
 SETUP_VERBOSE=${SETUP_VERBOSE:-1}
 
-if [[ -z "$SETUP_DISTRO" ]]; then
+if [[ -z "${SETUP_DISTRO:-}" ]]; then
 	SETUP_DISTRO=$(lsb_release -si)
 	SETUP_DISTRO=${SETUP_DISTRO,,}
 fi
 
-if [[ -z "$SETUP_RELEASE" ]]; then
+if [[ -z "${SETUP_RELEASE:-}" ]]; then
 	SETUP_RELEASE=$(lsb_release -sr)
 	SETUP_RELEASE=${SETUP_RELEASE//\./}
 fi
 
-if [[ -z "$SETUP_CODENAME" ]]; then
+if [[ -z "${SETUP_CODENAME:-}" ]]; then
 	SETUP_CODENAME=$(lsb_release -sc)
 	SETUP_CODENAME=${SETUP_CODENAME//\./}
 fi
 
-if [[ -z "$SETUP_BITS" ]]; then
-	if [[ "$(arch)" == 'x86_64' ]] then
+if [[ -z "${SETUP_BITS:-}" ]]; then
+	if [[ "$(arch)" == 'x86_64' ]]; then
 		SETUP_BITS=64
 	else
 		SETUP_BITS=32
@@ -32,7 +32,7 @@ fi
 exists()  { type "$1" >/dev/null 2>&1; }
 relpath() { python -c "import sys, os; print os.path.relpath(*sys.argv[1:])" "$@"; }
 message() { ((SETUP_VERBOSE)) && echo "$@"; }
-fatal()   { [[ "$1" ]] && echo "${0##*/}: error: $1" >&2 ; exit ${2:-1} ; }
+fatal()   { [[ "${1:-}" ]] && echo "${0##*/}: error: $1" >&2 ; exit ${2:-1} ; }
 integer() {
 	if ! [[ "$1" != *[!0-9]* ]]; then
 		echo "'$1'${2:+ in $2} is not an integer." >&2
