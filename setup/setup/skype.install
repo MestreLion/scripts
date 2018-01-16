@@ -15,7 +15,7 @@ else
 	exit 1
 fi
 
-# Older versions (up to Ubuntu 12.04)
+# Older releases (up to Ubuntu 12.04)
 if ! version_greater "$(package_version libc6)" '2.17'; then
 	deskfile=/usr/share/applications/skype.desktop
 	if is_online; then
@@ -37,3 +37,18 @@ if ! version_greater "$(package_version libc6)" '2.17'; then
 
 	exit
 fi
+
+# New releases
+if package_version 'skype'; then
+	sudo apt-get purge skype
+fi
+
+deb="skypeforlinux-${SETUP_BITS}.deb"
+url="https://repo.skype.com/latest/${deb}"  # also "https://go.skype.com/${deb}"
+path=$(mktemp -d)
+archive=$path/$deb
+trap 'rm -rf -- "$path"' EXIT
+
+wget -P "$path" -- "$url"
+sudo dpkg -i "$archive"
+sudo apt install -f

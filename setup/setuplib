@@ -20,6 +20,15 @@ if [[ -z "$SETUP_CODENAME" ]]; then
 	SETUP_CODENAME=${SETUP_CODENAME//\./}
 fi
 
+if [[ -z "$SETUP_BITS" ]]; then
+	if [[ "$(arch)" == 'x86_64' ]] then
+		SETUP_BITS=64
+	else
+		SETUP_BITS=32
+	fi
+fi
+
+
 exists()  { type "$1" >/dev/null 2>&1; }
 relpath() { python -c "import sys, os; print os.path.relpath(*sys.argv[1:])" "$@"; }
 message() { ((SETUP_VERBOSE)) && echo "$@"; }
@@ -74,7 +83,7 @@ version_lesser() {
 }
 
 package_version() {
-	dpkg-query --showformat='${Version}' --show "$1"
+	dpkg-query --showformat='${Version}' --show "$1" 2>/dev/null
 }
 
 is_online() {
