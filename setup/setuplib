@@ -1,4 +1,4 @@
-# Constants and functions be sourced by setup scripts
+# Constants and support functions to be sourced by setup scripts
 
 #   Copyright (C) 2015 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 #   License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
@@ -13,6 +13,11 @@ fi
 if [[ -z "$SETUP_RELEASE" ]]; then
 	SETUP_RELEASE=$(lsb_release -sr)
 	SETUP_RELEASE=${SETUP_RELEASE//\./}
+fi
+
+if [[ -z "$SETUP_CODENAME" ]]; then
+	SETUP_CODENAME=$(lsb_release -sc)
+	SETUP_CODENAME=${SETUP_CODENAME//\./}
 fi
 
 exists()  { type "$1" >/dev/null 2>&1; }
@@ -66,6 +71,10 @@ version_lesser() {
 	# Return 0 if version is lesser or equal than reference,
 	# non-zero otherwise
 	if ! version_compare "lesser" "$1" "$2"; then return 1; fi
+}
+
+package_version() {
+	dpkg-query --showformat='${Version}' --show "$1"
 }
 
 is_online() {
