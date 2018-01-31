@@ -1,17 +1,19 @@
 #!/bin/bash -e
 
 setuplib=${1:-$SETUP_LIB}
+sshtitle=${2:-${SETUP_SSHGITHUB_SSHTITLE:-Netbook}}
+
+
 if [[ -r "$setuplib" ]]; then
 	source "$setuplib"
 else
 	echo "Setup library not found! $setuplib" >&2
-	echo "Usage: ${0##*/} SETUP_LIB" >&2
+	echo "Usage: ${0##*/} SETUP_LIB SSH_TITLE" >&2
 	exit 1
 fi
 
 ghurl="https://api.github.com"
 sshfile="$HOME"/.ssh/id_rsa.pub
-sshtitle=Netbook
 ghuser=MestreLion
 urlkey=remote.origin.url
 
@@ -34,7 +36,7 @@ if key: sys.exit(1)  # print key[0]
 fi
 
 cd "$SCRIPTS"
-if git config --get "$urlkey" '^https://'; then
+if git config --get "$urlkey" '^https?://'; then
 	message "Replacing Scripts repository URL from HTTPS to SSH"
 	git config "$urlkey" 'git@github.com:MestreLion/scripts.git'
 fi
