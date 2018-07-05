@@ -26,6 +26,14 @@ which()   { builtin type -P "$@" ; }
 sprunge() { local l=${2-bash}; echo $(curl -sSF "sprunge=<${1:--}" http://sprunge.us)${l:+?$l}${3:+#n-$3}; }
 epoch()   { date -d@"$1" ; }
 
+timestamp() {
+	if [[ "${1:-}" ]]; then
+		date +%s --date "$1"
+	else
+		date +%s
+	fi
+}
+
 pyprofile() {
 	python -m cProfile --sort=time "$@" |
 	{ awk -v l=$((LINES-10)) '/ncalls  tottime/{t=l}t==1{exit}t>0{t--}{print}'
