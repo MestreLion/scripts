@@ -20,6 +20,7 @@
 myname="${0##*/}"
 time=30
 block=1M
+count=0
 
 fatal()   { [[ "$1" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
 message() { printf "%s\n" "$1"; }
@@ -50,6 +51,7 @@ usage() {
 
 	  --time TIME  - display progress every TIME seconds. [Default: $time]
 	  --block SIZE - copy SIZE blocks at a time. [Default: $block]
+	  --count NUM  - number of blocks to copy, 0 for all blocks [Default: $count]
 
 	Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
@@ -67,6 +69,8 @@ while (( $# )); do
 	--time=*     ) time="${1#*=}"                 ;;
 	--block      ) shift ; block="$1"             ;;
 	--block=*    ) block="${1#*=}"                ;;
+	--count      ) shift ; count="$1"             ;;
+	--count=*    ) count="${1#*=}"                ;;
 	--           ) shift ; break                  ;;
 	-*           ) invalid "$1"                   ;;
 	*            ) files+=( "$1" )                ;;
@@ -80,8 +84,10 @@ output=${files[1]}
 [[ "$input"  ]] || missing "" "INPUT"
 [[ "$output" ]] || missing "" "OUTPUT"
 [[ "$block"  ]] || missing "--block" "SIZE"
+[[ "$count"  ]] || missing "--count" "NUM"
 
-integer "$time" "--time"
+integer "$time"  "--time"
+integer "$count" "--count"
 
 if ! ((force)); then
 	for file in "$input" "$output"; do
@@ -91,10 +97,15 @@ if ! ((force)); then
 	done
 fi
 
-echo "dd if=\"$input\" of=\"$output\" bs=\"$block\""
+countarg=()
+if ((count)); then
+	countarg=(count="$count")
+fi
 
-#set -m  # do not supress backgound output
-dd if="$input" of="$output" bs="$block" & pid=$!
+echo "dd if=\"$input\" of=\"$output\" bs=\"$block\"" "${countarg[@]}"
+
+#set -m  # do not supress background output
+dd if="$input" of="$output" bs="$block" "${countarg[@]}" & pid=$!
 trap 'pkill -P $$' EXIT  # abort dd if script it aborted
 sleep 0.2  # wait for any immediate errors (permission denied, file not found, etc)
 
