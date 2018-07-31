@@ -1,0 +1,66 @@
+#!/bin/bash -e
+
+# Replace home "special" directories for symlinks to data partition
+
+setuplib=${1:-$SETUP_LIB}
+basedir=${2:-${SETUP_SYMLINKS_BASEDIR:-/dados}}
+is_desktop=$SETUP_DESKTOP
+
+myname="${0##*/}"
+
+usage() { echo "Usage: ${0##*/} SETUP_LIB [BASEDIR]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+xdg=${XDG_CONFIG_HOME:-$HOME/.config}/user-dirs.dirs
+
+tags=(
+	DOCUMENTS
+	DOWNLOAD
+	MUSIC
+	PICTURES
+	VIDEOS
+)
+
+declare -A desktop=(
+	[DOCUMENTS]=Arquivos
+	[DOWNLOAD]=Download
+	[MUSIC]=Mp3/Albuns
+	[PICTURES]=Fotos
+	[VIDEOS]=Filmes
+)
+
+source "$xdg" || fatal
+for tag in "${tags[@]}"; do
+	var=XDG_${tag}_DIR
+	dir=${!var}
+	if [[ "$is_desktop" ]]; then
+		leaf=${desktop[$tag]}
+	else
+		leaf=${dir##*/}
+	fi
+	target=$basedir/$leaf
+	if ! [[ -h "$dir" ]]; then
+		echo mkdir -p -- "$target" &&
+		echo mv -nt "$target" -- "$dir"/* &&
+		echo rmdir -- "$dir" &&
+		echo ln -s "$target" -- "$dir"
+	fi
+done
+
+# change templates and publicshare
+if ! [[ -f "$xdg".bak  ]]; then
+	cp "$xdg"{,.bak}
+	sed -i '/^XDG_TEMPLATES_DIR=/s/Templates/.templates/'  -- "$xdg"
+	sed -i '/^XDG_PUBLICSHARE_DIR=/s/Public/.publicshare/' -- "$xdg"
+}
+[[ -d "$HOME"/Templates ]] && mv "$HOME"/{Templates,.templates}
+[[ -d "$HOME"/Public    ]] && mv "$HOME"/{Public,.publicshare}
+
+# delete examples
+rm -f "$HOME/examples.desktop"
