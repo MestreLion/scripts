@@ -49,10 +49,7 @@ print_monitors() {
 	# but assign this string to the fields.
 	declare -r format="%-12s%-12s%-28s%-28s\n"
 	# awk option for portability
-	declate -r awk_option=$(awk -Wversion &>/dev/null && printf -- "-Wposix")
-	# $(awk -Wversion &>/dev/null && printf -- "-Wposix")
-	# or
-	#$(awk -Wversion 2>/dev/null | awk '{if (match($0,/^GNU/)){printf "--non-decimal-data";exit}else{exit}}')
+	declare -r awk_option=$(awk -Wversion &>/dev/null && printf -- "-Wposix")
 	declare OIFS=$IFS; # save old IFS
 	IFS=$fs
 	printf "$format" "Output" "Connection" "Name" "Data"
