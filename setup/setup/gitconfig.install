@@ -7,6 +7,11 @@ if [[ -f "$gitconfig" ]]; then
 	exit
 fi
 
+if [[ -z "$SCRIPTS" ]]; then
+	echo "\$SCRIPTS is not set! Run scripts.install first" >&2
+	exit 1
+fi
+
 templatedir=${SCRIPTS#$HOME}
 if [[ "${HOME}${templatedir}" == "$SCRIPTS" ]]; then
 	templatedir=~$(printf '%q' "$templatedir")
