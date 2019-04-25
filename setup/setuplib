@@ -48,6 +48,14 @@ required() {
 	fi
 }
 
+required_install() {
+	local pkg=$1
+	local cmd=${2:-$1}
+	if ! exists "$cmd"; then
+		sudo apt install -y "$pgk"
+	fi
+}
+
 version_sort() {
 	# print one argument per line sorted on version ordering
 	printf "%s\n" "$@" | LC_ALL=C sort --version-sort
