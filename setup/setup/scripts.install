@@ -65,8 +65,12 @@ fi
 mkdir -p "$HOME/.local/bin"
 
 # Nautilus scripts
-original=$HOME/.gnome2/nautilus-scripts
 custom=$SCRIPTS/nautilus-scripts
+if version_greater $(nautilus --version | awk '{print $NF}') 3.8.2; then  # Ubuntu 14.04
+	original=$HOME/.local/share/nautilus/scripts
+else
+	original=$HOME/.gnome2/nautilus-scripts
+fi
 if ! [[ -h "$original" ]]; then
 	mkdir -p "$original"
 	rmdir "$original" &&
