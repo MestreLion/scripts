@@ -8,17 +8,18 @@ usage() { echo "Usage: SCRIPTS=<SCRIPTS> $myname SETUP_LIB" >&2; exit 1; }
 # Reference only
 uninstall() {
 	# custom profile
+	# FIXME: use 'patch'
 	#grep -q "\$SCRIPTS" ~/.profile && echo "Now manually remove from export SCRIPT to fi!!!"
 
 	# custom bashrc
+	# FIXME: use 'patch'
 	#grep -q "\$SCRIPTS" ~/.bashrc && echo "Now manually remove from if SCRIPT to fi!!!"
 
 	# personal bin
 	rmdir "$HOME/.local/bin" 2>/dev/null
 
 	# Nautilus-extensions
-	#original=$HOME/.gnome2/nautilus-scripts
-	#[[ -h "$original" ]] && rm "$original" && mkdir -p "$original"
+	[[ -h "$nautilus" ]] && rm "$nautilus" && mkdir -p "$nautilus"
 }
 
 if ! [[ -d "$SCRIPTS" ]]; then
@@ -32,6 +33,14 @@ else
 	echo "Setup library not found: '$setuplib'" >&2
 	usage
 fi
+
+if version_greater $(nautilus --version | awk '{print $NF}') 3.8.2; then  # Ubuntu 14.04
+	nautilus=$HOME/.local/share/nautilus/scripts
+else
+	nautilus=$HOME/.gnome2/nautilus-scripts
+fi
+
+# Uninstall call goes here...
 
 # custom profile
 if ! grep -q "\$SCRIPTS" "$HOME"/.profile 2>/dev/null ; then
@@ -82,13 +91,8 @@ mkdir -p "$HOME/.local/bin"
 
 # Nautilus scripts
 custom=$SCRIPTS/nautilus-scripts
-if version_greater $(nautilus --version | awk '{print $NF}') 3.8.2; then  # Ubuntu 14.04
-	original=$HOME/.local/share/nautilus/scripts
-else
-	original=$HOME/.gnome2/nautilus-scripts
-fi
-if ! [[ -h "$original" ]]; then
-	mkdir -p "$original"
-	rmdir "$original" &&
-	ln -s "$(relpath "$custom" "$(dirname "$original")")" "$original"
+if ! [[ -h "$nautilus" ]]; then
+	mkdir -p "$nautilus"
+	rmdir "$nautilus" &&
+	ln -s "$(relpath "$custom" "$(dirname "$nautilus")")" "$nautilus"
 fi
