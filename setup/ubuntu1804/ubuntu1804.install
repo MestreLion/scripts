@@ -1,0 +1,37 @@
+#!/bin/bash
+
+packages=(
+	ubuntu-unity-desktop  # choose "lightdm"
+	xserver-xorg-input-synaptics  # enable "tap to click" on touchpad
+	git
+	gitg
+	gparted
+	gedit-plugins
+	acpi
+	powertop
+	default-jdk
+	eclipse
+	eclipse-pydev
+	dwww  # for 'mand'
+	curl  # some setup scripts
+)
+
+sudo apt install -y -- "${packages[@]}"
+
+# Launcher
+# Remove: Thunderbird, Rhythmbox, LibreOffice Writer, Ubuntu Software, Help, Amazon
+# Add: Terminal, gedit
+
+# Gedit
+# Display Line Numbers
+# Display right margin
+# Highlight current line
+# Hightlight matching braces
+# Enable automatic indentation
+# Color Scheme Cobalt
+# Plugins: COde Comment, Draw Spaces, Sort
+
+# Setup scripts:
+# scripts	SCRIPTS=$HOME/work/scripts ./scripts.install ../setuplib
+# gitconfig
+# dwww
