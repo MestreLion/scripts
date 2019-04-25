@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Fix DWWW 404 bug
+# https://askubuntu.com/questions/581118
+
+setuplib=${1:-$SETUP_LIB}
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	echo "Usage: ${0##*/} SETUP_LIB" >&2
+	exit 1
+fi
+
+required_install dwww
+
+sudo a2enmod cgi
+sudo service apache2 restart
