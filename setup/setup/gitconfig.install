@@ -7,12 +7,13 @@ if [[ -f "$gitconfig" ]]; then
 	exit
 fi
 
-template=${SCRIPTS#$HOME}
-if [[ "${HOME}${template}" == "$SCRIPTS" ]]; then
-	template="~${template}"
+templatedir=${SCRIPTS#$HOME}
+if [[ "${HOME}${templatedir}" == "$SCRIPTS" ]]; then
+	templatedir=~$(printf '%q' "$templatedir")
 else
-	template=$SCRIPTS
+	templatedir=$(printf '%q' "$SCRIPTS")
 fi
+templatedir=$templatedir/git_template
 
 cat > "$gitconfig" <<_EOF_
 [user]
@@ -37,7 +38,7 @@ cat > "$gitconfig" <<_EOF_
 	whitespace = fix
 
 [init]
-	templatedir = $(printf '%q' "$template")/git_template
+	templatedir = $templatedir
 
 [credential]
 	helper = cache --timeout=604800
