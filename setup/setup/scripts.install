@@ -5,6 +5,22 @@ myname="${0##*/}"
 
 usage() { echo "Usage: SCRIPTS=<SCRIPTS> $myname SETUP_LIB" >&2; exit 1; }
 
+# Reference only
+uninstall() {
+	# custom profile
+	#grep -q "\$SCRIPTS" ~/.profile && echo "Now manually remove from export SCRIPT to fi!!!"
+
+	# custom bashrc
+	#grep -q "\$SCRIPTS" ~/.bashrc && echo "Now manually remove from if SCRIPT to fi!!!"
+
+	# personal bin
+	rmdir "$HOME/.local/bin" 2>/dev/null
+
+	# Nautilus-extensions
+	#original=$HOME/.gnome2/nautilus-scripts
+	#[[ -h "$original" ]] && rm "$original" && mkdir -p "$original"
+}
+
 if ! [[ -d "$SCRIPTS" ]]; then
 	echo "Scripts dir not found: '$SCRIPTS'" >&2
 	usage
