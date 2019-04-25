@@ -34,8 +34,11 @@ else
 	usage
 fi
 
-if version_greater $(nautilus --version | awk '{print $NF}') 3.8.2; then  # Ubuntu 14.04
-	nautilus=$HOME/.local/share/nautilus/scripts
+# Nautilus 3.5.1 changed scripts paths, affects Ubuntu 14.04+
+# https://bugzilla.gnome.org/show_bug.cgi?id=646584
+# https://github.com/GNOME/nautilus/commit/05e7b7cc4d70b0c89442241e1a741d63a6c5d24d
+if version_greater $(nautilus --version | awk '{print $NF}') 3.5.1; then
+	nautilus=${XDG_DATA_HOME:-"$HOME"/.local/share}/nautilus/scripts
 else
 	nautilus=$HOME/.gnome2/nautilus-scripts
 fi
