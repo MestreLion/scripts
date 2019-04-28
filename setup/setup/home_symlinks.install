@@ -59,10 +59,13 @@ for tag in "${tags[@]}"; do
 	fi
 	target=$basedir/$leaf
 	if ! [[ -h "$dir" ]]; then
-		echo mkdir -p -- "$target" &&
-		echo mv -nt "$target" -- "$dir"/* &&
-		echo rmdir -- "$dir" &&
-		echo ln -s "$target" -- "$dir"
+		shopt -s nullglob
+		files=("$dir"/*)
+		mkdir -p -- "$target" &&
+		{ [[ "$files" ]] && mv -nt "$target" -- "$dir"/* || :; } &&
+		rmdir -- "$dir" &&
+		ln -s "$target" -- "$dir"
+		shopt -u nullglob
 	fi
 done
 
@@ -71,7 +74,7 @@ if ! [[ -f "$xdg".bak  ]]; then
 	cp "$xdg"{,.bak}
 	sed -i '/^XDG_TEMPLATES_DIR=/s/Templates/.templates/'  -- "$xdg"
 	sed -i '/^XDG_PUBLICSHARE_DIR=/s/Public/.publicshare/' -- "$xdg"
-}
+fi
 [[ -d "$HOME"/Templates ]] && mv "$HOME"/{Templates,.templates}
 [[ -d "$HOME"/Public    ]] && mv "$HOME"/{Public,.publicshare}
 
