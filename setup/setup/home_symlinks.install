@@ -10,6 +10,19 @@ myname="${0##*/}"
 
 usage() { echo "Usage: ${0##*/} SETUP_LIB [BASEDIR]" >&2; exit 1; }
 
+uninstall() {
+#	[[ -h ~/Documents ]] && rm ~/Documents  && mkdir ~/Documents
+#	[[ -h ~/Downloads ]] && rm ~/Downloads  && mkdir ~/Downloads
+#	[[ -h ~/Music     ]] && rm ~/Music      && mkdir ~/Music
+#	[[ -h ~/Pictures  ]] && rm ~/Pictures   && mkdir ~/Pictures
+#	[[ -h ~/Videos    ]] && rm ~/Videos     && mkdir ~/Videos
+
+	[[ -f "$HOME"/.config/user-dirs.dirs.bak ]] && mv "$HOME"/.config/user-dirs.dirs{.bak,}
+#	[[ -d "$HOME"/.templates   ]] && mv "$HOME"/{.templates,Templates}
+#	[[ -d "$HOME"/.publicshare ]] && mv "$HOME"/{.publicshare,Public}
+#	[[ -f "$HOME/examples.desktop" ]] || cp /etc/skel/examples.desktop "$HOME"
+}
+
 if [[ -r "$setuplib" ]]; then
 	source "$setuplib"
 else
