@@ -76,15 +76,15 @@ mv-link() (
 
 #minecraft
 minecraft-restore() {
-	rm -rf ~/cloud/Dropbox/minecraft/saves.bak &&
-	mv     ~/cloud/Dropbox/minecraft/saves{,.bak} &&
-	cp -r  ~/install/minecraft/saves/minecraft-auto/saves ~/cloud/Dropbox/minecraft
+	rm -rf ~/.minecraft/saves.bak &&
+	mv     ~/.minecraft/saves{,.bak} &&
+	cp -r  ~/install/minecraft/saves/minecraft-auto/saves ~/.minecraft
 }
 minecraft-save() {
 	rm -rf   ~/install/minecraft/saves/minecraft-auto/saves.bak &&
 	mkdir -p ~/install/minecraft/saves/minecraft-auto/saves
 	mv       ~/install/minecraft/saves/minecraft-auto/saves{,.bak} &&
-	cp -r    ~/cloud/Dropbox/minecraft/saves ~/install/minecraft/saves/minecraft-auto
+	cp -r    ~/.minecraft/saves ~/install/minecraft/saves/minecraft-auto
 }
 
 # So cute!
