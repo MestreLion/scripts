@@ -34,8 +34,23 @@ timestamp() {
 	fi
 }
 
+# Profiling:
+# python3 -m cProfile -o myprog.profile ./myprog.py ...
+#
+# pip3 install --user gprof2dot
+# gprof2dot -f pstats myprog.profile -o myprog.dot
+# xdg-open myprog.dot  # requires GraphViz
+#
+# pip3 install --user snakeviz
+# snakeviz myprog.profile  # outputs lots of errors, but URL provided works
+
 pyprofile() {
 	python -m cProfile --sort=time "$@" |
+	{ awk -v l=$((LINES-10)) '/ncalls  tottime/{t=l}t==1{exit}t>0{t--}{print}'
+	cat - >/dev/null; }
+}
+pyprofile3() {
+	python3 -m cProfile --sort=time "$@" |
 	{ awk -v l=$((LINES-10)) '/ncalls  tottime/{t=l}t==1{exit}t>0{t--}{print}'
 	cat - >/dev/null; }
 }
