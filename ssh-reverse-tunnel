@@ -24,7 +24,7 @@ portoffset=1000
 
 config=${XDG_CONFIG_HOME:-$HOME/.config}/ssh-reverse-tunnel.conf
 keyfile=$HOME/.ssh/id_rsa.nopassword
-pidfile=$HOME/.ssh/ssh-reverse-tunnel.lock
+pidfile=$HOME/.ssh/ssh-reverse-tunnel.pid
 
 # Read config or create a default one
 if [[ -f "$config" ]]; then
@@ -38,20 +38,23 @@ else
 	EOF
 fi
 
-close_ssh() {
+ssh_close() {
 	if [[ -e "$pidfile" ]]; then
-		ssh -S "$pidfile" -O exit host  # 'host' can be any dummy string
+		kill "$(<"$pidfile")"
+		rm -f -- "$pidfile"  # autossh deletes it if closed normally
 	fi
 }
 
 case "${1:-}" in
--h|--help) echo -e 'Create or close multiple SSH reverse tunnels\nUsage: ssh-reverse-tunnel [-c]' >&2; exit;;
--c|--close) close_ssh; exit;;
+-h|--help  ) echo -e 'Create or close multiple SSH reverse tunnels\nUsage: ssh-reverse-tunnel [-c]' >&2; exit;;
+-c|--close ) ssh_close; exit;;
 esac
 
 # Create a password-less SSH key and upload to server
 if ! [[ -f "$keyfile" ]]; then
 	ssh-keygen -f "$keyfile" -P ""
+	chmod 0600 -- "$keyfile"
+	chmod 0644 -- "$keyfile".pub
 	ssh-copy-id -i "$keyfile" "${hostopts[@]}"
 fi
 
@@ -63,7 +66,10 @@ for port in "${ports[@]}"; do
 done
 
 # Close existing tunnels
-close_ssh
+ssh_close
 
 # Create the reverse SSH tunnels
-SSH_AUTH_SOCK=0 ssh -M -S "${pidfile}" -N -T -f -i "$keyfile" "${map[@]}" "${hostopts[@]}"
+export AUTOSSH_PIDFILE=$pidfile
+export AUTOSSH_PORT=$portoffset
+export SSH_AUTH_SOCK=0
+autossh -f -- -N -T -i "$keyfile" "${map[@]}" "${hostopts[@]}"
