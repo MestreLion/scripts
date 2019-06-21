@@ -1,0 +1,69 @@
+#!/bin/bash
+#
+# ssh-reverse-tunnel - Create multiple SSH reverse tunnels
+#
+#    Copyright (C) 2019 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program. See <http://www.gnu.org/licenses/gpl.html>
+
+# Override settings in config file: ~/.config/ssh-reverse-tunnel.conf
+ports=(80 22)
+hostopts=(user@example.com -p 2222)
+portoffset=1000
+
+config=${XDG_CONFIG_HOME:-$HOME/.config}/ssh-reverse-tunnel.conf
+keyfile=$HOME/.ssh/id_rsa.nopassword
+pidfile=$HOME/.ssh/ssh-reverse-tunnel.lock
+
+# Read config or create a default one
+if [[ -f "$config" ]]; then
+	source "$config"
+else
+	cat > "$config" <<-EOF
+		# ssh-reverse-tunnel settings
+		ports=(${ports[@]})
+		hostopts=(${hostopts[@]})
+		portoffset=$portoffset
+	EOF
+fi
+
+close_ssh() {
+	if [[ -e "$pidfile" ]]; then
+		ssh -S "$pidfile" -O exit host  # 'host' can be any dummy string
+	fi
+}
+
+case "${1:-}" in
+-h|--help) echo -e 'Create or close multiple SSH reverse tunnels\nUsage: ssh-reverse-tunnel [-c]' >&2; exit;;
+-c|--close) close_ssh; exit;;
+esac
+
+# Create a password-less SSH key and upload to server
+if ! [[ -f "$keyfile" ]]; then
+	ssh-keygen -f "$keyfile" -P ""
+	ssh-copy-id -i "$keyfile" "${hostopts[@]}"
+fi
+
+# Map remote ports using the rule: remote port = local port + port offset
+map=()
+for port in "${ports[@]}"; do
+	rport=$(($port + $portoffset))
+	map+=(-R "${rport}:localhost:${port}")
+done
+
+# Close existing tunnels
+close_ssh
+
+# Create the reverse SSH tunnels
+SSH_AUTH_SOCK=0 ssh -M -S "${pidfile}" -N -T -f -i "$keyfile" "${map[@]}" "${hostopts[@]}"
