@@ -45,10 +45,28 @@ ssh_close() {
 	fi
 }
 
-case "${1:-}" in
--h|--help  ) echo -e 'Create or close multiple SSH reverse tunnels\nUsage: ssh-reverse-tunnel [-c]' >&2; exit;;
--c|--close ) ssh_close; exit;;
-esac
+ssh_status() {
+	if [[ -e "$pidfile" ]]; then
+		output=$(ps --no-headers "$(<"$pidfile")")
+		if (($? == 0)); then
+			echo "$output"
+			return
+		fi
+	fi
+	return 1
+}
+
+if [[ "${1:-}" ]]; then
+	case "$1" in
+	-h|--help  ) echo -e 'Create or close multiple SSH reverse tunnels\nUsage: ssh-reverse-tunnel [-c|-s]' >&2; exit;;
+	-c|--close ) ssh_close; exit;;
+	-q|--quit  ) ssh_close; exit;;
+	   --stop  ) ssh_close; exit;;
+	-s|--status) ssh_status; exit;;
+	   --start ) ;;
+	          *) echo -e "Invalid option: $1" >&2; exit;;
+	esac
+fi
 
 # Create a password-less SSH key and upload to server
 if ! [[ -f "$keyfile" ]]; then
@@ -72,4 +90,5 @@ ssh_close
 export AUTOSSH_PIDFILE=$pidfile
 export AUTOSSH_PORT=$portoffset
 export SSH_AUTH_SOCK=0
+
 autossh -f -- -N -T -i "$keyfile" "${map[@]}" "${hostopts[@]}"
