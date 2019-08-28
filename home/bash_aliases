@@ -55,6 +55,15 @@ pyprofile3() {
 	cat - >/dev/null; }
 }
 
+sri-hash() {
+	if [[ -z "$1" ]]; then echo "Usage: sri-hash URL" >&2; return; fi
+	echo -n "<script src=\"$1\" integrity=\"sha256-"
+	curl -s4 "$1" |
+	openssl dgst -sha256 -binary |
+	openssl base64 -A
+	echo '" crossorigin="anonymous"></script>'
+}
+
 cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
 cmdcat()  { cat  "$(type -P "$1")" ; }
 cmdopen() { open "$(type -P "$1")" ; }
