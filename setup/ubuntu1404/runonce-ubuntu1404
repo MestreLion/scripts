@@ -1,0 +1,9 @@
+#!/bin/bash -x
+
+# Known differences from Ubuntu 12-04:
+
+# - gnome-terminal uses dconf/gsettings
+
+# - gnome-games-data package removed: files split to individual packages
+
+sudo apt-get install git gitg gedit-plugins
