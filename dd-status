@@ -29,7 +29,8 @@ integer() { [[ "$1" != *[!0-9]* ]] || argerr "'$1'${2:+ in $2} is not an integer
 invalid() { argerr "invalid option: $1" ; }
 missing() { argerr "missing ${2:+$2 }argument${1:+ from $1}." ; }
 
-is_running() { kill -0 $pid 2>/dev/null ; }
+is_running() { kill -0    $1 2>/dev/null ; }
+dd_status()  { kill -USR1 $1 2>/dev/null ; }
 
 usage() {
 	cat <<-USAGE
@@ -113,9 +114,15 @@ if is_running $pid; then
 	echo "dd PID:	$pid"
 	echo "Starting at $(date)"
 	echo "Reporting every $time seconds"
-	while is_running $pid; do
-		sleep "$time"
-		date
-		kill -USR1 $pid 2>/dev/null   # request dd status report
+	timer=$(($time - 1))  # account for `sleep 1` below
+	while sleep 1 && is_running $pid; do
+		if ((timer-- <= 0)); then
+			date
+			dd_status $pid || break  # May fail if dd has finished
+			timer=$(($time - 1))
+		fi
 	done
+	echo "Finished at $(date)"
 fi
+
+wait $pid  # Use dd exit status as program exit status
