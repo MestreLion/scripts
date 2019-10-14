@@ -1,0 +1,33 @@
+#!/bin/bash
+
+config=${XDG_CONFIG_HOME:-$HOME/.config}/git/config
+#template=${SCRIPTS:-$(readlink -f "$(dirname "$(readlink -f "$0")")/../..")}/git_template
+
+mkdir -p -- "${config%/*}"
+
+if ! [[ -f "$config" ]]; then
+	if [[ -z "$SCRIPTS" ]]; then
+		echo "\$SCRIPTS is not set! Git template dir won't work until scripts are installed" >&2
+	fi
+	cat > "$config" <<-EOF
+		[user]
+		name = MestreLion
+		email = linux@rodrigosilva.com
+
+		[alias]
+		lol  = log --graph --decorate --oneline
+		lola = log --graph --decorate --oneline  --all
+		lop  = log --patch-with-stat
+		st = status --untracked-files=no
+		at = add -u
+
+		[apply]
+		whitespace = fix
+
+		[init]
+		templatedir = \$SCRIPTS/git_template
+
+		[credential]
+		helper = cache --timeout=604800
+	EOF
+fi
