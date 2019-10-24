@@ -54,8 +54,8 @@ git diff-index --cached "$against" -- |
 cut -f2 |
 while IFS= read -r file ; do
 	fixed=
-	# Do nothing for removed files
-	if ! [ -f "$file" ]; then continue; fi
+	# Do nothing for removed or empty files
+	if ! [ -f "$file" ] || [ $(stat --printf="%s" -- "$file") -eq 0 ]; then continue; fi
 	# Fix issues
 	if ! git diff-index --check --cached "$against" -- "$file" >/dev/null ; then
 		# FIXME: "space-before-tab" only fix *leading* spaces, not *mixed* ones.
