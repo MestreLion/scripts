@@ -1,9 +1,22 @@
 #!/bin/bash -e
 
-setuplib=${1:-$SETUP_LIB}
+export SCRIPTS=$(readlink -f "${SETUP_SCRIPTS:-${SCRIPTS:-$(dirname "$(readlink -f "$0")")/../..}}")
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
 myname="${0##*/}"
 
-usage() { echo "Usage: SCRIPTS=<SCRIPTS> $myname SETUP_LIB" >&2; exit 1; }
+usage() { echo "Usage: [SCRIPTS=<SCRIPTS>] $myname [SETUP_LIB]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+# -----------------------------------------------------------------------------
 
 # Reference only
 uninstall() {
@@ -27,12 +40,6 @@ if ! [[ -d "$SCRIPTS" ]]; then
 	usage
 fi
 
-if [[ -r "$setuplib" ]]; then
-	source "$setuplib"
-else
-	echo "Setup library not found: '$setuplib'" >&2
-	usage
-fi
 
 # Nautilus 3.5.1 changed scripts paths, affects Ubuntu 14.04+
 # https://bugzilla.gnome.org/show_bug.cgi?id=646584
@@ -98,4 +105,5 @@ if ! [[ -h "$nautilus" ]]; then
 	mkdir -p "$nautilus"
 	rmdir "$nautilus" &&
 	ln -s "$(relpath "$custom" "$(dirname "$nautilus")")" "$nautilus"
+	nautilus -q
 fi
