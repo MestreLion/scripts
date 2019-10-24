@@ -6,6 +6,25 @@ export SETUP_DISTRO=ubuntu
 export SETUP_RELEASE=1204
 export SETUP_PROFILE=netbook
 
+packages=(
+	ubuntu-unity-desktop  # choose "lightdm"
+	xserver-xorg-input-synaptics  # enable "tap to click" on touchpad
+	git
+	gitg
+	gparted
+	gedit-plugins
+	acpi
+	powertop
+	default-jdk
+	eclipse
+	eclipse-pydev
+	dwww  # for 'mand'
+	curl  # some setup scripts
+)
+
+sudo apt install -y -- "${packages[@]}"
+
+
 abort() {
 	[[ "$1" ]] && echo "$1" >&2
 	echo "Usage: ${0##*/} SCRIPTS SETUP_LIB" >&2

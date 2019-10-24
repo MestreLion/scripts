@@ -1,37 +1,56 @@
 #!/bin/bash
 
 packages=(
-	ubuntu-unity-desktop  # choose "lightdm"
-	xserver-xorg-input-synaptics  # enable "tap to click" on touchpad
-	git
-	gitg
+	git{,g}
 	gparted
-	gedit-plugins
-	acpi
-	powertop
-	default-jdk
-	eclipse
-	eclipse-pydev
-	dwww  # for 'mand'
-	curl  # some setup scripts
+	python3-pip
+	ssh                         # installs both client (not needed) and server
+	default-jdk                 # minecraft, eclipse
+#	eclipse                     # maybe better using snap version
+#	eclipse-pydev               # Can be installed inside Eclipse
+#	curl                        # some setup scripts (such as?)
+	rdiff-backup                # pulls Python 2 :-(
+	nautilus-compare            # also pulls Python 2. And meld
+	cowsay fortunes{,-br,-off}  # cowfortune
 )
 
 sudo apt install -y -- "${packages[@]}"
 
-# Launcher
-# Remove: Thunderbird, Rhythmbox, LibreOffice Writer, Ubuntu Software, Help, Amazon
-# Add: Terminal, gedit
+# Fix Video Driver errors (DRM drm_kms_helper, flip_done timed out)
+config=/etc/default/grub
+if ! [[ -f "$config".bak ]]; then
+	sudo cp -- "$config"{,.bak}
+	sudo sed -i '/^[ \t]*GRUB_CMDLINE_LINUX_DEFAULT=/s/"$/ video=SVIDEO-1:d"/' -- "$config"
+	sudo update-grub
+fi
 
-# Gedit
-# Display Line Numbers
-# Display right margin
-# Highlight current line
-# Hightlight matching braces
-# Enable automatic indentation
-# Color Scheme Cobalt
-# Plugins: COde Comment, Draw Spaces, Sort
 
 # Setup scripts:
 # scripts	SCRIPTS=$HOME/work/scripts ./scripts.install ../setuplib
 # gitconfig
 # dwww
+
+# Eclipse
+# https://askubuntu.com/questions/1040341/snap-vs-apt-install-here-for-eclipse
+# sudo apt-get install ubuntu-make
+# umake ide eclipse  # AND/OR pycharm
+# OR
+# sudo apt install default-jdk
+# sudo snap install eclipse --classic
+
+# Official instructions from https://www.jetbrains.com/pycharm/download/#section=linux
+# sudo snap install pycharm-community --classic
+
+#$ sudo add-apt-repository ppa:webupd8team/atom
+#$ sudo apt-get update
+#$ sudo apt-get install atom
+
+# Also consider LiClipse
+
+# sudo snap install code --classic  # MS Visual Studio Code
+
+# Enable / Disable Guest Session
+# https://askubuntu.com/a/1112356/11015
+# https://askubuntu.com/a/915417/11015
+# sudo sh -c 'printf "[Seat:*]\nallow-guest=true\n" >/etc/lightdm/lightdm.conf.d/40-enable-guest.conf'
+
