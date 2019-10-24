@@ -8,22 +8,6 @@
 #	    . "$SCRIPTS/home/bashrc"
 #	fi
 
-# Advertise 256-color capability when using gnome-terminal.
-# Will only work until gnome-terminal v3.13, as it has removed the
-# setting of COLORTERM variable
-# OBS: gnome-256color terminfo is in ncurses-term package
-term=terminfo/x/xterm-256color
-if [[ "$COLORTERM" == gnome-terminal ]] &&
-   [[ "$TERM" == xterm ]] &&
-   [[ -r /lib/"$term"       ||  # ncurses-base package
-      -r /usr/share/"$term" ||  # ncurses-term, does not contain xterm-256color
-      -r /etc/"$term"       ||  # empty by default
-      -r "$HOME"/."$term"   ]]  # dir may not exist
-then
-	export TERM=${term##*/}
-fi
-unset term
-
 # enable programmable completion features (you don't need to enable
 # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
 # sources /etc/bash.bashrc).
@@ -59,7 +43,7 @@ PS1="${termcolor[RESET]}${termcolor[GREEN]}\u@\h ${termcolor[BLUE]}\w "\
 set +o histexpand # same as set +H
 
 # Create core dump files on segmentation fault. File `core` at current process dir
-ulimit -c unlimited
+#ulimit -c unlimited
 
 relpath() { python -c "import os,sys;print os.path.relpath(*sys.argv[1:3])" "$@"; }
 mv-link() (
