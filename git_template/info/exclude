@@ -1,2 +1,7 @@
+# Eclipse and Pydev (.pyproject)
 .*project
 .settings/
+
+# Python pre-compiled files
+__pycache__
+*.pyc
