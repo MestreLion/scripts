@@ -20,7 +20,7 @@ if ! version_greater "$(package_version libc6)" '2.17'; then
 fi
 
 # New releases
-if package_exists 'skype'; then
+if package_installed 'skype'; then
 	sudo apt-get purge 'skype'
 fi
 
