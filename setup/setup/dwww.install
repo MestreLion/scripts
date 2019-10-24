@@ -3,17 +3,24 @@
 # Fix DWWW 404 bug
 # https://askubuntu.com/questions/581118
 
-setuplib=${1:-$SETUP_LIB}
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+myname="${0##*/}"
+
+usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
 
 if [[ -r "$setuplib" ]]; then
 	source "$setuplib"
 else
 	echo "Setup library not found! $setuplib" >&2
-	echo "Usage: ${0##*/} SETUP_LIB" >&2
-	exit 1
+	usage
 fi
 
-required_install dwww
+# -----------------------------------------------------------------------------
 
-sudo a2enmod cgi
-sudo service apache2 restart
+required_install dwww  # Pulls apache2
+
+sudo a2enmod cgi  # Not enabled by default in apache 2.4+
+#sudo service apache2 restart
+sudo systemctl restart apache2
