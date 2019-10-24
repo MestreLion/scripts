@@ -4,6 +4,13 @@
 #   License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
 
 SETUP_VERBOSE=${SETUP_VERBOSE:-1}
+SETUP_DRYRUN=${SETUP_DRYRUN:-0}
+
+if ((SETUP_DRYRUN)); then
+	SETUP_RUN=echo
+else
+	SETUP_RUN=env
+fi
 
 if [[ -z "${SETUP_DISTRO:-}" ]]; then
 	SETUP_DISTRO=$(lsb_release -si)
@@ -29,7 +36,7 @@ if [[ -z "${SETUP_BITS:-}" ]]; then
 fi
 
 
-exists()  { type "$1" >/dev/null 2>&1; }
+exists()  { type "$@" >/dev/null 2>&1; }
 relpath() { python -c "import sys, os; print os.path.relpath(*sys.argv[1:])" "$@"; }
 message() { ((SETUP_VERBOSE)) && echo "$@"; }
 fatal()   { [[ "${1:-}" ]] && echo "${0##*/}: error: $1" >&2 ; exit ${2:-1} ; }
@@ -49,10 +56,14 @@ required() {
 }
 
 required_install() {
+	# Install a package if a command is missing
+	# Usage: required_install <PACKAGE> [COMMAND]
+	# By default COMMAND == PACKAGE
+	# For simply installing missing packages, use package_install()
 	local pkg=$1
-	local cmd=${2:-$1}
+	local cmd=${2:-$pkg}
 	if ! exists "$cmd"; then
-		sudo apt install -y "$pgk"
+		$SETUP_RUN sudo apt install -y -- "$pkg"
 	fi
 }
 
@@ -94,8 +105,34 @@ package_version() {
 	dpkg-query --showformat='${Version}' --show "$1" 2>/dev/null
 }
 
-package_exists() {
+package_installed() {
 	package_version "$1" >/dev/null
+}
+
+package_install() {
+	# Install all non-existing packages in a single command
+	# Usage: package_install [PACKAGE...]
+	local pkg=
+	local pkgs=()
+	for pkg in "$@"; do
+		if ! package_installed "$pkg"; then pkgs+=( "$pkg" ); fi
+	done
+	if (("${#pkgs[@]}")); then
+		$SETUP_RUN sudo apt install -y "${pkgs[@]}"
+	fi
+}
+
+package_remove() {
+	# Remove all existing packages in a single command
+	# Usage: package_remove [PACKAGE...]
+	local pkg=
+	local pkgs=()
+	for pkg in "$@"; do
+		if package_installed "$pkg"; then pkgs+=( "$pkg" ); fi
+	done
+	if (("${#pkgs[@]}")); then
+		$SETUP_RUN sudo apt remove -y "${pkgs[@]}"
+	fi
 }
 
 is_online() {
