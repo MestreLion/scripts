@@ -1,0 +1,98 @@
+#!/bin/bash
+#
+# backup-home - back up home folder using rdiff-backup
+#
+# Copyright (C) 2019 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+
+# Factory default options, configurable by config file
+# See notes on default config file creation
+dest=${1:-}
+mount=
+sudo_mount=0
+excludes=(
+	"$HOME"/.cache
+	"$HOME"/.thumbnails
+	"$HOME"/.local/share/Trash
+	'**/.Trash-*'
+	'**/*cache*/*'
+	'**/Temp/*'
+	'**/Temporary Internet Files/*'
+)
+options=(
+	--print-statistics
+	--terminal-verbosity 5
+	--exclude-special-files   # Exclude all device files, fifo files, socket files, and symbolic links.
+	--include-symbolic-links  # Re-include symbolic links
+)
+
+# Config file location
+config=${XDG_CONFIG_HOME:-$HOME/.config}/backup-home.conf
+
+myname="${0##*/}"
+
+fatal()   { [[ "${1:-}" ]] && echo "$myname: error: $@" >&2 ; exit 1; }
+exists()  { type "$@" >/dev/null 2>&1; }
+
+if ! exists rdiff-backup; then
+	sudo apt install -y rdiff-backup
+fi
+
+if ! [[ -f "$config" ]]; then
+	echo "warning: config file not found, creating blank one at $config" >&2
+	cat > "$config" <<-EOF
+	# backup-home config file
+	# Sourced by bash, mind the syntax!
+
+	# Full path to backup destination directory
+	# Can also be set on each run by command line argument
+	dest=$dest
+
+	# Mountpoint to auto-mount, usually backup destination dir or a parent
+	# Usually requires an entry on /etc/fstab for the device, set to 'noauto'
+	# Leave blank to disable automount
+	mount=
+
+	# If auto-mount and its mountpoint require sudo or not. 0 = no, 1 = yes
+	sudo_mount=0
+
+	# rdiff-backup general options
+	# Must be a Bash array
+	options=(
+		--print-statistics
+		--terminal-verbosity 5
+		--exclude-special-files   # Exclude all device files, fifo files, socket files, and symbolic links.
+		--include-symbolic-links  # Re-include symbolic links
+	)
+
+	# Paths to exclude from backup. Each entry will be prepended with
+	# '--exclude=' and included to rdiff-backup options
+	# Must be a Bash array
+	excludes=(
+		"\$HOME"/.cache
+		"\$HOME"/.thumbnails
+		"\$HOME"/.local/share/Trash
+		'**/.Trash-*'
+		'**/*cache*/*'
+		'**/Temp/*'
+		'**/Temporary Internet Files/*'  # Wine "bottles"
+	)
+
+	EOF
+fi
+
+source "$config" || fatal "could not read config file $config"
+
+[[ "$dest" ]] || fatal "backup destination directory not set"
+
+for exclude in "${excludes[@]}"; do
+	options+=(--exclude="$exclude")
+done
+
+if [[ "$mount" ]]; then
+	if ((sudo_mount)); then sudo=sudo; else sudo=env; fi
+	$sudo mount "$mount"
+fi
+
+cd "$HOME" &&
+echo rdiff-backup "${options[@]}" -- "$HOME" "$dest"
