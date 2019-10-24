@@ -2,12 +2,15 @@
 
 # Gedit plugins and preferences
 
-setuplib=${1:-$SETUP_LIB}
+
+# TODO: Configure External Tools
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
 recents=${2:-${SETUP_GEDIT_RECENTS:-25}}
 
 myname="${0##*/}"
 
-usage() { echo "Usage: ${0##*/} SETUP_LIB [RECENTS]" >&2; exit 1; }
+usage() { echo "Usage: ${0##*/} [SETUP_LIB] [RECENTS]" >&2; exit 1; }
 
 if [[ -r "$setuplib" ]]; then
 	source "$setuplib"
@@ -16,42 +19,88 @@ else
 	usage
 fi
 
+# -----------------------------------------------------------------------------
+
 integer "$recents" "RECENTS" || usage
 
+gs_op_list() {
+	# See: https://developer.gnome.org/glib/stable/gvariant-text.html
+	# and  https://developer.gnome.org/glib/stable/glib-GVariantType.html
+	local op=${1:-}    # Operation to perform: 'add' or 'del'
+	local path=${2:-}  # GSettings path
+	local key=${3:-}   # GSettings key
+	local type=${4:-}  # List item type: 's' for string, 'u' for uint32
+	shift 4            # Remaining arguments are list items to add or del
 
-gs_add_list() {
-	local path=$1
-	local key=$2
-	shift; shift
+	if [[ -z "$op" || -z "$path" || -z "$key" || -z "$type" ]]; then
+		return 1
+	fi
+
 	local list=$(gsettings get "$path" "$key")
-	local newlist
-	newlist=$(python -c "
+	if [[ -z "$list" ]]; then
+		return 2
+	fi
+
+	local newlist=$(python3 -c "
+# Uses list instead of set to preserve order
 import sys, json
-if len(sys.argv) > 1:
-	l=json.loads(sys.argv[1].replace(\"'\", '\"'))
-else:
-	l=[]
-print repr([str(_) for _ in l if _ not in sys.argv[2:]] + sys.argv[2:])
-" "$list" "$@")
-	gsettings set "$path" "$key" "$newlist"
+op, itemtype, strlist, *items = sys.argv[1:]
+if strlist.startswith('@'):  # type annotation for empty lists: '@as []'
+	strlist = strlist.split(' ', 1)[1]
+curlist = json.loads(strlist.replace(\"'\", '\"'))
+if op == 'del':
+	newlist = [_ for _ in curlist if _ not in items]
+else:  # 'add'
+	newlist = curlist + [_ for _ in items if _ not in curlist]
+print('@a{0} {1!r}'.format(itemtype, newlist))
+" "$op" "$type" "$list" "$@")
+	$SETUP_RUN gsettings set "$path" "$key" "$newlist"
 }
+gs_add_list() { gs_op_list 'add' "$@"; }
+gs_del_list() { gs_op_list 'del' "$@"; }
 
 gsrootpath=org.gnome.gedit
 gsprefpath=${gsrootpath}.preferences
 
 # Preferences
-gsettings set "$gsprefpath".editor  auto-indent             true
-gsettings set "$gsprefpath".editor  auto-save               true
-gsettings set "$gsprefpath".editor  bracket-matching        true
-gsettings set "$gsprefpath".editor  create-backup-copy      false
-gsettings set "$gsprefpath".editor  display-line-numbers    true
-gsettings set "$gsprefpath".editor  display-right-margin    true
-gsettings set "$gsprefpath".editor  highlight-current-line  true
-gsettings set "$gsprefpath".editor  scheme                  'cobalt'
-gsettings set "$gsprefpath".ui      max-recents             "$recents"
+$SETUP_RUN gsettings set "$gsprefpath".editor  display-line-numbers    true        # View
+$SETUP_RUN gsettings set "$gsprefpath".editor  display-right-margin    true        # View
+$SETUP_RUN gsettings set "$gsprefpath".editor  highlight-current-line  true        # View
+$SETUP_RUN gsettings set "$gsprefpath".editor  bracket-matching        true        # View
+$SETUP_RUN gsettings set "$gsprefpath".editor  auto-indent             true        # Editor
+$SETUP_RUN gsettings set "$gsprefpath".editor  auto-save               true        # Editor
+$SETUP_RUN gsettings set "$gsprefpath".editor  create-backup-copy      false       # Editor, default in Ubuntu 18.04
+$SETUP_RUN gsettings set "$gsprefpath".editor  scheme                  'cobalt'    # Fonts & Colors
+$SETUP_RUN gsettings set "$gsprefpath".ui      max-recents             "$recents"  # not in GUI
 
 # Plugins
-gs_add_list org.gnome.gedit.plugins active-plugins \
-	changecase  \
-	drawspaces  \
+# See https://wiki.gnome.org/Apps/Gedit/PluginsLists
+
+packages=(
+	gedit-plugins
+	gedit-plugin-text-size   # Strangely not included above
+#	gedit-developer-plugins  # does not work, not very useful, pulls way too many packages
+)
+
+pluginadd=(
+	changecase
 	codecomment
+	drawspaces
+	externaltools
+	findinfiles
+#	git             # interesting, but disruptive
+	joinlines
+	snippets
+	sort
+	textsize
+#	translate       # not useful
+	wordcompletion
+)
+
+plugindel=(
+	modelines
+)
+
+package_install "${packages[@]}" &&
+gs_del_list org.gnome.gedit.plugins active-plugins s "${plugindel[@]}" &&
+gs_add_list org.gnome.gedit.plugins active-plugins s "${pluginadd[@]}"
