@@ -1,38 +1,38 @@
 #!/bin/bash -eu
 
 # Firefox preferences
-#	backspace for history.back: browser.backspace_action;2 -> 0
-#	increase window restore: browser.sessionstore.max_windows_undo;3 -> 10
 
-# Multiprocess windows: improved performance
-# http://www.omgubuntu.co.uk/2017/04/small-tweak-makes-firefox-linux-run-much-faster
-#	Test:
-#		about:support
-#	Some Add-ons are incompatible, namely
-#		Ubuntu modifications
-#		Add to Search Bar
-#	https://wiki.mozilla.org/Electrolysis#Force_Enable
+# TODO: Skel, UI, Sync
 
-# Enable Hardware acceleration (will be default on FF 57)
-# http://www.omgubuntu.co.uk/2017/04/small-tweak-makes-firefox-linux-run-much-faster
-#	layers.acceleration.force-enabled;false -> true
-#	Faster, but many reports of high CPU usage, even on idle
-#	Preferences > Advanced > Browsing > Use hardware acceleration when available
-#	Is there a difference beetween setting it in about:config and advanced settings?
-#		about config include experimental features that arent fully polished.
-#	Read the comments, all of them. Many extra tips
+# -----------------------------------------------------------------------------
 
-#########
-#setuplib=${1:-$SETUP_LIB}
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+myname="${0##*/}"
 
-#myname="${0##*/}"
+usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
 
-#usage() { echo "Usage: ${0##*/} SETUP_LIB" >&2; exit 1; }
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
 
-#if [[ -r "$setuplib" ]]; then
-#	source "$setuplib"
-#else
-#	echo "Setup library not found! $setuplib" >&2
-#	usage
-#fi
-#########
+# -----------------------------------------------------------------------------
+
+profile=($HOME/.mozilla/firefox/*.default)
+
+if ! [[ -d "$profile" ]]; then
+	firefox
+	profile=($HOME/.mozilla/firefox/*.default)
+fi
+
+[[ -d "$profile" ]] || fatal "could not determine default user profile directory"
+
+killall -q firefox || :
+
+cat > "$profile"/user.js <<-EOF
+	//@@ Firefox Preferences, added by firefox.install
+	user_pref("browser.backspace_action", 0);
+	user_pref("browser.sessionstore.max_windows_undo", 10);
+EOF
