@@ -1,0 +1,31 @@
+#!/bin/bash -e
+
+# MiniDLNA
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+
+usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+# -----------------------------------------------------------------------------
+
+package_install minidlna
+
+# Fix "WARNING: Inotify max_user_watches [8192] is low ..."
+# https://forum.excito.com/viewtopic.php?t=3592
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=613219
+
+# echo 65536 > /proc/sys/fs/inotify/max_user_watches  # single session
+# sysctl fs.inotify.max_user_watches=66536  # ?
+# /etc/sysctl	fs.inotify.max_user_watches = 66536  # Permanent
+
+
+# TODO: Patch config file!

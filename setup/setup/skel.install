@@ -1,0 +1,58 @@
+#!/bin/bash -e
+
+bakdir=${SETUP_SKEL:-/backup/$USER}
+
+dirs=(
+	.ssh
+	.config/cowfortune
+	.config/legendastv
+)
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+
+usage() { echo "Usage: [SETUP_SKEL=<DIR>] ${0##*/} [SETUP_LIB]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+# -----------------------------------------------------------------------------
+
+if ! [[ -d "$bakdir" ]]; then
+	echo "Backup directory not found: '$bakdir'" >&2
+	usage
+fi
+
+folders=()
+for dir in "${dirs[@]}"; do
+	source=$bakdir/$dir
+	dest=$HOME/$dir
+	if ! [[ -d "$source" ]]; then
+		echo "Source dir does not exist in backup: $source" >&2
+		continue
+	fi
+	if [[ -d "$dest" ]]; then
+		echo "Skipping existing directory in destination: $dest" >&2
+		continue
+	fi
+	folders+=( "$dir" )
+done
+
+if [[ -z "$folders" ]]; then
+	echo "No sources to be copied" >&2
+	exit
+fi
+
+for folder in "${folders[@]}"; do
+	source=$bakdir/$folder
+	dest=$HOME/$folder
+	$SETUP_RUN mkdir -p -- "$(dirname "$dest")"
+	$SETUP_RUN cp --verbose --archive -- "$source" "$dest"
+done
+
+

@@ -1,0 +1,27 @@
+#!/bin/bash -e
+
+# Retroarch Install via PPA
+# https://www.retroarch.com/index.php?page=linux-instructions
+
+# TODO: update cores and assets!
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+
+usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+# -----------------------------------------------------------------------------
+
+if ! exists retroarch; then
+	$SETUP_RUN sudo apt-add-repository -y -- 'ppa:libretro/stable' &&
+	$SETUP_RUN sudo apt update &&
+	$SETUP_RUN sudo apt install -y -- 'retroarch*'
+fi

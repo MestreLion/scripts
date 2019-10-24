@@ -1,0 +1,40 @@
+#!/bin/bash -x
+
+# Ubuntu Unity Desktop Environment settings
+
+# TODO
+# Launcher
+# Remove: Thunderbird, Rhythmbox, LibreOffice Writer, Ubuntu Software, Help, Amazon
+# Add: Terminal, gedit
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+myname="${0##*/}"
+
+usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+# -----------------------------------------------------------------------------
+
+
+# Install Unity, pre-setting lightdm as default login manager
+$SETUP_RUN sudo debconf-set-selections <<< "lightdm	shared/default-x-display-manager	select	lightdm"
+package_install ubuntu-unity-desktop
+
+# Re-Enable Guest Sessions
+# To Revert (disable): sudo rm -- "$conf"
+conf=/etc/lightdm/lightdm.conf.d/40-enable-guest.conf
+if ! [[ -f "$conf" ]]; then
+	printf "[Seat:*]\nallow-guest=true\n" |
+	$SETUP_RUN sudo tee -- "$conf"
+fi
+
+# Hide Keyboard Indicator
+$SETUP_RUN gsettings set  com.canonical.indicator.keyboard  visible  false

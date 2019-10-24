@@ -1,0 +1,58 @@
+#!/bin/bash -e
+
+# Lutris Install via PPA
+# https://lutris.net/downloads/
+
+# FIXME: Change preferences in Lutris to set a cache dir
+# FIXME: https://github.com/lutris/lutris/wiki/How-to:-Esync
+# TODO: Pre-install wine-gecko and wine-mono
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+
+usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+# -----------------------------------------------------------------------------
+
+# Wine
+required_install wine{-stable,}
+
+# Vulkan Drivers
+# https://github.com/lutris/lutris/wiki/Installing-drivers#amd--intel
+# (only the last step is necessary on Ubuntu 18.04+ with bionic-updates repo)
+package_install mesa-vulkan-drivers{,:i386}
+
+# Esync
+# https://github.com/lutris/lutris/wiki/How-to:-Esync
+# TODO: add a file at /etc/systemd/user.conf.d/ instead of editing /etc/systemd/user.conf
+limit=524288
+if (( "$(ulimit -Hn)" < "$limit" )); then
+	confs=( /etc/systemd/{system,user}.conf )
+	for conf in "${confs[@]}"; do
+		bak="$conf".lutris.bak
+		if ! [[ -f "$bak" ]]; then
+			$SETUP_RUN sudo cp -- "$conf" "$bak"
+			$SETUP_RUN sudo tee -a -- "$conf" <<-EOF
+			
+			#@@ Esync support, added by Lutris Install
+			DefaultLimitNOFILE=$limit
+			EOF
+		fi
+	done
+fi
+
+if ! exists lutris; then
+	$SETUP_RUN sudo apt-add-repository -y -- 'ppa:lutris-team/lutris' &&
+	$SETUP_RUN sudo apt update &&
+	$SETUP_RUN sudo apt install -y -- 'lutris'
+fi
+
+

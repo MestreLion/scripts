@@ -1,0 +1,35 @@
+#!/bin/bash -e
+
+# Motherboard Asus ROG Stryx X470-F Gaming
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+
+usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+# -----------------------------------------------------------------------------
+
+module=asus-wmi-sensors
+
+SCRIPTS=${SCRIPTS:-$HOME/work/scripts}
+dir=${SETUP_ASUS:-$(readlink -f "$SCRIPTS"/../"$module")}
+
+package_install git
+
+git clone -- 'https://github.com/electrified/asus-wmi-sensors.git' "$dir"
+cd "$dir"
+
+sudo make dkms
+sudo modprobe "$module"
+
+echo "$module" | sudo tee /etc/modules-load.d/"$module".conf
+
+

@@ -1,0 +1,23 @@
+#!/bin/bash -e
+
+# Steam
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+
+usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+# -----------------------------------------------------------------------------
+
+package_install steam
+
+# TODO: Enable Proton for all games
+# Steam > Settings > Steam Play > Advanced > 'Enable Steam Play for all other titles'

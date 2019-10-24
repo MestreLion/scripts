@@ -1,0 +1,55 @@
+#!/bin/bash -e
+
+# Oracle MySQL Repository
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+myname="${0##*/}"
+
+usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+# -----------------------------------------------------------------------------
+
+urlrepo=http://repo.mysql.com/apt
+urlmanual=http://dev.mysql.com/downloads/workbench/
+
+# Official, requires awk to parse
+# http://dev.mysql.com/doc/refman/en/checking-gpg-signature.html
+# parse=1
+
+# Unofficial, but easy to use and seems always updated
+urlkey=https://repo.mysql.com/RPM-GPG-KEY-mysql
+parse=0
+
+components=(mysql-{8.0,5.7,tools})
+
+# -----------------------------------------------------------------------------
+
+errmsg="Unable to install, install it manually from '$urlmanual'"
+exists apt-key apt-add-repository ||
+	fatal "$errmsg"
+
+if ((parse)); then
+	parsecmd=(awk '/^-+(BEGIN|END) PGP PUBLIC KEY BLOCK-+$/{if(ok){print;exit}else ok=1}ok{print}')
+else
+	parsecmd=(cat)
+fi
+
+distro=${SETUP_DISTRO,,}
+case "$distro" in
+	ubuntu|debian);;
+	linuxmint) distro=ubuntu;;
+	*) fatal "$errmsg";;
+esac
+
+wget -qO- "$urlkey" |
+"${parsecmd[@]}" |
+$SETUP_RUN sudo apt-key add - &&
+$SETUP_RUN sudo apt-add-repository "$urlrepo/$distro/ ${components[*]}" &&
+$SETUP_RUN sudo apt update -qq
