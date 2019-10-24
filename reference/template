@@ -20,6 +20,10 @@
 # Long description
 # ... that may span over multiple lines
 
+# Copyright (C) 2019 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+
+
 myname="${0##*/}"
 mydir=$(dirname "$(readlink -f "$0")")
 verbose=0
@@ -41,6 +45,7 @@ message() { ((verbose)) && echo "$(green '* ' "$@")" || :; }
 fatal()   { [[ "${1:-}" ]] && echo "$myname: error: $@" >&2 ; exit 1; }
 fatal()   { [[ "${1:-}" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
 message() { if ((verbose)); then printf "%s\n" "${1:-}"; fi; }
+exists()  { type "$@" >/dev/null 2>&1; }
 skip()    { i=${2:-$file}; message "skipping${i:+ $i}${1:+: $1}"; continue ; }
 argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1 ; }
 invalid() { argerr "invalid option: ${1:-}" ; }
