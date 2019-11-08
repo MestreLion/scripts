@@ -3,7 +3,6 @@
 packages=(
 	git{,g}
 	gparted
-	python3-pip
 	ssh                         # installs both client (not needed) and server
 	default-jdk                 # minecraft, eclipse
 #	eclipse                     # maybe better using snap version
@@ -11,12 +10,17 @@ packages=(
 #	curl                        # some setup scripts (such as?)
 	rdiff-backup                # pulls Python 2 :-(
 	nautilus-compare            # also pulls Python 2. And meld
-	cowsay fortunes{,-br,-off}  # cowfortune
+	deluge                      # another fan of python 2
+	jstest-gtk
+	gnome-cards-data
+	cowsay fortunes{,-br,-off} lolcat  # cowfortune
 )
 
 sudo apt install -y -- "${packages[@]}"
 
 # Fix Video Driver errors (DRM drm_kms_helper, flip_done timed out)
+# This all might be fixed in Ubuntu 18.04.3 (2019-10) or 20.04
+sudo apt purge xserver-xorg-video-intel
 config=/etc/default/grub
 if ! [[ -f "$config".bak ]]; then
 	sudo cp -- "$config"{,.bak}
@@ -53,4 +57,3 @@ fi
 # https://askubuntu.com/a/1112356/11015
 # https://askubuntu.com/a/915417/11015
 # sudo sh -c 'printf "[Seat:*]\nallow-guest=true\n" >/etc/lightdm/lightdm.conf.d/40-enable-guest.conf'
-

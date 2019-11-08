@@ -6,6 +6,8 @@ dirs=(
 	.ssh
 	.config/cowfortune
 	.config/legendastv
+	.config/gnome-games
+	.config/hexchat     # see notes on rodrigo.txt!
 )
 
 # -----------------------------------------------------------------------------

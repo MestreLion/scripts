@@ -6,15 +6,12 @@
 # -----------------------------------------------------------------------------
 
 setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
-myname="${0##*/}"
-
-usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
-
 if [[ -r "$setuplib" ]]; then
 	source "$setuplib"
 else
 	echo "Setup library not found! $setuplib" >&2
-	usage
+	echo "Usage: ${0##*/} [SETUP_LIB]" >&2
+	exit 1
 fi
 
 # -----------------------------------------------------------------------------
@@ -22,5 +19,4 @@ fi
 required_install dwww  # Pulls apache2
 
 sudo a2enmod cgi  # Not enabled by default in apache 2.4+
-#sudo service apache2 restart
 sudo systemctl restart apache2

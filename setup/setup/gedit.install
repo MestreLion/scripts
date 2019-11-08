@@ -4,6 +4,7 @@
 
 
 # TODO: Configure External Tools
+# TODO: Add gedi: https://github.com/isamert/gedi
 
 setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
 recents=${2:-${SETUP_GEDIT_RECENTS:-25}}
