@@ -47,7 +47,8 @@ print_monitors() {
 		h=0
 	}
 	h {sub(/[ \t]+/, ""); hex = hex $0}
-	/EDID.*:/ {h=1}' | sort)
+	/EDID.*:/ {h=1}' | sort
+	)
 }
 
 # if there's no pre-defined monitors list, read from xrandr
@@ -105,8 +106,8 @@ usage() {
 
 	  -a|--all           - enable all monitors.
 	  -s|--select OUTPUT - enable monitor OUTPUT, disable all others.
-	  -l|--left          - enable leftmost monitor.  Alias for --select ${monitors[0]}
-	  -r|--right         - enable rightmost monitor. Alias for --select ${monitors[${#monitors[@]}-1]}
+	  -l|--left          - select leftmost monitor.  Alias for --select ${monitors[0]}
+	  -r|--right         - select rightmost monitor. Alias for --select ${monitors[${#monitors[@]}-1]}
 
 	Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
