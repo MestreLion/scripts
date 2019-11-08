@@ -1,0 +1,34 @@
+#!/bin/bash -e
+
+# Pip and other development tools for Python 3
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	echo "Usage: ${0##*/} [SETUP_LIB]" >&2
+	exit 1
+fi
+
+# -----------------------------------------------------------------------------
+
+# Pip
+#
+# Motivation: pip3 from repository end up reading/using repository versions of
+# colorama, apport, and others, from /usr/lib/python3/dist-packages and
+# /usr/share/python-wheels, which are old and emit DeprecationWarnings like
+# 'imp module is deprecated in favour of importlib' and 'invalid escape sequence'
+# So we temporarily apt-install repository pip, use it to pip-install pip from
+# PyPi as a user install, which reads modern versions from ~/.local/{share,lib},
+# and finally purge the system-wide apt package
+# Note: Keeping both result in chaos. But I'll try anyway
+package_install python3-pip
+$SETUP_RUN pip3 install --user --upgrade pip
+#$SETUP_RUN sudo apt purge python3-pip
+
+
+#https://sourcery.ai/blog/python-best-practices/
+# Local development: use `pip install --user -e .` (better than python3 setup.py --develop)
