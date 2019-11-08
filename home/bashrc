@@ -80,7 +80,7 @@ PS1="${C[RESET]}${C[PURPLE]}\t ${C[GREEN]}\u@\h ${C[BLUE]}\w "\
 
 unset C
 
-# ------------------------------------------------------------------------------
+# Settings ---------------------------------------------------------------------
 
 # Disable the dreaded history expansion for interactive sessions
 # A.K.A 'why echo "Hello World!" do not work?'
@@ -88,39 +88,6 @@ set +o histexpand # same as set +H
 
 # Create core dump files on segmentation fault. File `core` at current process dir
 #ulimit -c unlimited
-
-# Functions (should be moved to bash_aliases)-----------------------------------
-
-mv-link() (
-	local newdir=$1
-	local msg1="Move all symlinks from current dir to another path, and make them relative"
-	local msg2="Usage: mv-link DESTDIR"
-	[[ "$newdir" ]] || { printf '%s\n%s\n' "$msg1" "$msg2"; return 1; }
-	while read -r link; do
-		ln -s "$(relpath "$(readlink -n "$link")" "$newdir")" \
-			"$newdir/$(basename "$link")" &&
-		rm "$link"
-	done < <(find "." -maxdepth 1 -type l)
-)
-
-# Minecraft
-_minecraft_saverestore() {
-	local src=$HOME/.minecraft/saves
-	local dst=$HOME/install/minecraft/saves/minecraft-auto/saves
-	local mode=${1:-save}
-	if [[ "$mode" == "restore" ]]; then
-		local tmp=$src
-		src=$dst
-		dst=$tmp
-	fi
-	[[ -d "$src" ]] || { echo "$src does not exist" >&2; return 1; }
-	rm -rf   -- "$dst".bak     &&   # Delete destination backup, if exists
-	mkdir -p -- "$dst"         &&   # Create destination
-	mv       -- "$dst"{,.bak}  &&   # Backup destination
-	cp -r    -- "$src" "${dst%/*}"  # Copy Source to Destination
-}
-minecraft-save()    { _minecraft_saverestore save;    }
-minecraft-restore() { _minecraft_saverestore restore; }
 
 # ------------------------------------------------------------------------------
 
