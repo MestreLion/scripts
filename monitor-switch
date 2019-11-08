@@ -17,11 +17,15 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program. See <http://www.gnu.org/licenses/gpl.html>
 
+# TODO: Allow multiple monitors on --select
+
 declare -A monitor_opts
 declare -a monitors
 
 myname="${0##*/}"
 verbose=0
+list=0
+all=0
 
 # Read settings from config file
 config=${XDG_CONFIG_HOME:-"$HOME"/.config}/"$myname".conf
@@ -120,7 +124,7 @@ for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
 while (( $# )); do
 	case "$1" in
 	-v|--verbose) verbose=1 ;;
-	-q|--no-notify) notify=0 ;;
+	-q|--no-notify) notify=0;;  # undocumented. For future `notify-send`
 	-l|--list) list=1 ;;
 	-a|--all) all=1 ;;
 	-s|--select) shift ; monitor="$1" ;;
@@ -137,7 +141,7 @@ if ((list)); then
 	exit
 fi
 
-if [[ -z "$monitor" && -z "$all" ]]; then
+if [[ -z "$monitor" ]] && ! ((all)); then
 	usage
 fi
 
