@@ -70,10 +70,12 @@ cmdcat()  { cat  "$(type -P "$1")" ; }
 cmdopen() { open "$(type -P "$1")" ; }
 complete -c cmdlist cmdcat cmdopen
 
+alias why='aptitude why'  # can also be 'apt cache rdepends --installed'
+
 ubuntu-package() {
 	open "http://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"
 }
-complete -F _comp_pkg_names ubuntu-package
+complete -F _comp_pkg_names ubuntu-package why
 
 compile() { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
 
