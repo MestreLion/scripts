@@ -8,11 +8,19 @@
 #	    . "$SCRIPTS/home/bashrc"
 #	fi
 
-# enable programmable completion features (you don't need to enable
-# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
-# sources /etc/bash.bashrc).
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-    . /etc/bash_completion
+# Supporting Functions (for scripts, not terminal, those go to bash_aliases) ---
+
+relpath() { python -c "import os,sys;print os.path.relpath(*sys.argv[1:3])" "$@"; }
+exists()  { type "$@" >/dev/null 2>&1; }
+
+# ------------------------------------------------------------------------------
+
+# Enable bash-completion, if not already enabled by ~/.bashrc
+if	[ -z "${BASH_COMPLETION_VERSINFO:-}" ] &&
+	[ -f /usr/share/bash-completion/bash_completion ] &&
+	! shopt -oq posix
+then
+	source /usr/share/bash-completion/bash_completion
 fi
 
 if [ -f "$SCRIPTS/home/bash_aliases" ] ; then
@@ -45,7 +53,8 @@ set +o histexpand # same as set +H
 # Create core dump files on segmentation fault. File `core` at current process dir
 #ulimit -c unlimited
 
-relpath() { python -c "import os,sys;print os.path.relpath(*sys.argv[1:3])" "$@"; }
+# Functions (should be moved to bash_aliases)-----------------------------------
+
 mv-link() (
 	local newdir=$1
 	local msg1="Move all symlinks from current dir to another path, and make them relative"
@@ -58,18 +67,26 @@ mv-link() (
 	done < <(find "." -maxdepth 1 -type l)
 )
 
-#minecraft
-minecraft-restore() {
-	rm -rf ~/.minecraft/saves.bak &&
-	mv     ~/.minecraft/saves{,.bak} &&
-	cp -r  ~/install/minecraft/saves/minecraft-auto/saves ~/.minecraft
+# Minecraft
+_minecraft_saverestore() {
+	local src=$HOME/.minecraft/saves
+	local dst=$HOME/install/minecraft/saves/minecraft-auto/saves
+	local mode=${1:-save}
+	if [[ "$mode" == "restore" ]]; then
+		local tmp=$src
+		src=$dst
+		dst=$tmp
+	fi
+	[[ -d "$src" ]] || { echo "$src does not exist" >&2; return 1; }
+	rm -rf   -- "$dst".bak     &&   # Delete destination backup, if exists
+	mkdir -p -- "$dst"         &&   # Create destination
+	mv       -- "$dst"{,.bak}  &&   # Backup destination
+	cp -r    -- "$src" "${dst%/*}"  # Copy Source to Destination
 }
-minecraft-save() {
-	rm -rf   ~/install/minecraft/saves/minecraft-auto/saves.bak &&
-	mkdir -p ~/install/minecraft/saves/minecraft-auto/saves
-	mv       ~/install/minecraft/saves/minecraft-auto/saves{,.bak} &&
-	cp -r    ~/.minecraft/saves ~/install/minecraft/saves/minecraft-auto
-}
+minecraft-save()    { _minecraft_saverestore save;    }
+minecraft-restore() { _minecraft_saverestore restore; }
+
+# ------------------------------------------------------------------------------
 
 # So cute!
-type cowfortune >/dev/null 2>&1 && cowfortune
+exists cowfortune && cowfortune | { exists lolcat && lolcat || cat; }
