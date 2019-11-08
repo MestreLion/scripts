@@ -34,11 +34,14 @@ export SCRIPTS=${SCRIPTS:-"$HOME"/work/scripts}
 # Note that folders will be prepended in the *reverse* order
 prepend_path() { add_path "$1" "${2:-}"   ; }
 append_path()  { add_path "$1" "${2:-}" 1 ; }
-add_path()
-{
-	SAVED_IFS="$IFS"
+add_path() {
+	# $1 = a single path
+	# $2 = force add even if path does not exist (but not dupe entries)
+	# $3 = append or prepend
+	local SAVED_IFS=$IFS
+	local folder
 	IFS=:
-	for folder in $1 ; do
+	for folder in ${1:-} ; do
 		if [ -z "${2:-}" ] && ! [ -d "$folder" ] ; then
 			continue
 		fi
@@ -50,14 +53,15 @@ add_path()
 			fi
 		fi
 	done
-	IFS="$SAVED_IFS"
-	unset folder
+	IFS=$SAVED_IFS
 }
 
 ##############################################################################
 
-# Add scripts bin and current folder to PATH
-prepend_path "/usr/local/games:$SCRIPTS:$HOME/.local/bin" 1
+# Add bins paths to PATH
+# /usr/local/games is already set in /etc/environment and /etc/login.defs
+# ~/.local/bin is set afterwards in ~/.profile
+prepend_path "$SCRIPTS"  add_non_dir
 
 # Add some projects
 append_path "$HOME/work/git-tools:$HOME/work/wine-tools:$HOME/work/xdg-tools"
@@ -68,25 +72,45 @@ export PATH
 # could also use ls -l --block-size="'1" as alias
 export LS_BLOCK_SIZE="'1"
 
-# Debian Development
-export DEBFULLNAME="Rodrigo Silva"
-export DEBEMAIL="debian@rodrigosilva.com"
-
-#Python
-#export PYTHONPATH="$PYTHONPATH":"$HOME"/work
-export PYTHONWARNINGS=default  # re-enable DeprecationWarning's disabled in Python 2.7
-export PYTHONIOENCODING=UTF-8
-
-# PyLint
-export PYLINTHOME=${XDG_CACHE_HOME:-$HOME/.cache}/pylint
-export PYLINTRC=${XDG_CONFIG_HOME:-$HOME/.config}/pylintrc
-
 # Locales
 export LANG="en_US.utf8"
 export LANGUAGE="en_US:en"
 export LC_MESSAGES="en_US.utf8"
-#export LC_NUMERIC="pt_BR.utf8" # qt4 (and maybe others) unfortunately use this
-#export LC_TIME="pt_BR.utf8"
-#export LC_MONETARY="pt_BR.utf8"
-#export LC_PAPER="pt_BR.utf8"
-#export LC_MEASUREMENT="pt_BR.utf8"
+export LC_NUMERIC="pt_BR.utf8" # qt4 (and maybe others) unfortunately use this
+export LC_TIME="pt_BR.utf8"
+export LC_MONETARY="pt_BR.utf8"
+export LC_PAPER="pt_BR.utf8"
+export LC_MEASUREMENT="pt_BR.utf8"
+
+# Python ----------------------------------------------------------------------
+
+# Disabled, use `pip install --user -e` for local projects
+#export PYTHONPATH=${PYTHONPATH:+${PYTHONPATH}:}:$HOME/work
+
+# Enable all DeprecationWarnings. Default all disabled in Python 2.7, some in 3
+# Disabled to keep default behavior, otherwise `pip` is very noisy
+#export PYTHONWARNINGS=default
+
+# Not needed for Python 3
+#export PYTHONIOENCODING=UTF-8
+
+# Not yet implemented on 3.8: https://bugs.python.org/issue29779
+export PYTHONHISTORY=${XDG_CONFIG_HOME:-$HOME/.config}/python_history  # or /python/history
+
+# IPython/Jupiter
+# Both already used XDG_CONFIG_HOME for a while, then reverted :-(
+# https://github.com/jupyter/notebook/issues/2374
+# https://github.com/ipython/ipython/issues/48
+export IPYTHONDIR=${XDG_CONFIG_HOME:-$HOME/.config}/ipython
+export JUPYTER_CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}/jupyter
+
+# PyLint
+# https://github.com/PyCQA/pylint/issues/1364
+export PYLINTHOME=${XDG_CACHE_HOME:-$HOME/.cache}/pylint    # Default ~/.pylint.d/
+export PYLINTRC=${XDG_CONFIG_HOME:-$HOME/.config}/pylintrc  # Default ~/.pylintrc
+
+# -----------------------------------------------------------------------------
+
+# Debian Development
+export DEBFULLNAME="Rodrigo Silva"
+export DEBEMAIL="debian@rodrigosilva.com"
