@@ -18,7 +18,13 @@ alias trash="trash-put"
 alias mand="dwww-man"
 alias package="dpkg-www"
 alias ca="CA.pl"
-alias have="type >/dev/null 2>&1"
+alias have="type &>/dev/null"
+
+# SP  ' '  0x20 = · U+00B7 Middle Dot
+# TAB '\t' 0x09 = ￫ U+FFEB Halfwidth Rightwards Arrow
+# CR  '\r' 0x0D = § U+00A7 Section Sign (⏎ U+23CE also works fine)
+# LF  '\n' 0x0A = ¶ U+00B6 Pilcrow Sign (was "Paragraph Sign")
+alias whitespace="sed 's/ /·/g;s/\t/￫/g;s/\r/§/g;s/$/¶/g'"
 
 complete-copy ls ll la
 complete-copy dwww-man mand package
@@ -48,11 +54,13 @@ timestamp() {
 # snakeviz myprog.profile  # outputs lots of errors, but URL provided works
 
 pyprofile() {
+	(($#)) || { echo "Usage: pyprofile <COMMAND> [ARGS...]" >&2; return 1; }
 	python -m cProfile --sort=time "$@" |
 	{ awk -v l=$((LINES-10)) '/ncalls  tottime/{t=l}t==1{exit}t>0{t--}{print}'
 	cat - >/dev/null; }
 }
 pyprofile3() {
+	(($#)) || { echo "Usage: pyprofile3 <COMMAND> [ARGS...]" >&2; return 1; }
 	python3 -m cProfile --sort=time "$@" |
 	{ awk -v l=$((LINES-10)) '/ncalls  tottime/{t=l}t==1{exit}t>0{t--}{print}'
 	cat - >/dev/null; }

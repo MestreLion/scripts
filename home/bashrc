@@ -11,7 +11,7 @@
 # Supporting Functions (for scripts, not terminal, those go to bash_aliases) ---
 
 relpath() { python -c "import os,sys;print os.path.relpath(*sys.argv[1:3])" "$@"; }
-exists()  { type "$@" >/dev/null 2>&1; }
+exists()  { type "$@" &>/dev/null; }
 
 # ------------------------------------------------------------------------------
 
