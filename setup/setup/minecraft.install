@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Minecraft and Minecraft Development stuff
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	echo "Usage: ${0##*/} [SETUP_LIB]" >&2
+	exit 1
+fi
+
+# -----------------------------------------------------------------------------
+
+packages=(
+	libmono-system-windows-forms4.0-cil  # NBT Explorer
+	libcanberra-gtk-module               # Fix a Gtk warning on NBT Explorer
+)
+
+# Python 2
+packages+=(
+	python-{yaml,numpy}                  # Pymclevel (from McEdit)
+	python-progressbar                   # Pyymctoolslib
+)
+
+# Python 3, not yet... :(
+#packages+=(
+#	python3-{yaml,numpy}
+#	python3-progressbar
+#)
+
+$SETUP_RUN sudo apt install -y -- "${packages[@]}"

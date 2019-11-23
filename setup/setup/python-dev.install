@@ -32,3 +32,12 @@ $SETUP_RUN pip3 install --user --upgrade pip
 
 #https://sourcery.ai/blog/python-best-practices/
 # Local development: use `pip install --user -e .` (better than python3 setup.py --develop)
+
+# Profiling:
+# python3 -m cProfile -o <dumpfile>.pstats <python script> [args...]
+# sudo apt install graphviz xdot && pip3 install --user gprof2dot
+# gprof2dot -f pstats <dumpfile>.pstats > <file>.dot && open <file>.dot  # xdot
+# gprof2dot -f pstats <dumpfile>.pstats | dot -Tpng -o <image>.png && open <image>.png
+# runsnakerun  # sudo apt install runsnakerun # Python 2 only
+# pip3 install --user snakeviz
+# snakeviz <dumpfile>.pstats

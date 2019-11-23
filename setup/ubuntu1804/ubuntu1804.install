@@ -1,5 +1,10 @@
 #!/bin/bash
 
+repos=(
+	universe
+	ppa:pedrocastro/ppa  # Gnome Subtitles. Deleted from 18.04, back in 18.10
+)
+
 packages=(
 	git{,g}
 	gparted
@@ -11,11 +16,18 @@ packages=(
 	rdiff-backup                # pulls Python 2 :-(
 	nautilus-compare            # also pulls Python 2. And meld
 	deluge                      # another fan of python 2
+	gnome-subtitles             # pulls mono :-(
+	upnp-router-control
 	jstest-gtk
 	gnome-cards-data
 	cowsay fortunes{,-br,-off} lolcat  # cowfortune
 )
 
+for repo in "${repos[@]}"; do
+	sudo add-apt-repository -y --no-update "$repo"
+fi
+
+sudo apt update
 sudo apt install -y -- "${packages[@]}"
 
 # Fix Video Driver errors (DRM drm_kms_helper, flip_done timed out)
@@ -27,7 +39,6 @@ if ! [[ -f "$config".bak ]]; then
 	sudo sed -i '/^[ \t]*GRUB_CMDLINE_LINUX_DEFAULT=/s/"$/ video=SVIDEO-1:d"/' -- "$config"
 	sudo update-grub
 fi
-
 
 # Setup scripts:
 # scripts	SCRIPTS=$HOME/work/scripts ./scripts.install ../setuplib
