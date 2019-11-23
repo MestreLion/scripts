@@ -1,11 +1,22 @@
 # To be sourced by ~/.bash_completion
 
+# BASH_COMPLETION_USER_DIR, by default ~/.local/share/bash-completion/completions,
+# is searched for completions *on-demand*, ie, when user types <cmd> and hit <TAB>,
+# also called "dynamic" or "lazy" loading.
+# For static (eager) loading, use either BASH_COMPLETION_COMPAT_DIR, by default
+# /etc/bash_completion.d (no user counterpart), or BASH_COMPLETION_USER_FILE,
+# by default ~/.bash_completion, which sources this file.
+# BASH_COMPLETION_COMPAT_DIR is loaded before BASH_COMPLETION_USER_FILE
+# All of this is done at /usr/share/bash-completion/bash-completion, sourced
+# by ~/.bashrc or $SCRIPTS/home/bashrc (whichever sources it first)
+
 # copies a completion definition for a command to other command(s)
 complete-copy() {
 	local cmd="$1"
 	shift
-	if complete -p "$cmd" >/dev/null 2>&1 &&
-	   type "$@"          >/dev/null 2>&1; then
+	if complete -p "$cmd" &>/dev/null &&
+	   type "$@"          &>/dev/null
+	then
 		eval $(complete -p "$cmd") "$@"
 	fi
 }
@@ -15,10 +26,12 @@ complete-copy() {
 _comp_pkg_names() {
 	local cur
 	_get_comp_words_by_ref cur prev
-	COMPREPLY=( $( apt-cache --no-generate pkgnames -- $cur 2> /dev/null ) )
+	COMPREPLY=( $(apt-cache --no-generate pkgnames -- $cur 2>/dev/null) )
 	return 0
 }
 
+# This is intencionally distinct from BASH_COMPLETION_USER_DIR, as a per-user
+# counterpart for static, *eager* loading
 BASH_COMPLETION_DIR_USER="$SCRIPTS/home/bash_completion.d"
 
 if [[ -d $BASH_COMPLETION_DIR_USER &&

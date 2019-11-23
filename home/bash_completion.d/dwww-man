@@ -1,1 +1,17 @@
-have dwww-man && complete-copy man dwww-man
+# _have() is defined in /etc/share/bash-completion/bash-completion, it also
+# states have() is deprecated, so _have() it is.
+# exists() is only defined at $SCRIPTS/home/bashrc, which comes later in load order.
+if ! _have dwww-man || ! _have man; then
+	return
+fi
+
+# Hardcoding _completion_loader() here, but could be obtained parsing `complete -p -D`
+if ! complete -p man &>/dev/null && declare -F _completion_loader >/dev/null; then
+	_completion_loader man
+fi
+
+# This assumes complete-copy() is already defined at $SCRIPTS/home/bash_completion.
+# Which should be true for both eager static dir loading of BASH_COMPLETION_DIR_USER,
+# sourced by $SCRIPTS/home/bash_completion itself, or lazy dynamic loading at
+# BASH_COMPLETION_USER_DIR, as it loads on-demand at runtime, after everything loads
+complete-copy man dwww-man

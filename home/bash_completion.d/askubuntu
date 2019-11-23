@@ -1,2 +1,2 @@
-have askubuntu-package &&
+_have askubuntu-package &&
 complete -F _comp_pkg_names askubuntu-package

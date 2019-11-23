@@ -1,3 +1,5 @@
+# This is sourced by $SCRIPTS/home/bashrc after it sources $SCRIPTS/home/bash_completion
+
 alias ls="ls --color=auto --group-directories-first -1"
 alias ll="ls -l --time-style=long-iso"
 alias la="ll -A"
