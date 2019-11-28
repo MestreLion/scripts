@@ -29,12 +29,6 @@ all=0
 monitors=()
 enable=()
 
-# Read settings from config file
-config=${XDG_CONFIG_HOME:-"$HOME"/.config}/"$myname".conf
-if [[ -f "$config" ]]; then
-	source "$config"
-fi
-
 print_monitors() {
 	while read -r output hex conn; do
 		[[ -z "$conn" ]] && conn=${output%%-*}
@@ -62,34 +56,6 @@ inarray() {
 	for i; do if [[ "$i" == "$item" ]]; then return 0; fi; done
 	return 1
 }
-
-
-# if there's no pre-defined monitors list, read from xrandr
-# and save them to config file
-if [[ -z "$monitors" ]]; then
-	while read -r output ; do
-		monitors+=("$output")
-	done < <(xrandr | awk '$2 ~/^c/{print $1}' | sort)
-	cat > "$config" <<-EOF
-		# $myname config file
-
-		# List of monitors, from left to right. Edit to your actual layout
-		monitors=(${monitors[@]})
-
-		# Extra xrandr options for each monitor.
-		# Useful when EDID data does not reflect actual preferred mode
-		# Options for non-existing outputs (such as the examples below) are ignored
-		# Examples:
-		monitor_opts[DFPx]="--mode 1920x1080 --rate 60"
-		monitor_opts[DFPy]="--mode 1280x720"
-
-		# As a reference, these were the connected monitors when this config file was created
-		# use it as a guide when editing the above monitors list and extra options
-		$(print_monitors)
-
-		# For an updated list, run $myname --list
-	EOF
-fi
 
 message() { printf "%s\n" "$1" >&2 ; }
 fatal()   { [[ "$1" ]] && message "$myname: error: $1" ; exit ${2:-1} ; }
@@ -132,6 +98,39 @@ usage() {
 	exit 0
 }
 
+
+# Read settings from config file
+config=${XDG_CONFIG_HOME:-"$HOME"/.config}/"$myname".conf
+if [[ -f "$config" ]]; then
+	source "$config"
+fi
+
+# if there's no pre-defined monitors list, read from xrandr
+# and save them to config file
+if [[ -z "$monitors" ]]; then
+	while read -r output ; do
+		monitors+=("$output")
+	done < <(xrandr | awk '$2 ~/^c/{print $1}' | sort)
+	cat > "$config" <<-EOF
+		# $myname config file
+
+		# List of monitors, from left to right. Edit to your actual layout
+		monitors=(${monitors[@]})
+
+		# Extra xrandr options for each monitor.
+		# Useful when EDID data does not reflect actual preferred mode
+		# Options for non-existing outputs (such as the examples below) are ignored
+		# Examples:
+		monitor_opts[DFPx]="--mode 1920x1080 --rate 60"
+		monitor_opts[DFPy]="--mode 1280x720"
+
+		# As a reference, these were the connected monitors when this config file was created
+		# use it as a guide when editing the above monitors list and extra options
+		$(print_monitors)
+
+		# For an updated list, run $myname --list
+	EOF
+fi
 
 # Option handling
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
