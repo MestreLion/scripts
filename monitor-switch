@@ -57,6 +57,15 @@ inarray() {
 	return 1
 }
 
+num2out() {
+	if [[ -z "$1" ]]; then missing "" OUTPUT; fi
+	if [[ "$1" != *[!1-9]* ]]; then
+		echo "${monitors[$(($1-1))]}"
+	else
+		echo "$1"
+	fi
+}
+
 message() { printf "%s\n" "$1" >&2 ; }
 fatal()   { [[ "$1" ]] && message "$myname: error: $1" ; exit ${2:-1} ; }
 argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1 ; }
@@ -91,6 +100,12 @@ usage() {
 	  -c|--center        - select center monitor.    Alias for --select ${monitors[1]}
 	                       It actually just selects the second one, so this just makes
 	                       sense in a 3-monitor setup.
+
+	OUTPUT in --enable and --select can be either an output name, as given by --list,
+	or the number of its position on the list, 1 being the first output.
+
+	The left-to-right order of monitors can be specified in the configuration file:
+	$config
 
 	Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
@@ -139,8 +154,8 @@ while (( $# )); do
 	-v|--verbose) verbose=1 ;;
 	-q|--no-notify) notify=0;;  # undocumented. For future `notify-send`
 	-l|--list) list=1 ;;
-	-s|--select) shift; enable=(  "$1" );;
-	-e|--enable) shift; enable+=( "$1" );;
+	-s|--select) shift; enable=(  $(num2out "$1") );;
+	-e|--enable) shift; enable+=( $(num2out "$1") );;
 	-a|--all  )  enable=( "${monitors[@]}"  );;
 	-l|--left )  enable=( "${monitors[0]}"  );;
 	-r|--right)  enable=( "${monitors[-1]}" );;
