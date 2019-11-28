@@ -26,6 +26,8 @@ myname="${0##*/}"
 verbose=0
 list=0
 all=0
+monitors=()
+enable=()
 
 # Read settings from config file
 config=${XDG_CONFIG_HOME:-"$HOME"/.config}/"$myname".conf
@@ -54,6 +56,13 @@ print_monitors() {
 	/EDID.*:/ {h=1}' | sort
 	)
 }
+
+inarray() {
+	local i item=$1; shift;
+	for i; do if [[ "$i" == "$item" ]]; then return 0; fi; done
+	return 1
+}
+
 
 # if there's no pre-defined monitors list, read from xrandr
 # and save them to config file
@@ -109,15 +118,17 @@ usage() {
 	  -l|--list          - list connector and monitor names of connected outputs
 
 	  -a|--all           - enable all monitors.
+	  -e|--enable OUTPUT - enable monitor OUTPUT. Can be specified multiple times.
 	  -s|--select OUTPUT - enable monitor OUTPUT, disable all others.
 	  -l|--left          - select leftmost monitor.  Alias for --select ${monitors[0]}
-	  -r|--right         - select rightmost monitor. Alias for --select ${monitors[${#monitors[@]}-1]}
+	  -r|--right         - select rightmost monitor. Alias for --select ${monitors[-1]}
 
 	Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
 	USAGE
 	exit 0
 }
+
 
 # Option handling
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
@@ -126,10 +137,11 @@ while (( $# )); do
 	-v|--verbose) verbose=1 ;;
 	-q|--no-notify) notify=0;;  # undocumented. For future `notify-send`
 	-l|--list) list=1 ;;
-	-a|--all) all=1 ;;
-	-s|--select) shift ; monitor="$1" ;;
-	-l|--left ) monitor="${monitors[0]}" ;;
-	-r|--right) monitor="${monitors[${#monitors[@]}-1]}" ;;
+	-s|--select) shift; enable=(  "$1" );;
+	-e|--enable) shift; enable+=( "$1" );;
+	-a|--all  )  enable=( "${monitors[@]}"  );;
+	-l|--left )  enable=( "${monitors[0]}"  );;
+	-r|--right)  enable=( "${monitors[-1]}" );;
 	*) invalid "$1" ;;
 	esac
 	shift
@@ -141,27 +153,32 @@ if ((list)); then
 	exit
 fi
 
-if [[ -z "$monitor" ]] && ! ((all)); then
+if ! ((${#enable[@]})) && ! ((all)); then
 	usage
 fi
 
 # Loop outputs (monitors)
+previous=
 for output in "${monitors[@]}"; do
-	if ((all)) || [[ "$output" = "$monitor" ]]; then
-		xrandropts+=(--output "$output" --auto ${monitor_opts["$output"]})
-		if ((all)); then
-			if [[ "$output" = "${monitors[0]}" ]]; then
-				xrandropts+=(--pos 0x0 --primary)
-			else
-				xrandropts+=(--right-of "$previous")
-			fi
-			previous="$output"
-		else
-			xrandropts+=(--primary)
-		fi
-	else
+	# Turn off monitors that were not chosen
+	if ! inarray "$output" "${enable[@]}"; then
 		xrandropts+=(--output "$output" --off)
+		continue
 	fi
+
+	# Load custom settings for that monitor
+	# monitor_opts is intentionally not quoted, to allow a single string
+	# to contain multiple options
+	xrandropts+=(--output "$output" --auto ${monitor_opts["$output"]})
+
+	if [[ -z "$previous" ]]; then
+		# Set first enabled monitor as primary
+		xrandropts+=(--pos 0x0 --primary)
+	else
+		# And subsequent ones to the right
+		xrandropts+=(--right-of "$previous")
+	fi
+	previous="$output"
 done
 
 ((verbose)) && message "$myname: executing xrandr ${xrandropts[*]}"
