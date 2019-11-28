@@ -26,6 +26,7 @@ myname="${0##*/}"
 verbose=0
 list=0
 all=0
+force=0
 monitors=()
 enable=()
 
@@ -59,15 +60,18 @@ inarray() {
 
 num2out() {
 	if [[ -z "$1" ]]; then missing "" OUTPUT; fi
-	if [[ "$1" != *[!1-9]* ]]; then
-		echo "${monitors[$(($1-1))]}"
+	if [[ "$1" != *[!0-9]* ]]; then
+		if (($1 < 1 || $1 > ${#monitors[@]})); then
+			argerr "invalid OUTPUT: $1"
+		fi
+		out=${monitors[$(($1-1))]}
 	else
-		echo "$1"
+		out=$1
 	fi
 }
 
 message() { printf "%s\n" "$1" >&2 ; }
-fatal()   { [[ "$1" ]] && message "$myname: error: $1" ; exit ${2:-1} ; }
+fatal()   { [[ "${1:-}" ]] && echo -e "$myname: error: $@" >&2 ; exit 1; }
 argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1 ; }
 invalid() { argerr "invalid argument: $1" ; }
 missing() { argerr "missing ${2:+$2 }operand${1:+ from $1}." ; }
@@ -94,6 +98,7 @@ usage() {
 
 	  -a|--all           - enable all monitors.
 	  -e|--enable OUTPUT - enable monitor OUTPUT. Can be specified multiple times.
+	                       monitors not enabled will be disabled.
 	  -s|--select OUTPUT - enable monitor OUTPUT, disable all others.
 	  -l|--left          - select leftmost monitor.  Alias for --select ${monitors[0]}
 	  -r|--right         - select rightmost monitor. Alias for --select ${monitors[-1]}
@@ -154,8 +159,9 @@ while (( $# )); do
 	-v|--verbose) verbose=1 ;;
 	-q|--no-notify) notify=0;;  # undocumented. For future `notify-send`
 	-l|--list) list=1 ;;
-	-s|--select) shift; enable=(  $(num2out "$1") );;
-	-e|--enable) shift; enable+=( $(num2out "$1") );;
+	-f|--force) force=1;;
+	-s|--select) shift; num2out "$1"; enable=(  "$out" );;
+	-e|--enable) shift; num2out "$1"; enable+=( "$out" );;
 	-a|--all  )  enable=( "${monitors[@]}"  );;
 	-l|--left )  enable=( "${monitors[0]}"  );;
 	-r|--right)  enable=( "${monitors[-1]}" );;
@@ -199,5 +205,11 @@ for output in "${monitors[@]}"; do
 	previous="$output"
 done
 
+if [[ -z "$previous" ]] && ! ((force)); then
+	fatal "Your request will result in all monitors being disabled,\n"   \
+	"check the configuration file at $config\n"                          \
+	"and use --force to confirm. This is the resulting xrand command:\n" \
+	"xrandr ${xrandropts[*]}"
+fi
 ((verbose)) && message "$myname: executing xrandr ${xrandropts[*]}"
 xrandr "${xrandropts[@]}"
