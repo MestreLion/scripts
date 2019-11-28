@@ -94,11 +94,12 @@ usage() {
 	  -h|--help          - show this page.
 	  -v|--verbose       - print in terminal the full xrandr command executed.
 
-	  -l|--list          - list connector and monitor names of connected outputs
+	  -l|--list          - list connector and monitor names of connected outputs.
+	                       When --verbose, also list the configured monitors.
 
 	  -a|--all           - enable all monitors.
 	  -e|--enable OUTPUT - enable monitor OUTPUT. Can be specified multiple times.
-	                       monitors not enabled will be disabled.
+	                       Monitors not enabled will be disabled.
 	  -s|--select OUTPUT - enable monitor OUTPUT, disable all others.
 	  -l|--left          - select leftmost monitor.  Alias for --select ${monitors[0]}
 	  -r|--right         - select rightmost monitor. Alias for --select ${monitors[-1]}
@@ -174,6 +175,12 @@ done
 if ((list)); then
 	echo "Connected monitors:"
 	print_monitors
+	if ((verbose)); then
+		echo -e "\nConfigured monitors in $config:"
+		for output in "${monitors[@]}"; do
+			echo -e "# ${output}${monitor_opts[$output]:+\t${monitor_opts[$output]}}"
+		done
+	fi
 	exit
 fi
 
