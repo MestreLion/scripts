@@ -122,6 +122,9 @@ usage() {
 	  -s|--select OUTPUT - enable monitor OUTPUT, disable all others.
 	  -l|--left          - select leftmost monitor.  Alias for --select ${monitors[0]}
 	  -r|--right         - select rightmost monitor. Alias for --select ${monitors[-1]}
+	  -c|--center        - select center monitor.    Alias for --select ${monitors[1]}
+	                       It actually just selects the second one, so this just makes
+	                       sense in a 3-monitor setup.
 
 	Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
@@ -142,6 +145,7 @@ while (( $# )); do
 	-a|--all  )  enable=( "${monitors[@]}"  );;
 	-l|--left )  enable=( "${monitors[0]}"  );;
 	-r|--right)  enable=( "${monitors[-1]}" );;
+	-c|--center) enable=( "${monitors[1]}"  );;
 	*) invalid "$1" ;;
 	esac
 	shift
