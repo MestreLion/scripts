@@ -92,4 +92,4 @@ set +o histexpand # same as set +H
 # ------------------------------------------------------------------------------
 
 # So cute!
-exists cowfortune && cowfortune | { exists lolcat && lolcat || cat; }
+exists cowfortune && { cowfortune | { exists lolcat && lolcat || cat ; } } || :
