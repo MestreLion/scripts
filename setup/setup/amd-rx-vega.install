@@ -1,0 +1,25 @@
+#!/bin/bash -e
+
+# Fix Video Driver errors (DRM drm_kms_helper, flip_done timed out)
+# This all might be fixed in Ubuntu 18.04.3 (2019-10) or 20.04
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	echo "Usage: ${0##*/} [SETUP_LIB]" >&2
+	exit 1
+fi
+
+# -----------------------------------------------------------------------------
+
+$SETUP_RUN sudo apt purge xserver-xorg-video-intel
+config=/etc/default/grub
+if ! [[ -f "$config".bak ]]; then
+	$SETUP_RUN sudo cp -- "$config"{,.bak}
+	$SETUP_RUN sudo sed -i '/^[ \t]*GRUB_CMDLINE_LINUX_DEFAULT=/s/"$/ video=SVIDEO-1:d"/' -- "$config"
+	$SETUP_RUN sudo update-grub
+fi

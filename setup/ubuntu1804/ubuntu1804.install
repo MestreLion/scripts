@@ -30,16 +30,6 @@ fi
 sudo apt update
 sudo apt install -y -- "${packages[@]}"
 
-# Fix Video Driver errors (DRM drm_kms_helper, flip_done timed out)
-# This all might be fixed in Ubuntu 18.04.3 (2019-10) or 20.04
-sudo apt purge xserver-xorg-video-intel
-config=/etc/default/grub
-if ! [[ -f "$config".bak ]]; then
-	sudo cp -- "$config"{,.bak}
-	sudo sed -i '/^[ \t]*GRUB_CMDLINE_LINUX_DEFAULT=/s/"$/ video=SVIDEO-1:d"/' -- "$config"
-	sudo update-grub
-fi
-
 # Setup scripts:
 # scripts	SCRIPTS=$HOME/work/scripts ./scripts.install ../setuplib
 # gitconfig
