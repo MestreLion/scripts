@@ -18,7 +18,7 @@ alias trash="trash-put"
 alias mand="dwww-man"
 alias package="dpkg-www"
 alias ca="CA.pl"
-alias have="type &>/dev/null"
+#alias have="exists"
 
 # SP  ' '  0x20 = · U+00B7 Middle Dot
 # TAB '\t' 0x09 = ￫ U+FFEB Halfwidth Rightwards Arrow
