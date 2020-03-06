@@ -7,6 +7,15 @@
 # Remove: Thunderbird, Rhythmbox, LibreOffice Writer, Ubuntu Software, Help, Amazon
 # Add: Terminal, gedit
 
+# NOTE:
+# Custom keybinding shortcuts will not work until a re-login!
+# See https://bugs.launchpad.net/ubuntu/+source/unity-settings-daemon/+bug/1435020
+
+# TODO
+# Keyboard Shortcuts
+# Turn off (laptop) screen	(Fn+F7)	xset dpms force off
+# Switch Monitors
+
 # -----------------------------------------------------------------------------
 
 setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
