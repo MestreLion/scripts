@@ -28,22 +28,14 @@ myname="${0##*/}"
 mydir=$(dirname "$(readlink -f "$0")")
 verbose=0
 
-bold()    { tput bold; printf '%s' "$@"; tput sgr0; }
-red()     { tput setaf 1; bold "$@"; }
-green()   { tput setaf 2; bold "$@"; }
-fatal()   { (($#)) && echo "$(red "$@")" >&2 || :; exit 1; }
-message() { ((verbose)) && echo "$(green '* ' "$@")" || :; }
-
 bold()    { if ! [[ "$TERM" = dumb ]]; then tput bold; fi; printf '%s' "$@"
             if ! [[ "$TERM" = dumb ]]; then tput sgr0; fi; }
 red()     { if ! [[ "$TERM" = dumb ]]; then tput setaf 1; fi; bold "$@"; }
 green()   { if ! [[ "$TERM" = dumb ]]; then tput setaf 2; fi; bold "$@"; }
-
 fatal()   { (($#)) && echo "$(red "$@")" >&2 || :; exit 1; }
 message() { ((verbose)) && echo "$(green '* ' "$@")" || :; }
-
-fatal()   { [[ "${1:-}" ]] && echo "$myname: error: $@" >&2 ; exit 1; }
 fatal()   { [[ "${1:-}" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
+fatal()   { [[ "${1:-}" ]] && echo "$myname: error: $@" >&2 ; exit 1; }
 message() { if ((verbose)); then printf "%s\n" "${1:-}"; fi; }
 exists()  { type "$@" >/dev/null 2>&1; }
 skip()    { i=${2:-$file}; message "skipping${i:+ $i}${1:+: $1}"; continue ; }

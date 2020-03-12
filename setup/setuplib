@@ -38,8 +38,13 @@ fi
 
 exists()  { type "$@" >/dev/null 2>&1; }
 relpath() { python -c "import sys, os; print os.path.relpath(*sys.argv[1:])" "$@"; }
-message() { ((SETUP_VERBOSE)) && echo "$@"; }
-fatal()   { [[ "${1:-}" ]] && echo "${0##*/}: error: $1" >&2 ; exit ${2:-1} ; }
+
+bold()    { tput bold; printf '%s' "$@"; tput sgr0; }
+red()     { tput setaf 1; bold "$@"; }
+green()   { tput setaf 2; bold "$@"; }
+fatal()   { echo $(red "${0##*/}" ': fatal' "${1:+: $1}") >&2; exit ${2:-1}; }
+error()   { echo $(red "${0##*/}" ': error' "${1:+: $@}") >&2; }
+message() { ((SETUP_VERBOSE)) && echo $(green '* ' "$@") || :; }
 integer() {
 	if ! [[ "$1" != *[!0-9]* ]]; then
 		echo "'$1'${2:+ in $2} is not an integer." >&2
