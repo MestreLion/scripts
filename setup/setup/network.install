@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# Networking setup
+
+SETUP_NETWORK_SSH_PORT=${SETUP_NETWORK_SSH_PORT:-2222}
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	echo "Usage: ${0##*/} [SETUP_LIB]" >&2
+	exit 1
+fi
+
+# -----------------------------------------------------------------------------
+
+# Configurações de SSH
+# - Desabilitar login SSH para root
+# - Alterar porta de escuta
+# - Estender timeout para 120s * 720 = 24h
+conf=/etc/ssh/sshd_config
+if ! grep -iq "$SETUP_USER" -- "$conf"; then
+	message "Alterando $conf para estender timeout e alterar porta para $SETUP_NETWORK_SSH_PORT"
+	$SETUP_RUN sudo cp -- "$conf"{,."$SETUP_USER".bak}
+	$SETUP_RUN sudo sed -Ei '
+		/^[ \t]*Port[ \t]+[0-9]+/s/^/#/;
+		/^[ \t]*PermitRootLogin[ \t]+/s/^/#/;
+		/^[ \t]*ChallengeResponseAuthentication[ \t]+/s/^/#/;
+		/^[ \t]*TCPKeepAlive[ \t]+/s/^/#/;
+		/^[ \t]*ClientAliveInterval[ \t]+[0-9]+/s/^/#/;
+		/^[ \t]*ClientAliveCountMax[ \t]+[0-9]+/s/^/#/;
+	' -- "$conf"
+
+	$SETUP_RUN sudo tee -a -- "$conf" <<-EOF
+
+
+	# Adicionado por ${SETUP_USER^} ${0##*/}
+	# - Altera porta de escuta de 22 para $SETUP_NETWORK_SSH_PORT
+	# - Desabilita login SSH para root
+	# - Estende timeout para 120s * 720 = 24h
+	Port $SETUP_NETWORK_SSH_PORT
+	PermitRootLogin no
+	ChallengeResponseAuthentication no
+	TCPKeepAlive yes
+	ClientAliveInterval 120
+	ClientAliveCountMax 720
+	EOF
+fi
+
+
+# Desabilitar logins remotos para root, incluindo SSH
+conf=/etc/security/access.conf
+if ! grep -iq "$SETUP_USER" -- "$conf"; then
+	message "Alterando $conf para desabilitar logins remotos para root"
+	$SETUP_RUN sudo cp -- "$conf"{,."$SETUP_USER".bak}
+	$SETUP_RUN sudo tee -a -- "$conf" <<-EOF
+
+
+	# Adicionado por ${SETUP_USER^} ${0##*/}
+	-:root:ALL EXCEPT LOCAL
+	EOF
+fi
+
+
+# Resolve bugs SSH/VPS: Porta SSH reseta pra padrão 22 no reboot
+#conf=/etc/systemd/system/sshd.socket.d/"$SETUP_USER".conf
+#if ! [[ -f "$conf" ]]; then
+#	mkdir -p -- "$(dirname "$conf")"
+#	cat > "$conf" <<-EOF
+#		# Adicionado por ${SETUP_USER^} ${0##*/}
+#		# Previne porta SSH resetando pro padrão 22 após reboot
+#		# 'ListenStream=' apaga o 22 definido em /lib/systemd/system/ssh.socket
+#		# e previne que ambas as portas fiquem abertas.
+#		# https://askubuntu.com/a/1160761/11015
+#		[Socket]
+#		ListenStream=
+#		ListenStream=$SETUP_NETWORK_SSH_PORT
+#	EOF
+#fi
+
+
+# Prevenir timeout SSH do cliente
+conf=/etc/ssh/ssh_config
+if ! grep -iq "$SETUP_USER" -- "$conf"; then
+	message "Alterando $conf para prevenir timeout de servidores"
+	$SETUP_RUN sudo cp -- "$conf"{,."$SETUP_USER".bak}
+	$SETUP_RUN sudo tee -a -- "$conf" <<-EOF
+
+	#   Adicionado por ${SETUP_USER^} ${0##*/}
+	    ServerAliveInterval 100
+	EOF
+fi
+
+$SETUP_RUN sudo systemctl restart ssh

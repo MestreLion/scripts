@@ -1,0 +1,37 @@
+#!/bin/bash -e
+
+# Apache, Nginx, Certbot, PHP
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	echo "Usage: ${0##*/} [SETUP_LIB]" >&2
+	exit 1
+fi
+
+# -----------------------------------------------------------------------------
+
+domain=rodrigosilva.com
+bits=4096
+
+verbose=1
+
+# Constants and other globals - DO NOT CHANGE! --------------------------------
+
+myname=${0##*/}
+mydir=$(dirname "$(readlink -f "$0")")
+
+package_install nginx{,-doc}
+package_install apache2{,-doc}
+package_install php-{fpm,curl,mysql,pgsql}  # FPM pulls PHP. No php-doc for PHP 7+
+package_install certbot python3-certbot-{nginx,apache} python-certbot-{nginx,apache}-doc
+
+sudo a2enmod proxy_fcgi setenvif
+sudo a2enconf php7.2-fpm
+sudo a2enmod headers
+
+sudo systemctl restart apache2
