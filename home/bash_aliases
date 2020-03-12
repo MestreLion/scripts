@@ -66,6 +66,23 @@ pyprofile3() {
 	cat - >/dev/null; }
 }
 
+venv() {
+	python3 -m venv "$@"
+}
+
+mkvenv() {
+	local vdir=${1:-}
+	local usage="Creates a Python Virtual Environment, activate it and upgrade its pip\nUsage: mkvenv ENV_DIR"
+	if [[ "$vdir" =~ ^(|-h|--help)$ ]]; then echo -e "$usage" >&2; return 1; fi
+	venv "$vdir" &&
+	source "$vdir"/bin/activate &&
+	PYTHONWARNINGS="ignore::DeprecationWarning" pip install --upgrade pip
+}
+
+activate-venv() {
+	:
+}
+
 sri-hash() {
 	if [[ -z "$1" ]]; then echo "Usage: sri-hash URL" >&2; return; fi
 	echo -n "<script src=\"$1\" integrity=\"sha256-"

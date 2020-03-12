@@ -8,6 +8,7 @@ dirs=(
 	.config/legendastv
 	.config/gnome-games
 	.config/hexchat     # see notes on rodrigo.txt!
+	.config/rodrigosilva
 )
 
 # -----------------------------------------------------------------------------

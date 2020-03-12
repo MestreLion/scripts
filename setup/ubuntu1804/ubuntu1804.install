@@ -3,6 +3,8 @@
 repos=(
 	universe
 	ppa:pedrocastro/ppa  # Gnome Subtitles. Deleted from 18.04, back in 18.10
+	ppa:certbot/certbot  # HTTPS Certificates
+	ppa:unity7maintainers/unity7-desktop  # Unity 7 backports and upgrades
 )
 
 packages=(
