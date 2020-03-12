@@ -114,3 +114,7 @@ export PYLINTRC=${XDG_CONFIG_HOME:-$HOME/.config}/pylintrc  # Default ~/.pylintr
 # Debian Development
 export DEBFULLNAME="Rodrigo Silva"
 export DEBEMAIL="debian@rodrigosilva.com"
+
+# Dotfiles in $HOME -----------------------------------------------------------
+
+export GNUPGHOME=${XDG_CONFIG_HOME:-$HOME/.config}/gnupg
