@@ -5,6 +5,7 @@ repos=(
 	ppa:pedrocastro/ppa  # Gnome Subtitles. Deleted from 18.04, back in 18.10
 	ppa:certbot/certbot  # HTTPS Certificates
 	ppa:unity7maintainers/unity7-desktop  # Unity 7 backports and upgrades
+	ppa:solaar-unifying/stable  # Logitech Unifying pairing
 )
 
 packages=(
@@ -19,6 +20,9 @@ packages=(
 	nautilus-compare            # also pulls Python 2. And meld
 	deluge                      # another fan of python 2
 	gnome-subtitles             # pulls mono :-(
+	exfat-utils                 # GPT partitions over 2TB, PS4 compatible
+	smartmontools               # SMART tools for command line
+	solaar                      # Logitech Unifying Keyoard/Mouse receiver
 	upnp-router-control
 	jstest-gtk
 	gnome-cards-data
