@@ -31,6 +31,7 @@ _comp_pkg_names() {
 
 # This is intencionally distinct from BASH_COMPLETION_USER_DIR, as a per-user
 # counterpart for static, *eager* loading
+# FIXME: Any particular reason for *wanting* a static, eager loading dir?
 BASH_COMPLETION_DIR_USER="$SCRIPTS/home/bash_completion.d"
 
 if [[ -d $BASH_COMPLETION_DIR_USER &&
