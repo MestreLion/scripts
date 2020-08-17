@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# Apache, Nginx, Certbot, PHP
+# Apache, Nginx, Certbot, PHP, Tomcat
 
 # -----------------------------------------------------------------------------
 
@@ -29,6 +29,7 @@ package_install nginx{,-doc}
 package_install apache2{,-doc}
 package_install php-{fpm,curl,mysql,pgsql}  # FPM pulls PHP. No php-doc for PHP 7+
 package_install certbot python3-certbot-{nginx,apache} python-certbot-{nginx,apache}-doc
+package_install tomcat9{,-{admin,docs,examples,user}
 
 sudo a2enmod proxy_fcgi setenvif
 sudo a2enconf php7.2-fpm
