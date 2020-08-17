@@ -17,9 +17,15 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program. See <http://www.gnu.org/licenses/gpl.html>
 
+# TODO: dd ... | pv -s $(du -sb "$output" | awk '{print $1}') | dd ...
+# TODO: dd ... status=progress # Coreutils 8.24+, Ubuntu 16.04+
+# TODO: dd ... conv=fsync oflag=direct
+# TODO: dialog --gauge
+# TODO: --size SIZE  # and do math for count, block
+
 myname="${0##*/}"
 time=30
-block=1M
+block=32M
 count=0
 
 fatal()   { [[ "$1" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
@@ -106,23 +112,4 @@ fi
 echo "dd if=\"$input\" of=\"$output\" bs=\"$block\"" "${countarg[@]}"
 
 #set -m  # do not supress background output
-dd if="$input" of="$output" bs="$block" "${countarg[@]}" & pid=$!
-trap 'pkill -P $$' EXIT  # abort dd if script it aborted
-sleep 0.2  # wait for any immediate errors (permission denied, file not found, etc)
-
-if is_running $pid; then
-	echo "dd PID:	$pid"
-	echo "Starting at $(date)"
-	echo "Reporting every $time seconds"
-	timer=$(($time - 1))  # account for `sleep 1` below
-	while sleep 1 && is_running $pid; do
-		if ((timer-- <= 0)); then
-			date
-			dd_status $pid || break  # May fail if dd has finished
-			timer=$(($time - 1))
-		fi
-	done
-	echo "Finished at $(date)"
-fi
-
-wait $pid  # Use dd exit status as program exit status
+dd if="$input" of="$output" bs="$block" "${countarg[@]}" status=progress conv=fsync
