@@ -1,0 +1,30 @@
+#!/bin/bash -e
+
+# Node.js
+# https://nodejs.org/en/download/package-manager/
+# https://github.com/nodesource/distributions/
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	echo "Usage: ${0##*/} [SETUP_LIB] [NODEJS_VERSION]" >&2
+	exit 1
+fi
+
+# -----------------------------------------------------------------------------
+
+# Available versions as of 2020-06
+#  8 - Ubuntu 18.04 repositories, no longer supported by Node
+# 10 - Former LTS, EOL 2020-04
+# 12 - Current LTS since 2019-10, EOL 2022-04
+# 14 - Next LTS
+version=${2:-${SETUP_NODEJS_VERSION:-12}}
+
+# Using official instructions from Node.js
+# Verified script simply adds Node repository to apt's lists.d/
+$SETUP_RUN curl -sL https://deb.nodesource.com/setup_${version}.x | $SETUP_RUN sudo -E bash -
+$SETUP_RUN sudo apt-get install -y nodejs
