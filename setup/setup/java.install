@@ -1,29 +1,52 @@
 #!/bin/bash -e
 
-# Setup java
+# Setup Java Development
 
-# Enable dwww
 
-exists()  { type "$1" >/dev/null 2>&1; }
+# -----------------------------------------------------------------------------
 
-if ! exists java; then
-	echo "ERROR: java is not installed" >&2
-	exit
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	echo "Usage: ${0##*/} [SETUP_LIB]" >&2
+	exit 1
 fi
-if ! exists dwww; then exit; fi  # silently
 
+# -----------------------------------------------------------------------------
+
+# JDK (includes JRE), Javadocs and Maven
+package_install default-jdk{,-doc} maven
+
+
+# Enable manpages on dwww ------------------
+if ! exists dwww; then exit; fi  # silently
 
 conf=/etc/dwww/dwww.conf
 bak=$conf.bak
+first=1
 
-if ! [[ -e "$bak" ]]; then
-	sudo cp -- "$conf" "$bak"
-fi
+first_edit() {
+	if ! [[ -e "$bak" ]]; then $SETUP_RUN sudo cp -- "$conf" "$bak"; fi
+	if ((first)); then
+		$SETUP_RUN sudo sed -i '/^# DWWW_DOCPATH=/s/^# /# @@ Changed by Rodrigo Setup Java install\n/' "$conf"
+		first=0
+	fi
+}
 
-sudo sed -i '/^# DWWW_DOCPATH=/s/^# /# @@ Changed by Rodrigo Setup install\n/' "$conf"
-
+# Java
 while read -r _ _ java; do
 	if ! grep -q "$java" "$conf"; then
-		sudo sed -i "/^DWWW_DOCPATH=/s/'\$/:${java//\//\\/}\/jre\/man'/" "$conf"
+		first_edit
+		$SETUP_RUN sudo sed -i "/^DWWW_DOCPATH=/s/'\$/:${java//\//\\/}\/man'/" "$conf"
 	fi
 done < <(update-java-alternatives --list)
+
+# Maven
+if ! grep -q '/usr/share/maven' "$conf"; then
+	first_edit
+	$SETUP_RUN sudo sed -i "/^DWWW_DOCPATH=/s/'\$/:\/usr\/share\/maven'/" "$conf"
+fi
+
+# ------------------------------------------
