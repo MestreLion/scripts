@@ -119,7 +119,8 @@ matrix-fake() {
 
 dmesgw() { watch -n 0.25 "dmesg $@ | tail -n $((LINES-3))"; }
 
-mv-link() (
+relpath() { python3 -c "import os,sys;print(os.path.relpath(*sys.argv[1:3]))" "$@"; }
+mv-link() (  # any particular reason for this to be a subshell??? relpath() won't work!
 	local newdir=$1
 	local msg1="Move all symlinks from current dir to another path, and make them relative"
 	local msg2="Usage: mv-link DESTDIR"
