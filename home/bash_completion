@@ -24,8 +24,7 @@ complete-copy() {
 # package names
 # functionally identical to /etc/bash_completion.d/devscripts.pkgnames
 _comp_pkg_names() {
-	local cur
-	_get_comp_words_by_ref cur prev
+	local cur; _get_comp_words_by_ref cur
 	COMPREPLY=( $(apt-cache --no-generate pkgnames -- $cur 2>/dev/null) )
 	return 0
 }
@@ -44,4 +43,5 @@ if [[ -d $BASH_COMPLETION_DIR_USER &&
 			source "$script"
 		fi
 	done
+	unset script
 fi
