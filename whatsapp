@@ -1,0 +1,43 @@
+#!/bin/bash
+
+cc=55  # Default Country Code
+ac=21  # Default Area Code
+api='https://web.whatsapp.com'
+
+apinum='/send?phone='
+apimsg='&text='
+
+num=${1:-}
+msg=${2:-}
+
+inputgui() {
+	prompt=${1:-'Número de Telefone'}
+	title=${2:-'WhatsApp Web Link'}
+	entry=${3:-}
+	local reply
+	if type -p zenity @>/dev/null && [[ "$TERM" == 'dumb' ]]; then
+		zenity --entry --width 250 --window-icon "${0}.png" --text "$prompt" --title "$title" --modal 2> >(grep -v 'GtkDialog' >&2)  # --entry-text '5521'
+	else
+		read -p "${prompt}: " reply
+		echo "$reply"
+	fi
+}
+
+if [[ -z "$num" ]]; then
+	num=$(inputgui)
+fi
+
+[[ "$num" ]] || exit 1
+
+case "${num:0:1}" in
+	+) num=${num:1};;
+	0) num=${cc}${num:1};;
+	*) num=${cc}${ac}${num};;
+esac
+
+
+url=${api}${apinum}${num}
+
+
+echo "$url"
+xdg-open "$url"
