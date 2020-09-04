@@ -29,6 +29,16 @@ _comp_pkg_names() {
 	return 0
 }
 
+# Files from a given dir.
+# NOT to be directly assigned to a command, but to be used by other completions,
+# hence the double underscore. E.g.: _comp_xxx() { __comp_dir_files "/etc/xxx"; }
+__comp_dir_files() {
+	local dirpath=${1:-.}
+	local cur prev words cword
+	_init_completion || return
+	COMPREPLY=( $(compgen -W '$(ls "${dirpath}"/*)' -- ${cur}) )
+}
+
 # This is intencionally distinct from BASH_COMPLETION_USER_DIR, as a per-user
 # counterpart for static, *eager* loading
 # FIXME: Any particular reason for *wanting* a static, eager loading dir?
