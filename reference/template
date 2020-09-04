@@ -1,4 +1,4 @@
-#!/bin/bash -ue
+#!/bin/bash
 #
 # progname - short desciption
 #
@@ -19,39 +19,54 @@
 #
 # Long description
 # ... that may span over multiple lines
-
+#------------------------------------------------------------------------------
+#!/bin/bash
+#
+# progname - short desciption
+#
 # Copyright (C) 2020 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 # License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+#------------------------------------------------------------------------------
 
+set -Eeuo pipefail  # exit on any error
+trap '>&2 echo "error: line $LINENO, status $?: $BASH_COMMAND"' ERR
+
+#------------------------------------------------------------------------------
+
+verbose=0
+
+#------------------------------------------------------------------------------
 
 myname="${0##*/}"
 mydir=$(dirname "$(readlink -f "$0")")
-verbose=0
+
+#------------------------------------------------------------------------------
 
 bold()    { tput bold; printf '%s' "$@"; tput sgr0; }
 red()     { tput setaf 1; bold "$@"; }
 green()   { tput setaf 2; bold "$@"; }
+fatal()   { if (($#)); then { red "$@"; echo; } >&2; fi; exit 1; }
+message() { if (($# && verbose)); then green '* ' "$@"; echo; fi; }
 
-fatal()   { (($#)) && echo "$(red "$@")" >&2 || :; exit 1; }
-message() { ((verbose)) && echo "$(green '* ' "$@")" || :; }
+fatal()   { if (($#)); then echo "$myname: error: $1" >&2; fi; exit ${2:-1}; }
+fatal()   { if (($#)); then echo "$myname: error: $@" >&2; fi; exit 1; }
+message() { if (($# && verbose)); then printf '%s\n' "$@"; fi; }
 
-fatal()   { [[ "${1:-}" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
-fatal()   { [[ "${1:-}" ]] && echo "$myname: error: $@" >&2 ; exit 1; }
-message() { if ((verbose)); then printf "%s\n" "${1:-}"; fi; }
+argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2; usage 1; }
+invalid() { argerr "invalid ${2:-option}: ${1:-}"; }
+missing() { argerr "missing ${1:+$1 }argument${2:+ from $2}."; }
 
 exists()  { type "$@" >/dev/null 2>&1; }
-skip()    { i=${2:-$file}; message "skipping${i:+ $i}${1:+: $1}"; continue ; }
-argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1 ; }
-invalid() { argerr "invalid option: ${1:-}" ; }
-missing() { argerr "missing ${2:+$2 }argument${1:+ from $1}." ; }
-quit()    { message "Goodbye!" ; exit; }
-relpath() { python -c "import os, sys; print os.path.relpath(*sys.argv[1:3])" "$@"; }
-integer() { [[ "$1" ]] || missing "${2:-}" "${3-NUM}"; [[ "$1" != *[!0-9]* ]] ||
+integer() { [[ "$1" ]] || missing "${3-NUM}" "${2:-}"; [[ "$1" != *[!0-9]* ]] ||
             argerr "'$1'${2:+ in $2} is not an integer."; }
-numeric() { [[ "$1" ]] || missing "${2:-}" "${3-NUM}"; re='^[0-9]+([.][0-9]+)?$'
+numeric() { [[ "$1" ]] || missing "${3-NUM}" "${2:-}"; local re='^[0-9]+([.][0-9]+)?$'
             [[ "$1" =~ $re ]] || argerr "'${1:-}'${2:+ in $2} is not a number."; }
 cmdpath() { type -P "$1"; }
 ppath()   { printf '%q' "$@"; }
+skip()    { i=${2:-$file}; message "skipping${i:+ $i}${1:+: $1}"; continue ; }
+quit()    { message "Goodbye!"; exit; }
+
+#------------------------------------------------------------------------------
 
 usage() {
 	if [[ "${1:-}" ]] ; then exec >&2; fi
@@ -72,13 +87,12 @@ usage() {
 	  -h|--help     - show this page.
 	  -v|--verbose  - print more details about what is being done.
 
-	Copyright (C) 2016 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	Copyright (C) 2020 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
 	USAGE
 	exit 0
 }
 
-# Option handling
 files=()
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
 while (( $# )); do
@@ -92,12 +106,18 @@ while (( $# )); do
 	*             ) argerr "$1"                    ;;
 	*             ) files+=( "$1" )                ;;
 	esac
-	shift
+	shift || break
 done
 files+=( "$@" )
 
+#------------------------------------------------------------------------------
 
-[[ "$var" ]] || missing "--var" "ARG"
+[[ "${var:-}" ]] || missing "ARG" "--var"
 
-echo "var=$var"
+#------------------------------------------------------------------------------
+
+echo "var=${var:-}"
 ((${#files[@]})) &&  echo "files: ${files[@]}"
+
+tmpdir=$(mktemp --directory) || fatal "could not create temp dir"
+trap 'rm -rf -- "$tmpdir"' EXIT
