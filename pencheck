@@ -1,0 +1,159 @@
+#!/bin/bash
+#
+# pencheck - create, copy and check random files to test storage integrity
+#
+# Copyright (C) 2020 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+#------------------------------------------------------------------------------
+
+set -Eeuo pipefail  # exit on any error
+trap '>&2 echo "error: line $LINENO, status $?: $BASH_COMMAND"' ERR
+
+#------------------------------------------------------------------------------
+
+dirbase=$USER
+count=10
+size=100M
+bs=1M
+verbose=1
+
+#------------------------------------------------------------------------------
+
+myname=${0##*/}
+mydir=$(dirname "$(readlink -f "$0")")
+
+checksum=sha256sum
+verify=${myname}-verify
+checkfile=${myname}-sha256sum.txt
+
+#------------------------------------------------------------------------------
+
+bold()    { tput bold; printf '%s' "$@"; tput sgr0; }
+red()     { tput setaf 1; bold "$@"; }
+green()   { tput setaf 2; bold "$@"; }
+fatal()   { if (($#)); then { red "$@"; echo; } >&2; fi; exit 1; }
+message() { if (($# && verbose)); then green '* ' "$@"; echo; fi; }
+argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2; usage 1; }
+invalid() { argerr "invalid ${2:-option}: ${1:-}"; }
+missing() { argerr "missing ${1:+$1 }argument${2:+ in $2}."; }
+integer() { [[ "$1" ]] || missing "${3:-NUM}" "${2:-}"; [[ "$1" != *[!0-9]* ]] ||
+            argerr "${2:+${3:-NUM} argument in $2 is }not an integer: $1"; }
+exists()  { type "$@" >/dev/null 2>&1; }
+
+garbage() {
+	if exists pv; then
+		pv "${pvopts[@]}" --buffer-size "$bs" --stop-at-size --size "$size"
+	else
+		dd "${ddopts[@]}" bs="$bs" iflag=count_bytes,fullblock count="$size"
+	fi < /dev/zero |
+	openssl enc -aes-128-ctr -pbkdf2 \
+	  -pass pass:"$(dd if=/dev/urandom bs=128 count=1 2>/dev/null | base64)"
+}
+
+#------------------------------------------------------------------------------
+
+usage() {
+	if [[ "${1:-}" ]] ; then exec >&2; fi
+	cat <<-USAGE
+	Usage: $myname [options] MOUNTDIR
+	USAGE
+	if [[ "${1:-}" ]] ; then
+		cat <<- USAGE
+		Try '$myname --help' for more information.
+		USAGE
+		exit 1
+	fi
+	cat <<-USAGE
+
+	Create, copy and check random files to test storage integrity
+
+	Options:
+	  -h|--help      - show this page.
+	  -v|--verbose   - print more details about what is being done.
+
+	  -c|--count NUM - Number of test files. [Default: $count]
+	  -s|--size SIZE - Size of each test file. [Default: $size]
+
+	Copyright (C) 2020 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+	USAGE
+	exit 0
+}
+
+files=()
+for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
+while (( $# )); do
+	case "$1" in
+	-q|--quiet    ) verbose=0             ;;
+	-s|--size     ) shift; size="${1:-}"  ;;
+	-c|--count    ) shift; count="${1:-}" ;;
+	--size=*      ) size="${1#*=}"        ;;
+	--count=*     ) count="${1#*=}"       ;;
+	--            ) shift ; break         ;;
+	-*            ) invalid "$1"          ;;
+	*             ) files+=( "$1" )       ;;
+	esac
+	shift || break
+done
+files+=( "$@" )
+
+#------------------------------------------------------------------------------
+
+if ((${#files[@]} < 1)); then missing "MOUNTDIR"; fi
+if ((${#files[@]} > 1)); then invalid "${files[1]}" argument; fi
+
+mountdir=${files[0]%/}
+[[ -d "$mountdir" ]] || argerr "MOUNTDIR is not a valid directory: $mountdir"
+
+dirbase=${dirbase%/}
+[[ "$dirbase" ]] || missing argerr "DIR" "--dirbase"
+
+[[ "${size:-}" ]] || missing "SIZE" "--size"
+integer "${count:-}" --count
+
+if ((verbose)); then
+	checksumopts=()
+	rsyncopts=(--info=progress2)
+	ddopts=(status=progress)
+	pvopts=()
+else
+	checksumopts=(--quiet)
+	rsyncopts=()
+	ddopts=(status=none)
+	pvopts=(--quiet)
+fi
+
+#------------------------------------------------------------------------------
+
+message "Create test files"
+
+tmpdir=$(mktemp --directory) || fatal "could not create temp dir"
+trap 'rm -rf -- "$tmpdir"' EXIT
+
+workdir=$tmpdir/$dirbase
+mkdir --parents -- "$workdir"
+cd -- "$workdir"
+for i in $(seq --equal-width "$count"); do
+	garbage "$size" > ./"$myname"-"$i".bin
+done
+"$checksum" --binary *.bin > ./"$checkfile"
+cat > ./"$verify" <<-EOF
+	#!/bin/sh
+	cd -- "\$(dirname "\$(readlink -f "\$0")")"
+	$checksum --check --ignore-missing "\$@" -- ./$checkfile
+EOF
+chmod +x -- ./"$verify"
+
+message "Verify test files"
+sync -- ./*
+./"$verify" "${checksumopts[@]}"
+cd - &>/dev/null
+
+message "Transfer test files to: $mountdir/$dirbase"
+rsync "${rsyncopts[@]}" --recursive -- "$workdir" "$mountdir"
+
+message "Wait for files to be actually written on device"
+sync -- "$mountdir"/"$dirbase"/*
+
+message "Test storage"
+"$mountdir"/"$dirbase"/"$verify" "${checksumopts[@]}"
