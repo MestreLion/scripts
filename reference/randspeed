@@ -1,0 +1,74 @@
+#!/bin/bash
+size=${1:-1G}
+benchmark=${2:-dd}
+
+# ---------------------
+
+benchmark_pv() {
+	pv -s "$size" -S > /dev/null
+}
+
+benchmark_dd() {
+	dd of=/dev/null bs=1M iflag=fullblock,count_bytes count="$size" status=progress
+}
+
+message() {
+	printf '\n%s\n' "$@"
+}
+
+# ---------------------
+
+devzero() {
+	cat /dev/zero
+}
+
+devurandom() {
+	cat /dev/urandom
+}
+
+# ---------------------
+
+openssl_ciphers() {
+	openssl enc -ciphers | awk 'NF==3{print($1 "\n"  $2 "\n" $3)}'
+}
+
+openssl_fast_ciphers() {
+	printf '%s\n' -aes-{128,192,256}-{ctr,ecb}
+}
+
+opensslenc() {
+	openssl enc "$@" -pbkdf2 \
+	  -pass pass:"$(dd if=/dev/urandom bs=128 count=1 status=none | base64)" \
+	  < /dev/zero \
+	  2> /dev/null  # avoid 'error writing file' when benchmark closes pipe
+	# can also be fixed with `head -c "$size" /dev/zero | openssl ...`,
+	# at a ~10% performance hit
+}
+
+openssl_none() {
+	opensslenc -none
+}
+
+openssl_fastest() {
+	opensslenc -aes-128-ecb  # ~1,85GiB/s
+}
+
+
+# ---------------------
+
+benchmark=benchmark_$benchmark
+
+message "Reference: /dev/zero"
+devzero | "$benchmark"
+
+# Too slow!
+#message "/dev/urandom"
+#devurandom | "$benchmark"
+
+message "OpenSSL none"
+openssl_none | "$benchmark"
+
+while IFS= read -r cipher; do
+	message "OpenSSL $cipher"
+	opensslenc "$cipher" | "$benchmark"
+done < <(openssl_fast_ciphers)
