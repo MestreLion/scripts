@@ -98,8 +98,8 @@ block=$(sizefmt "$block" '--block-size') || exit
 
 if ! ((force)); then
 	for file in "$input" "$output"; do
-		if [[ -b "$file" ]] && grep -q "^$file " /proc/mounts; then
-			fatal "$file seems to be a mounted partition." \
+		if [[ -b "$file" ]] && grep -q "^$file" /proc/mounts; then
+			fatal "$file seems to be (or contain) mounted partition(s)." \
 				"Un-mount it first or use --force."
 		fi
 	done
