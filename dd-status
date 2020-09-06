@@ -18,25 +18,22 @@
 #    along with this program. See <http://www.gnu.org/licenses/gpl.html>
 
 # TODO: dd ... | pv -s $(du -sb "$output" | awk '{print $1}') | dd ...
-# TODO: dd ... status=progress # Coreutils 8.24+, Ubuntu 16.04+
 # TODO: dd ... conv=fsync oflag=direct
 # TODO: dialog --gauge
-# TODO: --size SIZE  # and do math for count, block
+# TODO: INPUT and OUTPUT optional, use stdin/stdout
+# TODO: if OUTPUT is not writable, add sudo
 
-myname="${0##*/}"
-time=30
-block=32M
-count=0
+myname=${0##*/}
+block=1Mi
+size=0
 
-fatal()   { [[ "$1" ]] && echo "$myname: error: $1" >&2 ; exit ${2:-1} ; }
+fatal()   { [[ "$1" ]] && echo "$myname: error: $@" >&2 ; exit 1; }
 message() { printf "%s\n" "$1"; }
-argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1 ; }
-integer() { [[ "$1" != *[!0-9]* ]] || argerr "'$1'${2:+ in $2} is not an integer." ; }
+argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2 ; usage 1; }
 invalid() { argerr "invalid option: $1" ; }
 missing() { argerr "missing ${2:+$2 }argument${1:+ from $1}." ; }
-
-is_running() { kill -0    $1 2>/dev/null ; }
-dd_status()  { kill -USR1 $1 2>/dev/null ; }
+sizefmt() { [[ "$1" ]] || missing "${3:-SIZE}" "${2:-}";
+            echo $(numfmt --from=auto -- "$1" || fatal); }
 
 usage() {
 	cat <<-USAGE
@@ -56,9 +53,13 @@ usage() {
 	  -h|--help    - show this page.
 	  -f|--force   - force copy even for mounted partitions
 
-	  --time TIME  - display progress every TIME seconds. [Default: $time]
-	  --block SIZE - copy SIZE blocks at a time. [Default: $block]
-	  --count NUM  - number of blocks to copy, 0 for all blocks [Default: $count]
+	  -s|--size SIZE       - number of BYTES (*NOT* blocks!) to copy.
+	                           0 copies the whole input [Default: $size]
+	  -b|--block-size SIZE - copy SIZE blocks at a time. [Default: $block]
+
+	All SIZE units are parsed through 'numfmt' auto mode, so SI suffixes such
+	as K, M, G are allowed. '1K' means 1000; use 'Ki' (and 'Mi', 'Gi', etc)
+	for 1024-based units.
 
 	Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
@@ -69,20 +70,18 @@ usage() {
 # Option handling
 files=()
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
-while (( $# )); do
+while (($#)); do
 	case "$1" in
-	-f|--force   ) force=1                        ;;
-	--time       ) shift ; time="$1"              ;;
-	--time=*     ) time="${1#*=}"                 ;;
-	--block      ) shift ; block="$1"             ;;
-	--block=*    ) block="${1#*=}"                ;;
-	--count      ) shift ; count="$1"             ;;
-	--count=*    ) count="${1#*=}"                ;;
-	--           ) shift ; break                  ;;
-	-*           ) invalid "$1"                   ;;
-	*            ) files+=( "$1" )                ;;
+	-f|--force) force=1;;
+	-b|--block-size) shift; block=$1;;
+	-s|--size      ) shift; size=$1 ;;
+	--block-size=*) block=${1#*=};;
+	--size=*      ) size=${1#*=} ;;
+	--) shift; break;;
+	-*) invalid "$1";;
+	* ) files+=( "$1" );;
 	esac
-	shift
+	shift || break
 done
 files+=( "$@" )
 input=${files[0]}
@@ -90,26 +89,23 @@ output=${files[1]}
 
 [[ "$input"  ]] || missing "" "INPUT"
 [[ "$output" ]] || missing "" "OUTPUT"
-[[ "$block"  ]] || missing "--block" "SIZE"
-[[ "$count"  ]] || missing "--count" "NUM"
 
-integer "$time"  "--time"
-integer "$count" "--count"
+size=$( sizefmt "$size"  '--size'      ) || exit
+block=$(sizefmt "$block" '--block-size') || exit
 
 if ! ((force)); then
 	for file in "$input" "$output"; do
 		if [[ -b "$file" ]] && grep -q "^$file " /proc/mounts; then
-			fatal "$file seems to be a mounted partition. Un-mount it first or use --force."
+			fatal "$file seems to be a mounted partition." \
+				"Un-mount it first or use --force."
 		fi
 	done
 fi
 
-countarg=()
-if ((count)); then
-	countarg=(count="$count")
+args=(if="$input" of="$output" bs="$block" status=progress oflag=nocache,sync)
+if ((size)); then
+	args+=(iflag=count_bytes count="$size")
 fi
 
-echo "dd if=\"$input\" of=\"$output\" bs=\"$block\"" "${countarg[@]}"
-
-#set -m  # do not supress background output
-dd if="$input" of="$output" bs="$block" "${countarg[@]}" status=progress conv=fsync
+echo "dd ${args[@]}" >&2
+dd "${args[@]}"
