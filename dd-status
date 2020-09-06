@@ -54,7 +54,7 @@ usage() {
 
 	  -s|--size SIZE       - number of BYTES (*NOT* blocks!) to copy.
 	                           0 copies the whole input [Default: $size]
-	  -b|--block-size SIZE - copy SIZE blocks at a time. [Default: $block]
+	  -B|--block-size SIZE - copy SIZE blocks at a time. [Default: $block]
 
 	All SIZE units are parsed through 'numfmt' auto mode, so SI suffixes such
 	as K, M, G are allowed. '1K' means 1000; use 'Ki' (and 'Mi', 'Gi', etc)
@@ -73,7 +73,7 @@ while (($#)); do
 	case "$1" in
 	-f|--force  ) force=1;;
 	-S|--no-sudo) autosudo=0;;
-	-b|--block-size) shift; block=$1;;
+	-B|--block-size) shift; block=$1;;
 	-s|--size      ) shift; size=$1 ;;
 	--block-size=*) block=${1#*=};;
 	--size=*      ) size=${1#*=} ;;
