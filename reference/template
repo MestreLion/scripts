@@ -37,7 +37,7 @@ verbose=0
 
 #------------------------------------------------------------------------------
 
-myname="${0##*/}"
+myname=${0##*/}
 mydir=$(dirname "$(readlink -f "$0")")
 
 #------------------------------------------------------------------------------
@@ -57,10 +57,16 @@ invalid() { argerr "invalid ${2:-option}: ${1:-}"; }
 missing() { argerr "missing ${1:+$1 }argument${2:+ from $2}."; }
 
 exists()  { type "$@" >/dev/null 2>&1; }
-integer() { [[ "$1" ]] || missing "${3-NUM}" "${2:-}"; [[ "$1" != *[!0-9]* ]] ||
-            argerr "'$1'${2:+ in $2} is not an integer."; }
+integer() { [[ "$1" ]] || missing "${3:-NUM}" "${2:-}"; [[ "$1" != *[!0-9]* ]] ||
+            argerr "${2:+${3:-NUM} argument in $2 is }not an integer: $1"; }
 numeric() { [[ "$1" ]] || missing "${3-NUM}" "${2:-}"; local re='^[0-9]+([.][0-9]+)?$'
             [[ "$1" =~ $re ]] || argerr "'${1:-}'${2:+ in $2} is not a number."; }
+integer() { [[ "$1" ]] || missing "${3:-NUM}" "${2:-}"; [[ "$1" != *[!0-9]* ]] ||
+            argerr "${2:+${3:-NUM} argument in $2 is }not an integer: $1"; }
+sizefmt() { [[ "$1" ]] || missing "${3:-SIZE}" "${2:-}";
+            echo $(numfmt --from=auto -- "$1" || fatal); }
+exists()  { type "$@" >/dev/null 2>&1; }
+si()      { numfmt --to=si --suffix 'B' "$@"; }
 cmdpath() { type -P "$1"; }
 ppath()   { printf '%q' "$@"; }
 skip()    { i=${2:-$file}; message "skipping${i:+ $i}${1:+: $1}"; continue ; }
@@ -95,24 +101,26 @@ usage() {
 
 files=()
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
-while (( $# )); do
+while (($#)); do
 	case "$1" in
-	-v|--verbose  ) verbose=1                      ;;
-	--var=*       ) var="${1#*=}"                  ;;
-	--var         ) shift ; var="${1:-}"           ;;
-	--            ) shift ; break                  ;;
-	-*            ) invalid "$1"                   ;;
-	-*            ) opts+=( "$1" )                 ;;
-	*             ) argerr "$1"                    ;;
-	*             ) files+=( "$1" )                ;;
+	-v|--verbose) verbose=1;;
+	--var=*) var=${1#*=};;
+	--var) shift ; var=${1:-};;
+	--) shift; break;;
+	-*) invalid "$1";;
+	-*) opts+=( "$1" );;
+	* ) argerr "$1";;
+	* ) files+=( "$1" );;
 	esac
 	shift || break
 done
-files+=( "$@" )
+files+=("$@")
 
 #------------------------------------------------------------------------------
 
 [[ "${var:-}" ]] || missing "ARG" "--var"
+integer "${count:-}" '--count'
+size=$(sizefmt "${size:-}" '--size') || exit
 
 #------------------------------------------------------------------------------
 
