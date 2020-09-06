@@ -4,10 +4,13 @@
 #
 # Copyright (C) 2020 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 # License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+#
+# TODO: tar | dd | tar instead of rsync to avoid write cache and still do total
+#       progress report
 #------------------------------------------------------------------------------
 
 set -Eeuo pipefail  # exit on any error
-trap '>&2 echo "error: line $LINENO, status $?: $BASH_COMMAND"' ERR
+trap '>&2 echo "non-success status: line $LINENO, status $?: $BASH_COMMAND"' ERR
 
 #------------------------------------------------------------------------------
 
@@ -150,10 +153,12 @@ sync -- ./*
 cd - &>/dev/null
 
 message "Transfer test files to: $mountdir/$dirbase"
+# If only Debian's rsync had --drop-cache :-(
 rsync "${rsyncopts[@]}" --recursive -- "$workdir" "$mountdir"
 
 message "Wait for files to be actually written on device"
-sync -- "$mountdir"/"$dirbase"/*
+sync --file-system -- "$mountdir"/"$dirbase"/*
 
 message "Test storage"
-"$mountdir"/"$dirbase"/"$verify" "${checksumopts[@]}"
+# Some filesystems may be automounted as noexec (e.g. FAT), hence invoking sh
+sh "$mountdir"/"$dirbase"/"$verify" "${checksumopts[@]}"
