@@ -14,7 +14,6 @@ trap '>&2 echo "non-success status: line $LINENO, status $?: $BASH_COMMAND"' ERR
 
 #------------------------------------------------------------------------------
 
-dirbase=$USER
 count=10
 size=10M
 bs=1Mi
@@ -25,6 +24,7 @@ verbose=1
 myname=${0##*/}
 mydir=$(dirname "$(readlink -f "$0")")
 
+dirbase=$myname
 checksum=sha256sum  # must have --binary, --check and --ignore-missing
 verify=${myname}-verify
 checkfile=${myname}-sha256sum.txt
