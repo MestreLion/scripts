@@ -4,9 +4,6 @@
 #
 # Copyright (C) 2020 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 # License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
-#
-# TODO: tar | dd | tar instead of rsync to avoid write cache and still do total
-#       progress report
 #------------------------------------------------------------------------------
 
 set -Eeuo pipefail  # exit on any error
