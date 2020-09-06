@@ -20,6 +20,10 @@ alias package="dpkg-www"
 alias ca="CA.pl"
 alias dd-progress="dd status=progress bs=1M iflag=count_bytes"
 alias dd-nocache="dd-progress oflag=nocache,sync"
+alias dfd='df -H -x tmpfs -x squashfs -x devtmpfs'
+alias duh='du -sbh --si'
+alias dud='lsblk --exclude 7'
+
 #alias have="exists"
 
 # SP  ' '  0x20 = · U+00B7 Middle Dot
