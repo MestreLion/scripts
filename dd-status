@@ -17,13 +17,11 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program. See <http://www.gnu.org/licenses/gpl.html>
 
-# TODO: ETA: pv -s ... -- "$input" | dd ...
-# TODO: INPUT and OUTPUT optional, use stdin/stdout
-
 myname=${0##*/}
 block=1Mi
 size=0
 autosudo=1
+eta=1
 
 fatal()   { [[ "$1" ]] && echo "$myname: error: $@" >&2 ; exit 1; }
 message() { printf "%s\n" "$1"; }
@@ -91,7 +89,7 @@ output=${files[1]}
 [[ "$output" ]] || missing "" "OUTPUT"
 
 sudo=()
-if ((autosudo)) && ! [[ -w "$output" ]]; then sudo=(sudo); fi
+if ((autosudo)) && [[ -e "$output" && ! -w "$output" ]]; then sudo=(sudo); fi
 
 size=$( sizefmt "$size"  '--size'      ) || exit
 block=$(sizefmt "$block" '--block-size') || exit
@@ -105,12 +103,27 @@ if ! ((force)); then
 	done
 fi
 
-args=(if="$input" of="$output" bs="$block" status=progress oflag=nocache,sync)
+args=(of="$output" bs="$block" oflag=nocache,sync)
+
+if !((eta)); then
+	args+=(if="$input" status=progress)
+	if ((size)); then
+		args+=(iflag=count_bytes count="$size")
+	fi
+	cmd=("${sudo[@]}" dd "${args[@]}")
+	echo "${cmd[@]}" >&2
+	"${cmd[@]}"
+	exit
+fi
+args+=(status=none)
+
+pvargs=(--buffer-size "$block")
 if ((size)); then
-	args+=(iflag=count_bytes count="$size")
+	pvargs+=(--size "$size" --stop-at-size)
 fi
 
-cmd=("${sudo[@]}" dd "${args[@]}")
-echo "${cmd[@]}" >&2
+pvsudo=()
+if ((autosudo)) && [[ -e "$input" && ! -w "$input" ]]; then pvsudo=(sudo); fi
 
-"${cmd[@]}"
+echo "${pvsudo[@]}" pv "${pvargs[@]}" -- "$input" '|' "${sudo[@]}" dd "${args[@]}"
+     "${pvsudo[@]}" pv "${pvargs[@]}" -- "$input"  |  "${sudo[@]}" dd "${args[@]}"

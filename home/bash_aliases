@@ -18,8 +18,8 @@ alias trash="trash-put"
 alias mand="dwww-man"
 alias package="dpkg-www"
 alias ca="CA.pl"
-alias dd="dd status=progress bs=1M iflag=count_bytes"
-alias dd-nocache="dd oflag=nocache,sync"
+alias dd-progress="dd status=progress bs=1M iflag=count_bytes"
+alias dd-nocache="dd-progress oflag=nocache,sync"
 #alias have="exists"
 
 # SP  ' '  0x20 = · U+00B7 Middle Dot
