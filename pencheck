@@ -25,7 +25,7 @@ verbose=1
 myname=${0##*/}
 mydir=$(dirname "$(readlink -f "$0")")
 
-checksum=sha256sum
+checksum=sha256sum  # must have --binary, --check and --ignore-missing
 verify=${myname}-verify
 checkfile=${myname}-sha256sum.txt
 
@@ -42,6 +42,7 @@ missing() { argerr "missing ${1:+$1 }argument${2:+ in $2}."; }
 integer() { [[ "$1" ]] || missing "${3:-NUM}" "${2:-}"; [[ "$1" != *[!0-9]* ]] ||
             argerr "${2:+${3:-NUM} argument in $2 is }not an integer: $1"; }
 exists()  { type "$@" >/dev/null 2>&1; }
+si()      { numfmt --to=si "$@"; }
 
 garbage() {
 	if exists pv; then
@@ -49,8 +50,18 @@ garbage() {
 	else
 		dd "${ddopts[@]}" bs="$bs" iflag=count_bytes,fullblock count="$size"
 	fi < /dev/zero |
-	openssl enc -aes-128-ctr -pbkdf2 \
-	  -pass pass:"$(dd if=/dev/urandom bs=128 count=1 2>/dev/null | base64)"
+	openssl enc -aes-128-ctr -pbkdf2 -nosalt -pass \
+		"pass:$(dd if=/dev/urandom bs=128 count=1 2>/dev/null | base64)"
+}
+freespace() {
+	local path=$1
+	local required=$2
+	local available=$(df --block-size=1 -- "$path" | awk 'NR==2{print $4}')
+	if ((available < required)); then
+		fatal "not enough space on $path: " \
+			$(si "$available") "B available, " \
+			$(si "$required")  "B required."
+	fi
 }
 
 #------------------------------------------------------------------------------
@@ -111,8 +122,14 @@ mountdir=${files[0]%/}
 dirbase=${dirbase%/}
 [[ "$dirbase" ]] || missing argerr "DIR" "--dirbase"
 
+integer "${count:-}" --count  # automatically checks for missing
+
 [[ "${size:-}" ]] || missing "SIZE" "--size"
-integer "${count:-}" --count
+size=$(numfmt --from=auto -- "$size") || fatal # Also checks for valid integer
+
+# account for sha256sum.txt and verify script
+totalsize=$((count * (size + 82) + 1000))
+freespace "$mountdir" "$totalsize"
 
 if ((verbose)); then
 	checksumopts=()
@@ -132,6 +149,7 @@ message "Create test files"
 
 tmpdir=$(mktemp --directory) || fatal "could not create temp dir"
 trap 'rm -rf -- "$tmpdir"' EXIT
+freespace "$tmpdir" "$totalsize"
 
 workdir=$tmpdir/$dirbase
 mkdir --parents -- "$workdir"
@@ -153,11 +171,13 @@ sync -- ./*
 cd - &>/dev/null
 
 message "Transfer test files to: $mountdir/$dirbase"
+# test again, just in case $mountdir is the same filesystem as $tmpdir
+freespace "$mountdir" "$totalsize"
 # If only Debian's rsync had --drop-cache :-(
 rsync "${rsyncopts[@]}" --recursive -- "$workdir" "$mountdir"
 
 message "Wait for files to be actually written on device"
-sync --file-system -- "$mountdir"/"$dirbase"/*
+sync --file-system -- "$mountdir"/"$dirbase"/*  # intentionally sync whole fs
 
 message "Test storage"
 # Some filesystems may be automounted as noexec (e.g. FAT), hence invoking sh
