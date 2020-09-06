@@ -16,8 +16,8 @@ trap '>&2 echo "non-success status: line $LINENO, status $?: $BASH_COMMAND"' ERR
 
 dirbase=$USER
 count=10
-size=100M
-bs=1M
+size=10M
+bs=1Mi
 verbose=1
 
 #------------------------------------------------------------------------------
@@ -41,8 +41,14 @@ invalid() { argerr "invalid ${2:-option}: ${1:-}"; }
 missing() { argerr "missing ${1:+$1 }argument${2:+ in $2}."; }
 integer() { [[ "$1" ]] || missing "${3:-NUM}" "${2:-}"; [[ "$1" != *[!0-9]* ]] ||
             argerr "${2:+${3:-NUM} argument in $2 is }not an integer: $1"; }
+sizefmt() { [[ "$1" ]] || missing "${3:-SIZE}" "${2:-}";
+            echo $(numfmt --from=auto -- "$1" || fatal); }
 exists()  { type "$@" >/dev/null 2>&1; }
-si()      { numfmt --to=si "$@"; }
+si_iec()  { numfmt --to=${2:-si} --suffix 'B' "$1"; }
+si()      { si_iec "$1" si; }
+iec()     { si_iec "$1" iec-i; }
+bytesfmt(){ numfmt --grouping "$@"; }
+sizemsg() { echo "$(${2:-si} $1) ${3:+$3 }($(bytesfmt $1) bytes)"; }
 
 garbage() {
 	if exists pv; then
@@ -59,8 +65,8 @@ freespace() {
 	local available=$(df --block-size=1 -- "$path" | awk 'NR==2{print $4}')
 	if ((available < required)); then
 		fatal "not enough space on $path: " \
-			$(si "$available") "B available, " \
-			$(si "$required")  "B required."
+			$(si "$available") " available, " \
+			$(si "$required")  " required."
 	fi
 }
 
@@ -82,11 +88,32 @@ usage() {
 	Create, copy and check random files to test storage integrity
 
 	Options:
-	  -h|--help      - show this page.
-	  -v|--verbose   - print more details about what is being done.
+	  -h|--help    - show this page.
+	  -v|--verbose - print more details about what is being done.
 
-	  -c|--count NUM - Number of test files. [Default: $count]
-	  -s|--size SIZE - Size of each test file. [Default: $size]
+	  -c|--count NUM       - Number of test files. [Default: $count]
+	  -s|--size SIZE       - Size of each test file. [Default: $size]
+	  -d|--dirbasename DIR - Directory basename under MOUNTDIR root to copy
+	                           the test files. [Default: $dirbase]
+	  -b|--block-size SIZE - Use SIZE as block size on write operations
+	                           when applicable. [Default: $bs]
+
+	Create files with random data in MOUNTDIR/$dirbase, MOUNTDIR usually
+	being the mountpoint directory of a USB Thumb Drive, and verify their
+	integrity using the '$checksum' utility. Also creates the checksum file
+	'$checkfile' and a companion script '$verify' so
+	integrity can easily be tested again in the future.
+
+	It is suggested to adjust size and count so test files occupy almost
+	all of the storage free space, so for an empty 16GB Thumb Drive $myname
+	should preferably be used with '--size 1G --count 15'. Test files can
+	later be selectively deleted to free just enough space for your own data,
+	keeping the Thumb Drive always almost full to maximize integrity test
+	coverage.
+
+	All SIZE units are parsed through 'numfmt' auto mode, so SI suffixes such
+	as K, M, G are allowed. '1K' means 1000; use 'Ki' (and 'Mi', 'Gi', etc)
+	for 1024-based units.
 
 	Copyright (C) 2020 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
@@ -96,20 +123,24 @@ usage() {
 
 files=()
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
-while (( $# )); do
+while (($#)); do
 	case "$1" in
-	-q|--quiet    ) verbose=0             ;;
-	-s|--size     ) shift; size="${1:-}"  ;;
-	-c|--count    ) shift; count="${1:-}" ;;
-	--size=*      ) size="${1#*=}"        ;;
-	--count=*     ) count="${1#*=}"       ;;
-	--            ) shift ; break         ;;
-	-*            ) invalid "$1"          ;;
-	*             ) files+=( "$1" )       ;;
+	-q|--quiet      ) verbose=0;;
+	-s|--size       ) shift; size=${1:-}   ;;
+	-c|--count      ) shift; count=${1:-}  ;;
+	-b|--block-size ) shift; bs=${1:-}     ;;
+	-d|--dirbasename) shift; dirbase=${1:-};;
+	--size=*        ) size=${1#*=}   ;;
+	--count=*       ) count=${1#*=}  ;;
+	--block-size=*  ) bs=${1#*=}     ;;
+	--dirbasename=* ) dirbase=${1#*=};;
+	--) shift; break;;
+	-*) invalid "$1";;
+	* ) files+=( "$1" );;
 	esac
 	shift || break
 done
-files+=( "$@" )
+files+=("$@")
 
 #------------------------------------------------------------------------------
 
@@ -119,16 +150,20 @@ if ((${#files[@]} > 1)); then invalid "${files[1]}" argument; fi
 mountdir=${files[0]%/}
 [[ -d "$mountdir" ]] || argerr "MOUNTDIR is not a valid directory: $mountdir"
 
-dirbase=${dirbase%/}
-[[ "$dirbase" ]] || missing argerr "DIR" "--dirbase"
+dirbase=${dirbase%/}  # will also consider '/' as missing, which is sensible
+[[ "$dirbase" ]] || missing 'DIR' '--dirbase'
 
-integer "${count:-}" --count  # automatically checks for missing
+# integer automatically checks for missing
+integer "$count" '--count'
 
-[[ "${size:-}" ]] || missing "SIZE" "--size"
-size=$(numfmt --from=auto -- "$size") || fatal # Also checks for valid integer
+# sizefmt converts to bytes, and also checks missing values and valid integers
+# Being in a subshell requires outer || exit
+size=$(sizefmt "$size" '--size')       || exit
+bs=$(  sizefmt "$bs"   '--block-size') || exit
 
 # account for sha256sum.txt and verify script
 totalsize=$((count * (size + 82) + 1000))
+message "Use $(sizemsg $bs iec 'block size')"
 freespace "$mountdir" "$totalsize"
 
 if ((verbose)); then
@@ -145,7 +180,7 @@ fi
 
 #------------------------------------------------------------------------------
 
-message "Create test files"
+message "Create $count test files of $(sizemsg $size) each"
 
 tmpdir=$(mktemp --directory) || fatal "could not create temp dir"
 trap 'rm -rf -- "$tmpdir"' EXIT
@@ -170,7 +205,7 @@ sync -- ./*
 ./"$verify" "${checksumopts[@]}"
 cd - &>/dev/null
 
-message "Transfer test files to: $mountdir/$dirbase"
+message "Transfer test data to: $mountdir/$dirbase"
 # test again, just in case $mountdir is the same filesystem as $tmpdir
 freespace "$mountdir" "$totalsize"
 # If only Debian's rsync had --drop-cache :-(
