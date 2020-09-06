@@ -17,15 +17,13 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program. See <http://www.gnu.org/licenses/gpl.html>
 
-# TODO: dd ... | pv -s $(du -sb "$output" | awk '{print $1}') | dd ...
-# TODO: dd ... conv=fsync oflag=direct
-# TODO: dialog --gauge
+# TODO: ETA: pv -s ... -- "$input" | dd ...
 # TODO: INPUT and OUTPUT optional, use stdin/stdout
-# TODO: if OUTPUT is not writable, add sudo
 
 myname=${0##*/}
 block=1Mi
 size=0
+autosudo=1
 
 fatal()   { [[ "$1" ]] && echo "$myname: error: $@" >&2 ; exit 1; }
 message() { printf "%s\n" "$1"; }
@@ -52,6 +50,7 @@ usage() {
 	Options:
 	  -h|--help    - show this page.
 	  -f|--force   - force copy even for mounted partitions
+	  -S|--no-sudo - do not uso 'sudo' even if OUTPUT is not writable by user
 
 	  -s|--size SIZE       - number of BYTES (*NOT* blocks!) to copy.
 	                           0 copies the whole input [Default: $size]
@@ -72,7 +71,8 @@ files=()
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
 while (($#)); do
 	case "$1" in
-	-f|--force) force=1;;
+	-f|--force  ) force=1;;
+	-S|--no-sudo) autosudo=0;;
 	-b|--block-size) shift; block=$1;;
 	-s|--size      ) shift; size=$1 ;;
 	--block-size=*) block=${1#*=};;
@@ -89,6 +89,9 @@ output=${files[1]}
 
 [[ "$input"  ]] || missing "" "INPUT"
 [[ "$output" ]] || missing "" "OUTPUT"
+
+sudo=()
+if ((autosudo)) && ! [[ -w "$output" ]]; then sudo=(sudo); fi
 
 size=$( sizefmt "$size"  '--size'      ) || exit
 block=$(sizefmt "$block" '--block-size') || exit
@@ -107,5 +110,7 @@ if ((size)); then
 	args+=(iflag=count_bytes count="$size")
 fi
 
-echo "dd ${args[@]}" >&2
-dd "${args[@]}"
+cmd=("${sudo[@]}" dd "${args[@]}")
+echo "${cmd[@]}" >&2
+
+"${cmd[@]}"
