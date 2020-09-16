@@ -41,6 +41,7 @@ which()   { builtin type -P "$@" ; }
 sprunge() { local l=${2-bash}; echo $(curl -sSF "sprunge=<${1:--}" http://sprunge.us)${l:+?$l}${3:+#n-$3}; }
 epoch()   { date -d@"$1" ; }
 now()     { date +%Y%m%d%H%M%S ; }
+exists()  { type "$@" &>/dev/null; }
 
 timestamp() {
 	if [[ "${1:-}" ]]; then
@@ -49,6 +50,43 @@ timestamp() {
 		date +%s
 	fi
 }
+
+# WIP to be the new open()
+# idea: supress error messages only *after* (and *if*) successfully opened a file
+# all messages before from launcher itself (gio open/xdg-open) should be printed
+# after launcher returns, everything else should be discarded or redirected
+# If needed, test for success likelihood: file/URI exists, has default handler, etc
+newopen() {
+	local f=${1:-}
+	local out="$HOME"/.nohup.txt
+	local usage="Usage: open [-h|--help] FILE\n" arg err
+
+	for arg in "$@"; do
+		if [[ "$arg" == '--' ]]; then break; fi
+		if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
+			printf "Open a FILE with default application\n${usage}"
+			return
+		fi
+	done
+	# TODO: proper arg parse to allow --, -v|--verbose, -q|--quiet
+	if [[ -z "$f" ]]; then
+		printf >&2 "open: missing FILE argument\n${usage}"
+		return 1
+	fi
+
+	# now dance around with gio mime, gio info, gio open, xdg-mime, xdg-open
+	if ! { xdg-open "$f" &>>"$out" || { err=$?; false; }; }; then
+		exec >&2
+		#echo "error opening '$f', see $out"
+		tail -n1 "$out"
+		return $err
+	fi
+}
+
+where() {
+	dpkg --search -- $(type -p "${1:-}")
+}
+complete -c where
 
 # Profiling:
 # python3 -m cProfile -o myprog.profile ./myprog.py ...
@@ -104,7 +142,7 @@ cmdcat()  { cat  "$(type -P "$1")" ; }
 cmdopen() { open "$(type -P "$1")" ; }
 complete -c cmdlist cmdcat cmdopen
 
-alias why='aptitude why'  # can also be 'apt cache rdepends --installed'
+alias why='apt rdepends --installed'  # can also be 'aptitude why'
 
 ubuntu-package() {
 	open "http://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"

@@ -38,6 +38,7 @@ __comp_dir_files() {
 	_init_completion || return
 	COMPREPLY=( $(compgen -W '$(ls "${dirpath}"/*)' -- ${cur}) )
 }
+# ... or use `complete -G '/etc/xxx/*' xxx` and drop both _comp_xxx() and this
 
 # This is intencionally distinct from BASH_COMPLETION_USER_DIR, as a per-user
 # counterpart for static, *eager* loading
