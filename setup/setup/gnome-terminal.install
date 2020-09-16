@@ -3,31 +3,30 @@
 # Setup gnome-terminal
 
 # Create a new profile named after USER, titled
-# Enable 256 colors
+# Enable 256 colors (not needed anymore)
 # Enable transparency
 # Increase rows and columns
 # Unlimited scroll
 
 # Up to Ubuntu 12.04 (v3.4.11): gconf
-# Some point after: dconf/gsettings
+# v3.8 onwards: dconf/gsettings
 
 # for gsettings: https://wiki.gnome.org/Apps/Terminal/FAQ
-# list of profile UUIDs: gsettings get org.gnome.Terminal.ProfilesList list
-# default profile UUID: gsettings get org.gnome.Terminal.ProfilesList default
-# change a profile: gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:UUID/ KEY VALUE
 
-setuplib=${1:-$SETUP_LIB}
-cols=${2:-${SETUP_GNOME_TERMINAL_COLS:-180}}
-rows=${3:-${SETUP_GNOME_TERMINAL_ROWS:-50}}
+# -----------------------------------------------------------------------------
 
-usage() { echo "Usage: ${0##*/} SETUP_LIB [COLS] [ROWS]" >&2; exit 1; }
+usage() {
+	echo "${1:+Setup library not found: $setuplib}" >&2
+	echo "Usage: ${0##*/} [COLS [ROWS]]" >&2
+	exit 1
+}
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+if [[ -r "$setuplib" ]]; then source "$setuplib"; else usage setuplib; fi
 
-if [[ -r "$setuplib" ]]; then
-	source "$setuplib"
-else
-	echo "Setup library not found! $setuplib" >&2
-	usage
-fi
+# -----------------------------------------------------------------------------
+
+cols=${1:-${SETUP_GNOME_TERMINAL_COLS:-180}}
+rows=${2:-${SETUP_GNOME_TERMINAL_ROWS:-60}}
 
 integer "$cols" "COLS" || usage
 integer "$rows" "ROWS" || usage
@@ -35,7 +34,7 @@ integer "$rows" "ROWS" || usage
 user=${USER,,}
 user=${user^}
 
-version=$(gnome-terminal --version | awk '{print $NF}')
+version=$(gnome-terminal --version | awk '{print $4}')
 
 gconftool=gconftool
 gcrootkey=/apps/gnome-terminal
@@ -161,6 +160,44 @@ gt_gconf() {
 		"env TERM=xterm-256color /bin/bash"
 }
 
-if version_lesser "$version" 3.4.11; then
+gt_dconf() {
+	local name=${1:-$user}
+	local path='/org/gnome/terminal/legacy/profiles:/'
+	local profiles= profile= puid= pname= sep=
+
+	while IFS= read -r puid; do
+		pname=$(dconf read "${path}${puid}visible-name")
+		if [[ "'${name}'" != "$pname" ]]; then continue; fi
+		profile=$puid
+		break
+	done < <(dconf list "$path" | awk '/^:/{print}')
+	if [[ "$profile" ]]; then
+		message "Update Gnome Terminal profile: $name (${profile:1:-1})"
+	else
+		profile=":$(uuidgen)/"
+		message "Create Gnome Terminal profile: $name (${profile:1:-1})"
+		profiles=$(dconf read "${path}list")
+		if [[ "${profiles: -2}" == "']" ]]; then sep=', '; fi
+		$SETUP_RUN dconf write "${path}list" "${profiles::-1}${sep}'${profile:1:-1}']"
+	fi
+	# Created with: dconf dump "${path}${profile}" | sort
+	$SETUP_RUN dconf load "${path}${profile}" < <(sed -Ez 's/\n +//g' <<-EOF
+		[/]
+		background-transparency-percent=12
+		default-size-columns=${cols}
+		default-size-rows=${rows}
+		scrollback-unlimited=true
+		use-theme-transparency=false
+		use-transparent-background=true
+		visible-name='${name}'
+	EOF
+	)
+	$SETUP_RUN dconf write "${path}default" "'${profile:1:-1}'"
+}
+
+
+if version_lesser "$version" 3.7; then
 	gt_gconf
+else
+	gt_dconf
 fi
