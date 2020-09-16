@@ -151,6 +151,36 @@ complete -F _comp_pkg_names ubuntu-package why
 
 compile() { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
 
+
+# unzip featuring an enhanced version of tar's --strip-components=1
+# Usage: unzip-strip ARCHIVE [DESTDIR] [EXTRA_cp_OPTIONS]
+# Derive DESTDIR to current dir and archive filename or toplevel dir
+# https://superuser.com/a/573624/68321
+unzip-strip() (
+	set -eu
+	local archive=$1
+	local destdir=${2:-}
+	shift; shift || :
+	local tmpdir=$(mktemp -d)
+	trap 'rm -rf -- "$tmpdir"' EXIT
+	unzip -qd "$tmpdir" -- "$archive"
+	shopt -s dotglob
+	local files=("$tmpdir"/*) name i=1
+	if (( ${#files[@]} == 1 )) && [[ -d "${files[0]}" ]]; then
+		name=$(basename "${files[0]}")
+		files=("$tmpdir"/*/*)
+	else
+		name=$(basename "$archive"); name=${archive%.*}
+		files=("$tmpdir"/*)
+	fi
+	if [[ -z "$destdir" ]]; then
+		destdir=./"$name"
+	fi
+	while [[ -f "$destdir" ]]; do destdir=${destdir}-$((i++)); done
+	mkdir -p "$destdir"
+	cp -ar "$@" -t "$destdir" -- "${files[@]}"
+)
+
 # 1337!
 alias matrix='cmatrix -bsu8'
 
