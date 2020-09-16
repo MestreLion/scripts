@@ -3,6 +3,19 @@
 #   Copyright (C) 2015 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 #   License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
 
+# Add this to scripts:
+## -----------------------------------------------------------------------------
+#setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+#if [[ -r "$setuplib" ]]; then
+#	source "$setuplib"
+#else
+#	echo "Setup library not found! $setuplib" >&2
+#	echo "Usage: ${0##*/} [SETUP_LIB]" >&2
+#	exit 1
+#fi
+## -----------------------------------------------------------------------------
+
+
 SETUP_VERBOSE=${SETUP_VERBOSE:-1}
 SETUP_DRYRUN=${SETUP_DRYRUN:-0}
 SETUP_USER=${SETUP_USER:-${USER,,}}
