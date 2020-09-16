@@ -12,7 +12,7 @@ trap '>&2 echo "non-success status: line $LINENO, status $?: $BASH_COMMAND"' ERR
 #------------------------------------------------------------------------------
 
 count=10
-size=10M
+size=100M
 bs=1Mi
 verbose=1
 
