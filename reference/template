@@ -99,8 +99,14 @@ usage() {
 	exit 0
 }
 
-files=()
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
+
+# Pre-parse for -h|--help, ignoring if after '--'
+for arg in "$@"; do
+	if [[ "$arg" == '--' ]]; then break; fi
+	if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then usage; fi
+done
+files=()
 while (($#)); do
 	case "$1" in
 	-v|--verbose) verbose=1;;
