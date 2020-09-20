@@ -6,6 +6,8 @@
 # License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
 #
 # TODO: add 'toggle' action, parsing uhubctl with no action to determine status
+# TODO: gsettings for keyboard shortcuts
+# FIXME: implement 'config' action
 #------------------------------------------------------------------------------
 
 set -Eeuo pipefail  # exit on any error
@@ -186,6 +188,6 @@ if [[ "$message" ]]; then
 		off) icon=brasero-disc-00;;
 		*)   icon=brasero-disc-100;;
 	esac
-	notify-send --app-name "$myname"  --icon "$icon" -- "$message"
+	notify-send --app-name "$myname"  --icon "$icon" -- "$message" || :
 fi
 uhubctl "${args[@]}"
