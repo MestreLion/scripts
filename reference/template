@@ -106,21 +106,27 @@ for arg in "$@"; do
 	if [[ "$arg" == '--' ]]; then break; fi
 	if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then usage; fi
 done
-files=()
+args=()
 while (($#)); do
 	case "$1" in
 	-v|--verbose) verbose=1;;
-	--var=*) var=${1#*=};;
-	--var) shift ; var=${1:-};;
+	-o|--opt) shift; opt=${1:-};;
+	--opt=*) opt=${1#*=};;
 	--) shift; break;;
 	-*) invalid "$1";;
 	-*) opts+=( "$1" );;
 	* ) argerr "$1";;
-	* ) files+=( "$1" );;
+	* ) args+=( "$1" );;
 	esac
 	shift || break
 done
-files+=("$@")
+args+=("$@")
+
+case ${#args[@]} in
+	0) missing ARG;;
+	1) arg=${args[0]}; if [[ -z "$arg" ]]; then missing ARG; fi;;
+	*) invalid "${args[1]}" argument;;
+esac
 
 #------------------------------------------------------------------------------
 
