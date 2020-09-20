@@ -1,0 +1,191 @@
+#!/bin/bash
+#
+# usb-power - Control USB ports power using uhubctl
+#
+# Copyright (C) 2020 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+#
+# TODO: add 'toggle' action, parsing uhubctl with no action to determine status
+#------------------------------------------------------------------------------
+
+set -Eeuo pipefail  # exit on any error
+trap '>&2 echo "error: line $LINENO, status $?: $BASH_COMMAND"' ERR
+
+#------------------------------------------------------------------------------
+
+action=cycle
+port=
+location=
+vendor=
+message=
+verbose=0
+
+#------------------------------------------------------------------------------
+
+url=https://github.com/mvp/uhubctl.git
+
+myname=${0##*/}
+mydir=$(dirname "$(readlink -f "$0")")
+config=${XDG_CONFIG_HOME:-$HOME/.config}/usb-power.conf
+destdir=${XDG_DATA_HOME:-$HOME/.local/share}/uhubctl
+bindir=${XDG_BIN_HOME:-$HOME/.local/bin}
+udev=/etc/udev/rules.d/52-usb-hub.rules
+
+#------------------------------------------------------------------------------
+
+install_package() {
+	local pkg=
+	local pkgs=()
+	for pkg in "$@"; do
+		if ! dpkg-query --show "$pkg" &>/dev/null; then pkgs+=("$pkg"); fi
+	done
+	if ((${#pkgs[@]})); then
+		sudo apt install -y "${pkgs[@]}"
+	fi
+}
+
+install_uhubctl() {
+	install_package git libusb-1.0-0-dev
+	if ! [[ -d "$destdir" ]]; then git clone "$url" -- "$destdir"; fi
+	cd -- "$destdir"
+	git reset --hard && git pull
+	make
+	make install sbindir="$bindir"
+	exit
+}
+
+udev() {
+	echo "# Added by $myname for USB hub power control via uhubctl" |
+		sudo tee -- "$udev" >/dev/null
+	while IFS=: read -r idVendor idProduct; do
+		echo "SUBSYSTEMS==\"usb\"," \
+			"ATTRS{idVendor}==\"${idVendor}\"," \
+			"ATTRS{idProduct}==\"${idProduct}\", TAG+=\"uaccess\"" |
+		sudo tee -a  -- "$udev" >/dev/null
+	done < <(
+		sudo "$bindir"/uhubctl |
+		awk -F'[,[]' '/^[^ ]/ { sub(/ .*/, "", $2)
+			if ($2 != prev) { print $2; prev = $2 }
+		}'
+	)
+	sudo udevadm trigger --attr-match=subsystem=usb
+	exit
+}
+
+#------------------------------------------------------------------------------
+
+fatal()   { if (($#)); then echo "$myname: error: $@" >&2; fi; exit 1; }
+message() { if (($# && verbose)); then printf '%s\n' "$@"; fi; }
+argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2; usage 1; }
+invalid() { argerr "invalid ${2:-option}: ${1:-}"; }
+missing() { argerr "missing ${1:+$1 }argument${2:+ from $2}."; }
+
+user_config() {
+	local uconfig=${1:-}
+	if [[ -z "$uconfig" ]]; then missing FILE --config; fi
+	if ! [[ -f "$uconfig" ]]; then
+		fatal "could not find config file: $uconfig"
+	fi
+	source "$uconfig"
+}
+
+#------------------------------------------------------------------------------
+
+usage() {
+	if [[ "${1:-}" ]] ; then exec >&2; fi
+	cat <<-USAGE
+	Usage: $myname [OPTIONS] [ACTION]
+	USAGE
+	if [[ "${1:-}" ]] ; then
+		cat <<- USAGE
+		Try '$myname --help' for more information.
+		USAGE
+		exit 1
+	fi
+	cat <<-USAGE
+
+	Control USB port power
+
+	Options:
+	  -h|--help     - show this page.
+	  -v|--verbose  - print more details about what is being done.
+
+	  -c|--config FILE - Extra configuration file. Will override settings in
+	                       master config file $config
+	  -m|--message MSG - A message to display via notifications
+	  -V|--vendor ID   - limit ACTION usage to the specified Vendor ID
+
+	ACTION might be one of:
+	  on       - turn port on
+	  off      - turn port off
+	  cycle    - turn port off for 2 seconds, then back on (default)
+	  install  - download uhubctl from $url,
+	               install it at $destdir,
+	               and symlink executable to $bindir
+	               May require installing dependency packages using sudo
+	  config   - run 'cycle' on each USB hub port to aid creating the config file
+	  udev     - generate udev rules for the USB hub port. Uses sudo
+
+	Copyright (C) 2020 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+	USAGE
+	exit 0
+}
+
+# Pre-parse for -h|--help, ignoring if after '--'
+for arg in "$@"; do
+	if [[ "$arg" == '--' ]]; then break; fi
+	if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then usage; fi
+done
+# Pre-parse master config file. Silently ignore if it does not exist
+if [[ -f "$config" ]]; then
+	source "$config"
+fi
+args=()
+while (($#)); do
+	case "$1" in
+	-v|--verbose) verbose=1;;
+	-V|--vendor) shift; vendor=${1:-};;
+	-c|--config) shift; user_uconfig "${1:-}";;
+	-m|--message) shift; message=${1:-};;
+	--vendor=*) vendor=${1#*=};;
+	--config=*) user_uconfig "${1#*=}";;
+	--message=*) message=${1#*=};;
+	-*) invalid "$1";;
+	* ) args+=( "$1" );;
+	esac
+	shift || break
+done
+args+=("$@")
+
+case ${#args[@]} in
+	0) info=1;;
+	1) action=${args[0]}; if [[ -z "$action" ]]; then missing ACTION; fi;;
+	*) invalid "${args[1]}" ACTION;;
+esac
+
+#------------------------------------------------------------------------------
+
+args=()
+
+case "$action" in
+	on|off|cycle) args+=(-a "$action");;
+	install) install_uhubctl;;
+	udev) udev;;
+	config) cycle;;
+	*) invalid "$action" ACTION;;
+esac
+
+if [[ "$port"     ]]; then args+=(--port     "$port"); fi
+if [[ "$location" ]]; then args+=(--location "$location"); fi
+if [[ "$vendor"   ]]; then args+=(--vendor   "$vendor"); fi
+
+message uhubctl "${args[@]}"
+if [[ "$message" ]]; then
+	case "$action" in
+		off) icon=brasero-disc-00;;
+		*)   icon=brasero-disc-100;;
+	esac
+	notify-send --app-name "$myname"  --icon "$icon" -- "$message"
+fi
+uhubctl "${args[@]}"
