@@ -48,8 +48,9 @@ print_monitors() {
 		h=0
 	}
 	h {sub(/[ \t]+/, ""); hex = hex $0}
-	/EDID.*:/ {h=1}' | sort
-	)
+	/EDID.*:/ {h=1}
+	END {if (output && hex) print output, hex, conn}
+	' | sort)
 }
 
 inarray() {
