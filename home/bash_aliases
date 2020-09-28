@@ -206,6 +206,15 @@ mv-link() (  # any particular reason for this to be a subshell??? relpath() won'
 	done < <(find "." -maxdepth 1 -type l)
 )
 
+compare-images() (
+	local tmpdir=$(mktemp -d) || exit 1
+	trap 'rm -rf -- "$tmpdir"' EXIT
+	for img in "$@"; do
+		convert "$img" pam:"$tmpdir"/"$(basename "$img")"
+	done
+	md5sum "$tmpdir"/* | sort
+)
+
 # Minecraft
 _minecraft_saverestore() {
 	local src=$HOME/.minecraft/saves
