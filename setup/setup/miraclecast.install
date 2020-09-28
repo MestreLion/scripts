@@ -1,0 +1,43 @@
+#!/bin/bash -e
+
+# Miraclecast - Miracast for Linux
+# https://github.com/albfan/miraclecast
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	echo "Usage: ${0##*/} [SETUP_LIB]" >&2
+	exit 1
+fi
+
+# -----------------------------------------------------------------------------
+
+repourl=https://github.com/albfan/miraclecast.git
+
+# Constants and other globals - DO NOT CHANGE! --------------------------------
+
+myname=${0##*/}
+mydir=$(dirname "$(readlink -f "$0")")
+
+prefix=$HOME/.local  # NOT a XDG path!
+
+datadir=${XDG_DATA_HOME:-$HOME/.local/share}
+repodir=$datadir/miraclecast
+
+# -----------------------------------------------------------------------------
+
+# https://github.com/albfan/miraclecast/wiki/Building
+package_install git lib{glib2.0,udev,systemd,readline}-dev
+git clone "$repourl" -- "$repodir"
+mkdir -p "$repodir"/build
+cd "$repodir"/build
+../autogen.sh g # --prefix="$prefix" --syconfdir="$datadir"  # /dbus-1/system.d
+make
+sudo make install
+
+# Uninstall:
+# sudo make uninstall && make distclean
