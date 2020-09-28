@@ -32,12 +32,12 @@ enable=()
 
 print_monitors() {
 	while read -r output hex conn; do
-		[[ -z "$conn" ]] && conn=${output%%-*}
 		echo "# $output	$conn	$(xxd -r -p <<< "$hex")"
 	done < <(xrandr --prop | awk '
 	!/^[ \t]/ {
 		if (output && hex) print output, hex, conn
 		output=$1
+		conn=output; sub(/-.*$/, "", conn)
 		hex=""
 	}
 	/ConnectorType:/ {conn=$2}
