@@ -1,0 +1,39 @@
+#!/bin/bash -e
+
+# Google Chrome with proper signing key (outdated in official package)
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+
+usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+# -----------------------------------------------------------------------------
+
+package=google-chrome-stable
+url=https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+debfile=${XDG_CACHE_HOME:-$HOME/.cache}/$(basename "$url")
+
+if exists google-chrome; then
+	# Manually install updated signing key to avoid error on apt update:
+	# Err:1 http://dl.google.com/linux/chrome/deb stable InRelease
+	#  The following signatures couldn't be verified because the public key is not available: NO_PUBKEY 78BD65473CB3BD13
+	# https://askubuntu.com/questions/1078813
+	# https://www.google.com/linuxrepositories/
+	wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+	$SETUP_RUN sudo apt update
+	$SETUP_RUN sudo apt full-upgrade "$package"
+	exit
+fi
+
+$SETUP_RUN wget -O "$debfile" -- "$url"
+$SETUP_RUN dpkg --install "$debfile"
+$SETUP_RUN apt-get -f install
+rm -f "$debfile"
