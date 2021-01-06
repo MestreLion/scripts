@@ -143,8 +143,8 @@ if [[ -z "$monitors" ]]; then
 		# Useful when EDID data does not reflect actual preferred mode
 		# Options for non-existing outputs (such as the examples below) are ignored
 		# Examples:
-		monitor_opts[DFPx]="--mode 1920x1080 --rate 60"
-		monitor_opts[DFPy]="--mode 1280x720"
+		#monitor_opts[DFPx]="--mode 1920x1080 --rate 60"
+		#monitor_opts[DFPy]="--mode 1280x720"
 
 		# As a reference, these were the connected monitors when this config file was created
 		# use it as a guide when editing the above monitors list and extra options
