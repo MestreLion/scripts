@@ -93,7 +93,7 @@ PS1=${c[RESET]}${c[BOLD]}\
 "${c[RED]}\$(__git_ps1 '%s ')${c[YELLOW]}\$(ps1_exitcode)${c[BLUE]}\\$ "\
 ${c[RESET]}
 
-unset color C
+unset color c
 
 
 # Settings ---------------------------------------------------------------------
