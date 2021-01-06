@@ -23,6 +23,8 @@ alias dd-nocache="dd-progress oflag=nocache,sync"
 alias dfd='df -H -x tmpfs -x squashfs -x devtmpfs'
 alias duh='du -sbh --si'
 alias dud='lsblk --exclude 7'
+alias rot13="tr 'A-Za-z' 'N-ZA-Mn-za-m'"
+alias json='python3 -m json.tool'
 
 #alias have="exists"
 
