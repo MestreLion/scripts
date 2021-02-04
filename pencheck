@@ -39,7 +39,8 @@ missing() { argerr "missing ${1:+$1 }argument${2:+ in $2}."; }
 integer() { [[ "$1" ]] || missing "${3:-NUM}" "${2:-}"; [[ "$1" != *[!0-9]* ]] ||
             argerr "${2:+${3:-NUM} argument in $2 is }not an integer: $1"; }
 sizefmt() { [[ "$1" ]] || missing "${3:-SIZE}" "${2:-}";
-            echo $(numfmt --from=auto -- "$1" || fatal); }
+            local num=$(numfmt --from=auto -- "$1");
+            [[ "$num" ]] && echo "$num" || return 1; }
 exists()  { type "$@" >/dev/null 2>&1; }
 si_iec()  { numfmt --to=${2:-si} --suffix 'B' "$1"; }
 si()      { si_iec "$1" si; }
@@ -155,7 +156,7 @@ integer "$count" '--count'
 
 # sizefmt converts to bytes, and also checks missing values and valid integers
 # Being in a subshell requires outer || exit
-size=$(sizefmt "$size" '--size')       || exit
+size=$(sizefmt "$size" '--size') || exit
 bs=$(  sizefmt "$bs"   '--block-size') || exit
 
 # account for sha256sum.txt and verify script
