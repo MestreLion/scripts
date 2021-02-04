@@ -1,0 +1,44 @@
+#!/bin/bash -e
+
+# MKVToolNix and MediaInfo setup
+# https://mkvtoolnix.download/downloads.html#ubuntu
+# https://mediaarea.net/en/MediaInfo/Download/Ubuntu
+
+# -----------------------------------------------------------------------------
+
+setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
+
+usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
+
+if [[ -r "$setuplib" ]]; then
+	source "$setuplib"
+else
+	echo "Setup library not found! $setuplib" >&2
+	usage
+fi
+
+# -----------------------------------------------------------------------------
+
+# MKVToolNix
+aptkey=https://mkvtoolnix.download/gpg-pub-moritzbunkus.txt
+aptrepo=https://mkvtoolnix.download/ubuntu/
+
+$SETUP_RUN wget -q -O - "$aptkey" | $SETUP_RUN sudo apt-key add -
+$SETUP_RUN sudo apt-add-repository --enable-source --no-update -- "$aptrepo"
+
+# -----------------------------------------------------------------------------
+
+# MediaInfo
+repodeb=https://mediaarea.net/repo/deb/repo-mediaarea_1.0-14_all.deb
+
+tmpdir=$(mktemp --directory) || fatal "could not create temp dir"
+trap 'rm -rf -- "$tmpdir"' EXIT
+repofile=$tmpdir/$(basename "$repodeb")
+
+wget -O "$repofile" -- "$repodeb" && $SETUP_RUN sudo dpkg -i "$repofile"
+
+# -----------------------------------------------------------------------------
+
+packages=({mkvtoolnix,mediainfo}{,-gui})
+$SETUP_RUN sudo apt update
+$SETUP_RUN sudo apt full-upgrade --yes -- "${packages[@]}"
