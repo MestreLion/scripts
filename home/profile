@@ -118,3 +118,8 @@ export DEBEMAIL="debian@rodrigosilva.com"
 # Dotfiles in $HOME -----------------------------------------------------------
 
 export GNUPGHOME=${XDG_CONFIG_HOME:-$HOME/.config}/gnupg
+
+
+# DOSBox ----------------------------------------------------------------------
+
+export DOSBOX_DRIVEC=/dados/Jogos/DOSBox
