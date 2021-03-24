@@ -27,6 +27,7 @@ packages=(
 	jstest-gtk
 	gnome-cards-data
 	cowsay fortunes{,-br,-off} lolcat  # cowfortune
+	virtualbox{,-ext-pack,-guest-additions-iso}  # add script to auto-accept license
 )
 
 for repo in "${repos[@]}"; do
@@ -35,6 +36,31 @@ fi
 
 sudo apt update
 sudo apt install -y -- "${packages[@]}"
+
+
+sudo tee /etc/sysctl.d/90-rodrigo-inotify_max_user_watches.conf >/dev/null <<-EOF
+# Increase inotify max watch limit, for PyCharm and perhaps other applications.
+# In Debian/Ubuntu, create this file as '/etc/sysctl.d/60-*.conf' and run
+# `sudo service procps reload` or reboot to apply changes.
+# See https://transang.me/enospc-inotify-in-ubuntu/
+#
+# Original setting (8192 in Ubuntu 18.04):
+#     $(sysctl fs.inotify.max_user_watches)
+# Current setting:
+#     sysctl fs.inotify.max_user_watches
+#     # or
+#     cat /proc/sys/fs/inotify/max_user_watches
+# Current watch actual usage:
+#     lsof | grep inotify | wc -l
+# Relevant manpages:
+#     man inotify
+#     man sysctl.conf
+#
+# Each _used_ watch takes ~1080B of RAM. So 128K watches = ~135MB if fully used
+fs.inotify.max_user_watches = 131072
+EOF
+sudo service procps reload
+
 
 # Setup scripts:
 # scripts	SCRIPTS=$HOME/work/scripts ./scripts.install ../setuplib
