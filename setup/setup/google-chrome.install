@@ -37,3 +37,11 @@ $SETUP_RUN wget -O "$debfile" -- "$url"
 $SETUP_RUN dpkg --install "$debfile"
 $SETUP_RUN apt-get -f install
 rm -f "$debfile"
+
+#TODO: Disable form-controls-refresh
+# Restore native-ish form widgets
+# https://blog.chromium.org/2020/03/updates-to-form-controls-and-focus.html
+# https://groups.google.com/a/chromium.org/g/blink-dev/c/kscJbfVjR5k/m/z73iZYlHCQAJ
+# http://concrete-hardboard.glitch.me/
+# chrome://flags/#form-controls-refresh
+# Default -> Disabled
