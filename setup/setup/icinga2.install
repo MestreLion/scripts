@@ -1,0 +1,15 @@
+#!/bin/bash -ue
+
+echo "WIP!"
+exit
+
+install_package icinga{,web}2 php-pgsql
+
+token=$(sudo icingacli setup token create | cut -d: -f2 | cut -d' ' -f2)
+
+printf '; Added by icinga2.install\ndate.timezone = America/Sao_Paulo' |
+sudo tee -a /etc/php/7.2/fpm/php.ini
+sudo service php7.2-fpm restart
+
+echo "$token"
+xdg-open 'http://desktop/icingaweb2/'
