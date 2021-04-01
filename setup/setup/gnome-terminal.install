@@ -15,13 +15,11 @@
 
 # -----------------------------------------------------------------------------
 
-usage() {
-	echo "${1:+Setup library not found: $setuplib}" >&2
-	echo "Usage: ${0##*/} [COLS [ROWS]]" >&2
-	exit 1
-}
-setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
-if [[ -r "$setuplib" ]]; then source "$setuplib"; else usage setuplib; fi
+usage() { echo "Usage: ${1:+$1 }${0##*/}${USAGE:+ $USAGE}" >&2; exit 1; }
+setuplib=${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}
+if [[ -r "$setuplib" ]]; then source "$setuplib"; else
+	echo "Setup library not found: $setuplib" >&2; usage '[SETUP_LIB=<path>]'
+fi
 
 # -----------------------------------------------------------------------------
 
