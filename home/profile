@@ -82,6 +82,7 @@ export LC_MONETARY="pt_BR.utf8"
 export LC_PAPER="pt_BR.utf8"
 export LC_MEASUREMENT="pt_BR.utf8"
 
+
 # Python ----------------------------------------------------------------------
 
 # Disabled, use `pip install --user -e` for local projects
@@ -109,11 +110,13 @@ export JUPYTER_CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}/jupyter
 export PYLINTHOME=${XDG_CACHE_HOME:-$HOME/.cache}/pylint    # Default ~/.pylint.d/
 export PYLINTRC=${XDG_CONFIG_HOME:-$HOME/.config}/pylintrc  # Default ~/.pylintrc
 
+
 # -----------------------------------------------------------------------------
 
 # Debian Development
 export DEBFULLNAME="Rodrigo Silva"
 export DEBEMAIL="debian@rodrigosilva.com"
+
 
 # Dotfiles in $HOME -----------------------------------------------------------
 
@@ -123,3 +126,8 @@ export GNUPGHOME=${XDG_CONFIG_HOME:-$HOME/.config}/gnupg
 # DOSBox ----------------------------------------------------------------------
 
 export DOSBOX_DRIVEC=/dados/Jogos/DOSBox
+
+
+# DWWW / sensible-browser -----------------------------------------------------
+
+export BROWSER=firefox
