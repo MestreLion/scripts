@@ -1,22 +1,28 @@
-#!/bin/bash
+#!/bin/bash -Eeu
 
-# Fix DWWW 404 bug
+# Fix DWWW 404 bug, permission errors and info2www issues
 # https://askubuntu.com/questions/581118
 
 # -----------------------------------------------------------------------------
 
-setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
-if [[ -r "$setuplib" ]]; then
-	source "$setuplib"
-else
-	echo "Setup library not found! $setuplib" >&2
-	echo "Usage: ${0##*/} [SETUP_LIB]" >&2
-	exit 1
+usage() { echo "Usage: ${1:+$1 }${0##*/}${USAGE:+ $USAGE}" >&2; exit 1; }
+setuplib=${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}
+if [[ -r "$setuplib" ]]; then source "$setuplib"; else
+	echo "Setup library not found: $setuplib" >&2; usage '[SETUP_LIB=<path>]'
 fi
 
 # -----------------------------------------------------------------------------
 
-required_install dwww  # Pulls apache2
+required_install dwww  # Pulls apache2 and info2www
+
+# Enable info2www images in dwww. See /usr/share/doc/info2www/README.Debian
+sudo ln -s /var/lib/info2www /var/www/html/
+
+#FIXME: Several issues with info2www. See Debian Bugs
+# - Image paths (see above fix)
+# - Typo in README.Debian (for the above command)
+# - Declare UTF-8 encoding (patch in Debian)
+# - s/fileutils/coreutils/g in index.html
 
 sudo a2enmod cgi  # Not enabled by default in apache 2.4+
 sudo systemctl restart apache2
@@ -24,6 +30,7 @@ sudo systemctl restart apache2
 # Add extensions to DWWW_DOCPATH!
 # - Java
 # - Maven
+# - Info2www
 #
 # From ./java.install:
 # if ! exists dwww; then exit; fi  # silently (CHANGE TO JAVA!!!)
