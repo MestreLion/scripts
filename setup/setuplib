@@ -59,12 +59,21 @@ green()   { tput setaf 2; bold "$@"; }
 fatal()   { echo $(red "${0##*/}" ': fatal' "${1:+: $1}") >&2; exit ${2:-1}; }
 error()   { echo $(red "${0##*/}" ': error' "${1:+: $@}") >&2; }
 message() { ((SETUP_VERBOSE)) && echo $(green '* ' "$@") || :; }
+argument(){
+	if ! [[ "${1:-}" ]]; then
+		echo "Missing required argument${2:+ '$2'}" >&2
+		return 1
+	fi
+}
 integer() {
 	if ! [[ "$1" != *[!0-9]* ]]; then
 		echo "'$1'${2:+ in $2} is not an integer." >&2
 		return 1
 	fi
 }
+
+# NOTE: Given install_package() and exists(),
+# required() and required_install() are DEPRECATED!
 
 required() {
 	local cmd=$1
@@ -73,7 +82,6 @@ required() {
 		fatal "$msg"
 	fi
 }
-
 required_install() {
 	# Install a package if a command is missing
 	# Usage: required_install <PACKAGE> [COMMAND]
@@ -140,6 +148,7 @@ package_install() {
 		$SETUP_RUN sudo apt install -y "${pkgs[@]}"
 	fi
 }
+alias install_package=package_install
 
 package_remove() {
 	# Remove all existing packages in a single command
