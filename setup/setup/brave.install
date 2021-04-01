@@ -1,0 +1,26 @@
+#!/bin/bash -e
+
+# Brave Browser
+# https://brave.com/linux/
+
+# -----------------------------------------------------------------------------
+
+usage() { echo "Usage: ${1:+$1 }${0##*/}${USAGE:+ $USAGE}" >&2; exit 1; }
+setuplib=${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}
+if [[ -r "$setuplib" ]]; then source "$setuplib"; else
+	echo "Setup library not found: $setuplib" >&2; usage '[SETUP_LIB=<path>]'
+fi
+
+# -----------------------------------------------------------------------------
+
+package_install apt-transport-https curl gnupg
+
+curl -s https://brave-browser-apt-release.s3.brave.com/brave-core.asc |
+$SETUP_RUN sudo apt-key --keyring /etc/apt/trusted.gpg.d/brave-browser-release.gpg add -
+
+echo "deb [arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main" |
+$SETUP_RUN sudo tee /etc/apt/sources.list.d/brave-browser-release.list
+
+sudo apt update
+
+package_install brave-browser
