@@ -4,15 +4,10 @@
 
 # -----------------------------------------------------------------------------
 
-setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
-
-usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
-
-if [[ -r "$setuplib" ]]; then
-	source "$setuplib"
-else
-	echo "Setup library not found! $setuplib" >&2
-	usage
+usage() { echo "Usage: ${1:+$1 }${0##*/}${USAGE:+ $USAGE}" >&2; exit 1; }
+setuplib=${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}
+if [[ -r "$setuplib" ]]; then source "$setuplib"; else
+	echo "Setup library not found: $setuplib" >&2; usage '[SETUP_LIB=<path>]'
 fi
 
 # -----------------------------------------------------------------------------
