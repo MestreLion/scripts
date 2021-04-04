@@ -8,7 +8,7 @@
 #	    . "$SCRIPTS/home/bashrc"
 #	fi
 
-# Supporting Functions (for self, not terminal: those go to bash_aliases) ------
+# Supporting Functions ---------------------------------------------------------
 
 exists()  { type "$@" &>/dev/null; }
 
@@ -109,5 +109,3 @@ set +o histexpand # same as set +H
 
 # So cute!
 exists cowfortune && { cowfortune | { exists lolcat && lolcat || cat ; } } || :
-
-unset exists

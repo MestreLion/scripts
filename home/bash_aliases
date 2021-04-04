@@ -43,7 +43,6 @@ which()   { builtin type -P "$@" ; }
 sprunge() { local l=${2-bash}; echo $(curl -sSF "sprunge=<${1:--}" http://sprunge.us)${l:+?$l}${3:+#n-$3}; }
 epoch()   { date -d@"$1" ; }
 now()     { date +%Y%m%d%H%M%S ; }
-exists()  { type "$@" &>/dev/null; }
 
 timestamp() {
 	if [[ "${1:-}" ]]; then
