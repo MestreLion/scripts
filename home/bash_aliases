@@ -183,12 +183,30 @@ unzip-strip() (
 )
 
 # 1337!
-alias matrix='cmatrix -bsu8'
+matrix() {
+	if ! exists cmatrix; then
+		echo "Runing fake matrix, install 'cmatrix' for the real one" >&2
+		matrix-fake
+		return
+	fi
+	# cmatrix -a, asynchronous scroll looks bad in linux TTY and terrible in X11
+	# See https://github.com/abishekvashok/cmatrix/issues/124
+	if [[ "$TERM" == "linux" ]]; then
+		local default=$(mktemp) && trap 'rm -f -- "$default"' RETURN
+		setfont -O "$default" matrix.psf
+		cmatrix -sbxu8  # -x seems to be -l minus setfont, indicates custom font
+		setfont "$default"
+	else
+		# cmatrix-xfont installs in /usr/share/fonts/X11/misc/mtx.pcf.gz
+		# To enable X11 font, see https://unix.stackexchange.com/a/88734/4919
+		cmatrix -sbu8
+	fi
+}
 
 # Even more 1337!
 matrix-fake() {
 	tr -c "[:digit:]" " " < /dev/urandom |
-	dd cbs=$COLUMNS conv=unblock |
+	dd cbs=$COLUMNS conv=unblock status=none |
 	GREP_COLOR="1;32" grep --color "[^ ]"
 }
 
