@@ -1,0 +1,66 @@
+#!/bin/bash -Eeu
+
+# Docker Engine / Podman
+
+# -----------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------
+
+usage() { echo "Usage: ${1:+$1 }${0##*/}${USAGE:+ $USAGE}" >&2; exit 1; }
+setuplib=${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}
+if [[ -r "$setuplib" ]]; then source "$setuplib"; else
+	echo "Setup library not found: $setuplib" >&2; usage '[SETUP_LIB=<path>]'
+fi
+
+# -----------------------------------------------------------------------------
+
+# Used by both Docker and Podman
+source /etc/os-release
+
+# Docker on 18.04 (ubuntu repo):
+package_install docker.io
+$SETUP_RUN sudo usermod -aG docker "$USER"  # root-less CLI operation. NOT rootless docker!
+$SETUP_RUN sudo docker --version
+
+# Docker on 18.04 (docker repo)
+# https://docs.docker.com/engine/install/ubuntu/
+$SETUP_RUN sudo apt remove docker docker-engine docker.io containerd runc
+install_package apt-transport-https ca-certificates curl gnupg lsb-release
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg |
+$SETUP_RUN sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg]" \
+	"https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" |
+$SETUP_RUN sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+$SETUP_RUN sudo apt-get update
+install_package docker-ce docker-ce-cli containerd.io
+$SETUP_RUN sudo docker run hello-world
+
+
+# Podman on 18.04:
+# https://podman.io/getting-started/installation
+repo=https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}
+echo "deb ${repo}/ /" | $SETUP_RUN sudo tee /etc/apt/sources.list.d/podman.list
+curl -L  "${repo}/Release.key" | $SETUP_RUN sudo apt-key add -
+$SETUP_RUN sudo apt update
+$SETUP_RUN sudo apt -y full-upgrade
+package_install podman
+# (Ubuntu 18.04) Restart dbus for rootless podman
+#$SETUP_RUN systemctl --user restart dbus  # FIXME: This logs the user out!!!
+echo
+$SETUP_RUN podman --version
+
+# Nice GUIs:
+# https://dockstation.io/ (Proprietary)
+# Kitematic (Archived, predecessor of Docker Desktop, which is Win/Mac only)
+slug=Kitematic-0.17.13
+zip=${slug}-Ubuntu.zip
+deb=${slug}_amd64.deb
+wget -- "https://github.com/docker/kitematic/releases/download/v0.17.13/${zip}"
+unzip -- "$zip"
+dpkg -i -- "$deb"
+rm -f -- "$zip" "$deb"
+# https://www.portainer.io/
+# Cockpit
+install_package cockpit{,-{docker,doc,packagekit}}  # No podman even for 20.04 :(
+xdg-open "http://${HOSTNAME}:9090"
