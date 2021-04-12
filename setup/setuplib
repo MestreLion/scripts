@@ -136,7 +136,7 @@ package_installed() {
 	package_version "$1" >/dev/null
 }
 
-package_install() {
+install_package() {
 	# Install all non-existing packages in a single command
 	# Usage: package_install [PACKAGE...]
 	local pkg=
@@ -148,7 +148,9 @@ package_install() {
 		$SETUP_RUN sudo apt install -y "${pkgs[@]}"
 	fi
 }
-alias install_package=package_install
+package_install() {
+	echo >&2 "package_install() is deprecated, use install_package() instead"
+}
 
 package_remove() {
 	# Remove all existing packages in a single command
