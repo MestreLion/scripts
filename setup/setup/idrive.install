@@ -1,0 +1,34 @@
+#!/bin/bash -Eeu
+
+# -----------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------
+
+usage() { echo "Usage: ${1:+$1 }${0##*/}${USAGE:+ $USAGE}" >&2; exit 1; }
+setuplib=${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}
+if [[ -r "$setuplib" ]]; then source "$setuplib"; else
+	echo "Setup library not found: $setuplib" >&2; usage '[SETUP_LIB=<path>]'
+fi
+
+# -----------------------------------------------------------------------------
+
+zip=IDriveForLinux.zip
+base=IDriveForLinux
+url="https://www.idrivedownloads.com/downloads/linux/download-for-linux/LinuxScripts/${zip}"
+dir="$HOME"/.local/opt/idrive
+
+
+mkdir -p -- "$dir"
+cd "$dir"
+rm -rf -- *.zip "$base" Idrivelib
+wget "$url"
+unzip -q "$zip"
+mv -- "$base"/scripts/* .
+rm -rf -- "$base"
+
+chmod +x account_setting.pl
+
+install_package build-essential perl-doc libdbi-perl libdbd-sqlite3-perl
+perl -MCPAN -e 'install common::sense'
+perl -MCPAN -e 'install Linux::Inotify2'
