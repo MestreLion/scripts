@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# Just some tests and documentation, not a real install
+
+# Ed25519 key, in new format (-o is implicit). -a = 100 takes 1.3s, default = 16
+# https://blog.g3rt.nl/upgrade-your-ssh-keys.html
+# https://flak.tedunangst.com/post/new-openssh-key-format-and-bcrypt-pbkdf
+ssh-keygen -a 100 -t ed25519
+
+
+# https://crypto.stackexchange.com/a/64425/48427
+echo "Will take ~5s for the first test, and proportionally more for the subsequent ones";
+rm -f test{.pub,};
+for j in 16 32 64 100 150; do
+	echo -n "-a $j takes on average ";
+	for i in {1..20}; do
+		ssh-keygen -qa $j -t ed25519 -f test -N test;
+		time ssh-keygen -qa $j -N tost -pP test -f test;
+		rm test{.pub,};
+	done |& grep real | awk -F m '{print $2}' | sed 's/,/./;s/s//' | LC_ALL=C awk '{sum+=$1} END{print sum/NR}';
+done
