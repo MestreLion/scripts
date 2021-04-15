@@ -133,7 +133,7 @@ package_version() {
 }
 
 package_installed() {
-	package_version "$1" >/dev/null
+	local ok=$(package_version "$1") && [[ "$ok" ]]
 }
 
 install_package() {
