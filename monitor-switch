@@ -24,6 +24,7 @@ declare -a monitors
 
 myname="${0##*/}"
 verbose=0
+debug=0
 list=0
 all=0
 force=0
@@ -94,9 +95,12 @@ usage() {
 	Options:
 	  -h|--help          - show this page.
 	  -v|--verbose       - print in terminal the full xrandr command executed.
+	  -d|--debug         - print debugging information on --list. Implies --verbose.
 
 	  -l|--list          - list connector and monitor names of connected outputs.
 	                       When --verbose, also list the configured monitors.
+	                       When --debug, also print the full unparsed output
+	                       of 'xrand --prop' and the contents of the config file.
 
 	  -a|--all           - enable all monitors.
 	  -e|--enable OUTPUT - enable monitor OUTPUT. Can be specified multiple times.
@@ -159,6 +163,7 @@ for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
 while (( $# )); do
 	case "$1" in
 	-v|--verbose) verbose=1 ;;
+	-d|--debug) verbose=1; debug=1;;
 	-q|--no-notify) notify=0;;  # undocumented. For future `notify-send`
 	-l|--list) list=1 ;;
 	-f|--force) force=1;;
@@ -177,10 +182,23 @@ if ((list)); then
 	echo "Connected monitors:"
 	print_monitors
 	if ((verbose)); then
-		echo -e "\nConfigured monitors in $config:"
+		printf "\nConfigured monitors:\n"
 		for output in "${monitors[@]}"; do
 			echo -e "# ${output}${monitor_opts[$output]:+\t${monitor_opts[$output]}}"
 		done
+		printf "\nConfiguration file: %q\n" "$config"
+	fi
+	if ((debug)); then
+		dashes=-----------------------------------------------------------------
+		if [[ -f "$config" ]]; then
+			printf '\nContents of configuration file:\n%s\n' "$dashes"
+			cat "$config"
+		else
+			printf '\nNo configuration file found at %q\n' "$config"
+		fi
+		echo "$dashes"
+		xrandr --prop
+		echo "$dashes"
 	fi
 	exit
 fi
