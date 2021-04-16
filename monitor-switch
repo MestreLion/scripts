@@ -34,18 +34,20 @@ enable=()
 print_monitors() {
 	while read -r output hex conn; do
 		echo "# $output	$conn	$(xxd -r -p <<< "$hex")"
-	done < <(xrandr --prop | awk '
+	done < <(xrandr --prop | tr -d '\r' | awk '
 	!/^[ \t]/ {
 		if (output && hex) print output, hex, conn
 		output=$1
 		conn=output; sub(/-.*$/, "", conn)
 		hex=""
+		h=0
 	}
 	/ConnectorType:/ {conn=$2}
 	/[:.]/ && h {
 		sub(/.*000000fc00/, "", hex)
 		hex = substr(hex, 0, 26) "0a"
 		sub(/0a.*/, "", hex)
+		if (! hex) hex = "-"  # Garbage for xxd -r, which silently ignores it
 		h=0
 	}
 	h {sub(/[ \t]+/, ""); hex = hex $0}
