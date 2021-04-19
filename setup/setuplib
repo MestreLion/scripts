@@ -3,37 +3,79 @@
 #   Copyright (C) 2015 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 #   License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
 
-# Add this to scripts:
-## -----------------------------------------------------------------------------
-#setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
-#if [[ -r "$setuplib" ]]; then
-#	source "$setuplib"
-#else
-#	echo "Setup library not found! $setuplib" >&2
-#	echo "Usage: ${0##*/} [SETUP_LIB]" >&2
-#	exit 1
-#fi
-## -----------------------------------------------------------------------------
+# Add this to the top of each setup script:
+#------------------------------------------------------------------------------
+#	DESCRIPTION='Description for usage(), preferably a one-liner'  # Optional
+#	ARGS='[OPTIONAL_ARG_1] [OPTIONAL_ARG_2] ...'  # Optional
+#	setuplib=${SETUP_LIB_PATH:-"$(dirname "$(readlink -f "$0")")"/../setuplib}
+#	if [[ -r "$setuplib" ]]; then source "$setuplib"; else
+#		echo "Setup library not found: $setuplib" >&2; exit 1
+#	fi
+#------------------------------------------------------------------------------
 
+set -Eeuo pipefail  # exit on any error
+trap '>&2 echo "error: line $LINENO, status $?: $BASH_COMMAND"' ERR
 
+#------------------------------------------------------------------------------
+
+usage() {
+	# Calling scripts are expected to set DESCRIPTION and ARGS
+	local error=${1:-0}
+	local usage="Usage: ${0##*/}${ARGS:+" ${ARGS}"}"
+	if ((error)); then
+		echo "$usage" >&2; exit "$error"
+	else
+		echo -e "${DESCRIPTION:+"${DESCRIPTION}\n"}${usage}"; exit
+	fi
+}
+
+# Pre-parse for -h|--help, ignoring if after '--'
+for arg in "$@"; do
+	if [[ "$arg" == '--' ]]; then break; fi
+	if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then usage; fi
+done
+unset arg
+
+CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
+DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
+BIN_HOME=${XDG_BIN_HOME:-"$HOME/.local/bin"}  # Not official, but widely used
+
+# Source the config file, silently ignore if it does not exist
+SETUP_CONFIG=${1:-${SETUP_CONFIG:-"${CONFIG_HOME}/setup/setup.conf"}}
+if [[ -r "$SETUP_CONFIG" ]]; then source "$SETUP_CONFIG"; fi
+
+#------------------------------------------------------------------------------
+# Setup engine
+
+absdir() { dirname "$(readlink -f "$1")"; }
+
+slug=${SETUP_SLUG:-}; slug=${slug##*/}; SETUP_SLUG=${slug:-'setup'}; unset slug
 SETUP_VERBOSE=${SETUP_VERBOSE:-1}
+SETUP_DEBUG=${SETUP_DEBUG:-0}
 SETUP_DRYRUN=${SETUP_DRYRUN:-0}
 SETUP_USER=${SETUP_USER:-${USER,,}}
+SETUP_LIBS_DIR=${SETUP_LIBS_DIR:-"$(absdir "$BASH_SOURCE")/setuplib.d"}
 
+# DEPRECATED! Use setup_run() directly.
 if ((SETUP_DRYRUN)); then
-	SETUP_RUN=echo
+	SETUP_RUN='setup_run'
 else
-	SETUP_RUN=env
+	SETUP_RUN='setup_run'
 fi
 
+#------------------------------------------------------------------------------
+# Platform info
+
+# Distro name, lowercase: ubuntu
 if [[ -z "${SETUP_DISTRO:-}" ]]; then
 	SETUP_DISTRO=$(lsb_release -si)
 	SETUP_DISTRO=${SETUP_DISTRO,,}
 fi
 
+# Distro numeric release version: 18.04
+# Use version_{lesser,greater}() to compare!
 if [[ -z "${SETUP_RELEASE:-}" ]]; then
 	SETUP_RELEASE=$(lsb_release -sr)
-	SETUP_RELEASE=${SETUP_RELEASE//\./}
 fi
 
 if [[ -z "${SETUP_CODENAME:-}" ]]; then
@@ -49,26 +91,86 @@ if [[ -z "${SETUP_BITS:-}" ]]; then
 	fi
 fi
 
+# Desktop environment
+SETUP_DESKTOP=${SETUP_DESKTOP:-${XDG_SESSION_DESKTOP:-${XDG_CURRENT_DESKTOP:-}}}
+
+# Encapsulates the mess that DE detection was, is, or will ever be...
+# Without arguments, check if in a Desktop Environment at all
+# Subshell is intentional so we don't have to save/restore IFS
+# Case-insensitive comparison
+# https://unix.stackexchange.com/a/645761/4919
+is_desktop_environment() (
+	local de=${1:-}
+	local DEs=${XDG_CURRENT_DESKTOP:-}
+
+	# Shortcut: If de is empty, check if empty DEs
+	if [[ -z "$de" ]]; then if [[ "$DEs" ]]; then return; else return 1; fi; fi
+
+	# Lowercase both
+	de=${de,,}; DEs=${DEs,,}
+
+	# Check de against each DEs component
+	IFS=:; for DE in $DEs; do if [[ "$de" == "$DE" ]]; then return; fi; done
+
+	# Not found
+	return 1
+)
+
+is_desktop_environment
+
+#------------------------------------------------------------------------------
+
+# Source libraries in SETUP_LIBS_DIR
+# Usage: include LIB...
+include() {
+	local lib
+	for lib in "$@"; do
+		lib=${SETUP_LIBS_DIR}/${lib}
+		if ! [[ -f "$lib" && -r "$lib" ]]; then
+			fatal "Library not accessible: ${lib}"
+		fi
+		# shellcheck disable=SC1090
+		source "$lib"
+	done
+}
+
+setup_run() {
+	if ((SETUP_DRYRUN)); then
+		echo "$@" >&2
+	else
+		"$@"
+	fi
+}
+
+#------------------------------------------------------------------------------
 
 exists()  { type "$@" >/dev/null 2>&1; }
-relpath() { python -c "import sys, os; print os.path.relpath(*sys.argv[1:])" "$@"; }
+relpath() { python3 -c 'import sys,os;print(os.path.relpath(*sys.argv[1:]))' "$@"; }
 
-bold()    { tput bold; printf '%s' "$@"; tput sgr0; }
-red()     { tput setaf 1; bold "$@"; }
-green()   { tput setaf 2; bold "$@"; }
-fatal()   { echo $(red "${0##*/}" ': fatal' "${1:+: $1}") >&2; exit ${2:-1}; }
-error()   { echo $(red "${0##*/}" ': error' "${1:+: $@}") >&2; }
-message() { ((SETUP_VERBOSE)) && echo $(green '* ' "$@") || :; }
+try()     { "$@" 2>/dev/null || :; }
+bold()    { try tput bold; printf '%s' "$@"; try tput sgr0; echo; }
+color()   { if (($# > 1)); then try tput setaf "$1"; shift; bold "$@"; fi; }
+red()     { color 1 "$@"; }
+green()   { color 2 "$@"; }
+yellow()  { color 3 "$@"; }
+blue()    { color 4 "$@"; }
+fatal()   { red "${0##*/}: fatal${1:+: $@}" >&2; exit 1; }
+error()   { red           "error${1:+: $@}" >&2; }
+warning() { yellow      "warning${1:+: $@}" >&2; }
+message() { if ((SETUP_VERBOSE)); then green    "* $*";     fi; }
+debugmsg(){ if ((SETUP_DEBUG));   then echo       "$@" >&2; fi; }
+debugvar(){ if ((SETUP_DEBUG));   then declare -p "$@" >&2; fi; }
+
 argument(){
 	if ! [[ "${1:-}" ]]; then
-		echo "Missing required argument${2:+ '$2'}" >&2
-		return 1
+		echo "Missing required argument${2:+" ${2}"}" >&2
+		usage 1
 	fi
 }
 integer() {
 	if ! [[ "$1" != *[!0-9]* ]]; then
-		echo "'$1'${2:+ in $2} is not an integer." >&2
-		return 1
+		echo "'$1'${2:+" in ${2}"} is not an integer." >&2
+		usage 1
 	fi
 }
 
@@ -133,7 +235,8 @@ package_version() {
 }
 
 package_installed() {
-	local ok=$(package_version "$1") && [[ "$ok" ]]
+	local ok
+	ok=$(package_version "$1") && [[ "$ok" ]]
 }
 
 install_package() {
