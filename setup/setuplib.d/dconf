@@ -1,0 +1,42 @@
+# DConf
+#
+# Copyright (C) 2021 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+
+include gvariant
+
+# Wrapper to dconf, automatically invoking setup_run on write
+# and dispatching to extra commands
+dconf() {
+	cmd=$1
+	shift
+	case "$cmd" in
+	write) setup_run command dconf write "$@";;
+	list ) dconf_list "$@";;
+	*    ) command dconf "$cmd" "$@";;
+	esac
+}
+
+dconf_list() {
+	local op=$1      # Operation to perform: include, remove, clear/new, set
+	local key=$2     # Full path of the DConf key
+	local type=$3    # List item type. See gvariant_array()
+	shift 3          # Remaining arguments are list items
+
+	# This is a LOT tricker than using gsettings, as dconf:
+	# - Does not set exit status on any error, missing keys, etc
+	# - Does not return the default value if key is not set, unless -d
+	#   (and -d return the default value regardless if a value is set)
+
+	# DConf prints '@as []' on empty lists, and nothing on keys not set
+	local list=$(dconf read "$key")
+
+	# If not set, try the default value
+	if [[ -z "$list" ]]; then list=(dconf read -d "$key"); fi
+
+	# If empty default (or default not set, not sure), format it.
+	if [[ -z "$list" ]]; then list="a${type} []"; fi
+
+	list=$(gvariant_array "$op" "$type" "$list" "$@")
+	dconf write "$key" "$list"
+}

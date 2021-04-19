@@ -1,0 +1,28 @@
+# D-Bus
+#
+# Copyright (C) 2021 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+
+
+dbus_call() {
+	local method=$1
+	local path=$2
+	local dest=$3
+	local bus=${4:-session}
+	shift 4 || true
+	local args=("$@")
+
+	dbus-send --"$bus" --dest="$dest" --print-reply "$path" "$method" "${args[@]}"
+}
+
+dbus_get_property() {
+	local prop=$1
+	local path=$2
+	local dest=$3
+	local bus=${4:-session}
+	local iface=${dest}${5:+".${5}"}
+
+	local method=org.freedesktop.DBus.Properties.Get
+
+	dbus_call "$method" "$path" "$dest" "$bus" string:"$iface" string:"$prop"
+}

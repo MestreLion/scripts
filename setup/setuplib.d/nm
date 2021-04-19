@@ -1,0 +1,70 @@
+# Network Manager via D-Bus
+#
+# Copyright (C) 2021 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+
+# https://cgit.freedesktop.org/NetworkManager/NetworkManager/tree/introspection
+# http://sgros.blogspot.com/2016/01/connections-in-networkmanager.html
+# http://cheesehead-techblog.blogspot.com/2012/09/dbus-tutorial-fun-with-network-manager.html
+# https://www.kernelcrash.com/blog/updating-networkmanager-via-the-command-line/2012/04/01/
+
+include dbus
+
+nm_call() {
+	local method=$1
+	local path=${2:-}
+	shift 2 || true
+	local args=("$@")
+
+	local root=/org/freedesktop/NetworkManager
+	local dest=org.freedesktop.NetworkManager
+	local bus=system
+
+	if [[ "${path::1}" != / ]]; then path=${root}${path:+"/${path}"}; fi
+	dbus_call "${dest}.${method}" "$path" "$dest" "$bus" "${args[@]}"
+}
+
+nm_get_property() {
+	local prop=$1
+	local path=${3:-}
+	local iface=${2:-}
+
+	local root=/org/freedesktop/NetworkManager
+	local dest=org.freedesktop.NetworkManager
+	local bus=system
+
+	if [[ "${path::1}" != / ]]; then path=${root}${path:+"/${path}"}; fi
+	dbus_get_property "$prop" "$path" "$dest" "$bus" "$iface" |
+		grep '"' | cut -d'"' -f2
+}
+
+nm_active_connection_uuid() {
+	local path=$1
+	nm_get_property Uuid Connection.Active "$1"
+}
+
+# Return Paths and UUIDs separated by TAB
+nm_list_all_connections() {
+	while IFS= read -r path; do
+		printf '%s\t' "$path"
+		nm_call Settings.Connection.GetSettings "$path" |
+		grep -A1 'string "uuid"' | tail -n1 | cut -d'"' -f2
+	done < <(nm_list_all_connections_path)
+}
+nm_list_active_connections() {
+	while IFS= read -r path; do
+		printf '%s\t' "$path"
+		nm_active_connection_uuid "$path"
+	done < <(nm_list_active_connections_path)
+}
+
+# Return D-Bus Paths only
+nm_list_all_connections_path()    { nm_get_property Connections Settings Settings; }
+nm_list_active_connections_path() { nm_get_property ActiveConnections; }
+
+# Return UUIDs only
+nm_list_all_connections_uuid()    { nm_list_all_connections    | cut -f2; }
+nm_list_active_connections_uuid() { nm_list_active_connections | cut -f2; }
+
+nm_primary_connection_path() { nm_get_property PrimaryConnection; }
+nm_primary_connection_uuid() { nm_active_connection_uuid "$(nm_primary_connection_path)"; }

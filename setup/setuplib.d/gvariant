@@ -1,0 +1,15 @@
+# GVariant arrays
+#
+# Copyright (C) 2021 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+
+# See: https://developer.gnome.org/glib/stable/gvariant-text.html
+# and  https://developer.gnome.org/glib/stable/glib-GVariantType.html
+
+gvariant_array() (
+	local op=$1        # Operation to perform: include, remove, clear/new, set
+	local itemtype=$2  # List item type: 's' for string, 'u' for uint32, etc
+	local curlist=$3   # Current list, as a string in GVariant format: '@as []'
+	shift 3
+	python3 -- "$(absdir "$BASH_SOURCE")"/gvariant.py "$op" "$itemtype" "$curlist" "$@"
+)
