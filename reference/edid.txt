@@ -1,0 +1,177 @@
+Screen 0: minimum 8 x 8, current 7840 x 2560, maximum 16384 x 16384
+DVI-I-0 disconnected (normal left inverted right x axis y axis)
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: VGA 
+		supported: VGA
+	ConnectorType: DVI-I 
+	ConnectorNumber: 0 
+	_ConnectorLocation: 0 
+	non-desktop: 0 
+		supported: 0, 1
+DVI-I-1 connected primary 2560x1440+1920+0 (normal left inverted right x axis y axis) 597mm x 336mm
+	_GNOME_FLASHBACK_PRESENTATION_OUTPUT: 0 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	EDID: 
+		00ffffffffffff00232f9b0400000000
+		28150103a53c2278226fb1a7554c9e25
+		0c505400000001010101010101010101
+		010101010101565e00a0a0a029503020
+		350055502100001a000000fc00445541
+		4c2d4456490a20202020000000fc000a
+		202020202020202020202020000000fc
+		000a2020202020202020202020200111
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: TMDS 
+		supported: TMDS
+	ConnectorType: DVI-I 
+	ConnectorNumber: 0 
+	_ConnectorLocation: 0 
+	non-desktop: 0 
+		supported: 0, 1
+   2560x1440     59.95*+
+HDMI-0 connected 1920x1080+0+360 (normal left inverted right x axis y axis) 531mm x 299mm
+	_GNOME_FLASHBACK_PRESENTATION_OUTPUT: 0 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	EDID: 
+		00ffffffffffff0010ac914055363736
+		1118010380351e78ee0ef5a555509e26
+		105054a54b00714f8180a9c0d1c00101
+		010101010101023a801871382d40582c
+		4500132b2100001e000000ff0056324d
+		465434344c363736550a000000fc0044
+		454c4c204532343134480a20000000fd
+		00384c1e5311000a20202020202000c3
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: TMDS 
+		supported: TMDS
+	ConnectorType: HDMI 
+	ConnectorNumber: 1 
+	_ConnectorLocation: 1 
+	non-desktop: 0 
+		supported: 0, 1
+   1920x1080     60.00*+
+   1600x900      60.00  
+   1280x1024     75.02    60.02  
+   1152x864      75.00  
+   1024x768      75.03    60.00  
+   800x600       75.00    60.32  
+   640x480       75.00    59.94  
+DP-0 connected 1920x1080+5920+1057 (normal left inverted right x axis y axis) 477mm x 268mm
+	EDID: 
+		00ffffffffffff004c2dac08465a565a
+		2216010380301b782a92c1a259559e27
+		0e5054bfef80714f81c0810081809500
+		a9c0b3000101023a801871382d40582c
+		4500dd0c1100001e000000fd00384b1e
+		5111000a202020202020000000fc0053
+		3232423330300a2020202020000000ff
+		00485450433830303039390a202001e8
+		02010400023a80d072382d40102c4580
+		dd0c1100001e011d007251d01e206e28
+		5500dd0c1100001e011d00bc52d01e20
+		b8285540dd0c1100001e8c0ad0902040
+		31200c405500dd0c110000188c0ad08a
+		20e02d10103e9600dd0c110000180000
+		00000000000000000000000000000000
+		00000000000000000000000000000007
+	_GNOME_FLASHBACK_PRESENTATION_OUTPUT: 0 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: TMDS 
+		supported: TMDS
+	ConnectorType: DisplayPort 
+	ConnectorNumber: 2 
+	_ConnectorLocation: 2 
+	non-desktop: 0 
+		supported: 0, 1
+   1920x1080     60.00*+  50.00  
+   1680x1050     59.95  
+   1600x900      60.00  
+   1440x900      59.89  
+   1280x1024     75.02    60.02  
+   1280x800      59.81  
+   1280x720      60.00    50.00  
+   1152x864      75.00  
+   1024x768      75.03    70.07    60.00  
+   800x600       75.00    72.19    60.32    56.25  
+   720x576       50.00  
+   720x480       59.94  
+   640x480       75.00    72.81    59.94  
+DVI-D-0 connected 1440x2560+4480+0 left (normal left inverted right x axis y axis) 597mm x 336mm
+	_GNOME_FLASHBACK_PRESENTATION_OUTPUT: 0 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	EDID: 
+		00ffffffffffff00232f9b0400000000
+		28150103a53c2278226fb1a7554c9e25
+		0c505400000001010101010101010101
+		010101010101565e00a0a0a029503020
+		350055502100001a000000fc00445541
+		4c2d4456490a20202020000000fc000a
+		202020202020202020202020000000fc
+		000a2020202020202020202020200111
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+		ffffffffffffffffffffffffffffffff
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: TMDS 
+		supported: TMDS
+	ConnectorType: DVI-D 
+	ConnectorNumber: 3 
+	_ConnectorLocation: 3 
+	non-desktop: 0 
+		supported: 0, 1
+   2560x1440     59.95*+
+DP-1 disconnected (normal left inverted right x axis y axis)
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: DisplayPort 
+		supported: DisplayPort
+	ConnectorType: DisplayPort 
+	ConnectorNumber: 2 
+	_ConnectorLocation: 2 
+	non-desktop: 0 
+		supported: 0, 1

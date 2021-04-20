@@ -32,9 +32,6 @@ monitors=()
 enable=()
 
 print_monitors() {
-	# FIXME: if EDID contains multiple 000000fc00 blocks, only the last one is
-	# parsed as monitor name. And that last block is usually blank.
-	# awk should use a non-greedy logic to at least concatenate all names.
 	while read -r output hex conn; do
 		echo "# $output	$conn	$(xxd -r -p <<< "$hex")"
 	done < <(xrandr --prop | tr -d '\r' | awk '
@@ -47,13 +44,18 @@ print_monitors() {
 	}
 	/ConnectorType:/ {conn=$2}
 	/[:.]/ && h {
-		sub(/.*000000fc00/, "", hex)
-		hex = substr(hex, 0, 26) "0a"
-		sub(/0a.*/, "", hex)
+		n = split(hex, names, "000000fc00")
+		hex = ""
+		for (i = 2; i <= n; i++) {
+			name = substr(names[i], 0, 26) "0a"
+			sub(/0a.*/, "", name)
+			hex = hex (name "")
+			break
+		}
 		if (! hex) hex = "-"  # Garbage for xxd -r, which silently ignores it
 		h=0
 	}
-	h {sub(/[ \t]+/, ""); hex = hex $0}
+	h {sub(/[ \t]+/, ""); hex = hex ($0 "")}
 	/EDID.*:/ {h=1}
 	END {if (output && hex) print output, hex, conn}
 	' | sort)

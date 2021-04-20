@@ -1,5 +1,7 @@
 #!/bin/bash
-
+#
+# Testbed for monitor-switch print_monitors()
+#
 # Answer to:
 # http://stackoverflow.com/questions/10500521/linux-retrieve-monitor-names
 
@@ -15,18 +17,105 @@
 #  $hex = "";
 #}'
 
-xrandr --verbose | awk '
-/[:.]/ && hex {
-	sub(/.*000000fc00/, "", hex)
-	hex = substr(hex, 0, 26) "0a"
-	sub(/0a.*/, "0a", hex)
-	print hex
-	hex=""
+# Old version
+#xrandr --verbose | awk '
+#/[:.]/ && hex {
+#	sub(/.*000000fc00/, "", hex)
+#	hex = substr(hex, 0, 26) "0a"
+#	sub(/0a.*/, "0a", hex)
+#	print hex
+#	hex=""
+#}
+#hex {
+#	gsub(/[ \t]+/, "")
+#	hex = hex $0
+#}
+#/EDID.*:/ {
+#	hex=" "
+#}' | xxd -r -p
+
+
+print_monitors() {
+	if [[ -f "${1:-}" ]]; then
+		local input=(cat -- "$1")
+	else
+		local input=(xrandr --prop)
+	fi
+	while read -r output hex conn; do
+		echo "# $output	$conn	$(xxd -r -p <<< "$hex")"
+	done < <("${input[@]}" | tr -d '\r' | awk '
+	!/^[ \t]/ {
+		if (output && hex) print output, hex, conn
+		output=$1
+		conn=output; sub(/-.*$/, "", conn)
+		hex=""
+		h=0
+	}
+	/ConnectorType:/ {conn=$2}
+	/[:.]/ && h {
+		n = split(hex, names, "000000fc00")
+		hex = ""
+		for (i = 2; i <= n; i++) {
+			name = substr(names[i], 0, 26) "0a"
+			sub(/0a.*/, "", name)
+			hex = hex (name "")
+			break
+		}
+		if (! hex) hex = "-"  # Garbage for xxd -r, which silently ignores it
+		h=0
+	}
+	h {sub(/[ \t]+/, ""); hex = hex ($0 "")}
+	/EDID.*:/ {h=1}
+	END {if (output && hex) print output, hex, conn}
+	' | sort)
 }
-hex {
-	gsub(/[ \t]+/, "")
-	hex = hex $0
+
+# Incomplete
+print_debug() {
+	if [[ -f "${1:-}" ]]; then
+		local input=(cat -- "$1")
+	else
+		local input=(xrandr --prop)
+	fi
+	"${input[@]}" | tr -d '\r' | gawk '
+	BEGIN {
+		hex = ""
+		output = ""
+		conn = ""
+		i = 0
+	}
+	!/^[ \t]/ {
+		if (output && hex) print output, hex, conn
+		output=$1
+		conn=output; sub(/-.*$/, "", conn)
+		hex=""
+		h=0
+	}
+	/ConnectorType:/ {conn=$2}
+	/[:.]/ && h {
+		print "EDID for output " output " ended in line " NR-1 ". Full EDID data: \n" hex
+		n = split(hex, names, "000000fc00")
+		hex = ""
+		for (i = 2; i <= n; i++) {
+			name = substr(names[i], 0, 26) "0a"
+			sub(/0a.*/, "", name)
+			hex = hex "" (name "")
+			break
+		}
+		if (! hex) hex = "-"  # Garbage for xxd -r, which silently ignores it
+		h=0
+	}
+	h {
+		sub(/[ \t]+/, "");
+		hex = hex $0;
+		print "\tEDID data in line " NR ": " $0;
+	}
+	/EDID.*:/ {h=1; print "Found EDID begin block for output " output " in line " NR}
+	END {if (output && hex) print output, hex, conn}
+	'
 }
-/EDID.*:/ {
-	hex=" "
-}' | xxd -r -p
+
+
+print_debug "${1:-}"
+echo "-----------------------------------------------------------------------"
+print_monitors "${1:-}"
