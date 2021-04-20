@@ -37,129 +37,9 @@ user=${user^}
 
 version=$(gnome-terminal --version | awk '{print $4}')
 
-gconftool=gconftool
-gcrootkey=/apps/gnome-terminal
-gclistkey=$gcrootkey/global/profile_list
-gcprofrootkey=$gcrootkey/profiles
-
-gt_gconf_profile_exist() {
-	if ! "$gconftool" --dir-exists "$gcprofrootkey"/"$1"; then
-		return 1
-	fi
-}
-
-gt_gconf_profile_must_exist() {
-	gt_gconf_profile_exist "$1" || fatal "Missing key for profile: $1"
-}
-
-gt_gconf_profile_name() {
-	"$gconftool" --get "$gcprofrootkey"/"$1"/visible_name
-}
-
-gt_gconf_get_free_profile() {
-	local profiles=$("$gconftool" --get-list-size "$gclistkey")
-
-	# Loop existing profiles to:
-	# - Check if new profile already exists
-	# - Get a suitable key name for the new profile
-	local i=-1
-	local newprof=""
-	local profile
-	local profname
-	while ((++i < profiles)); do
-		profile=$("$gconftool" --get-list-element "$gclistkey" "$i")
-		profname=$(gt_gconf_profile_name "$profile")
-
-		if [[ "$profname" == "$user" ]]; then
-			# should exit gracefully, so repeated installs are no-op
-			# echo "Profile named '$user' already exists: $profile" >&2
-			return
-		fi
-
-		gt_gconf_profile_must_exist "$profile"
-
-		if [[ -z "$newprof" ]]; then
-			local testprof=Profile$i
-			if ! gt_gconf_profile_exist "$testprof"; then
-				newprof=$testprof
-			fi
-		fi
-	done
-
-	# Some sanity cheks:
-	# - Profiles key count must match profiles list size
-	# - The 'Default' profile key must exist
-	local profkeys
-	profkeys=$("$gconftool" --all-dirs "$gcprofrootkey" | wc -l)
-	if ! [[ "$profkeys" == "$profiles" ]]; then
-		fatal "Profiles list and key count do not match:" \
-			"$profiles / $profkeys"
-	fi
-	gt_gconf_profile_must_exist "Default"
-
-	echo "$newprof"
-}
-
-gt_gconf_clone_default_profile() {
-	local profile=$1
-	local profkey="$gcprofrootkey"/"$profile"
-	local defaultkey="$gcrootkey"/global/default_profile
-	local default
-	local defaultname
-
-	default=$("$gconftool" --get "$defaultkey")
-	gt_gconf_profile_must_exist "$default"
-
-	defaultname=$(gt_gconf_profile_name "$default")
-	message "Creating new Gnome Terminal profile based on" \
-		"$default ($defaultname): $profile ($user)"
-
-	# Order of operations is important!
-
-	# Load the new profile key copying from current default
-	"$gconftool" --load <(\
-		"$gconftool" --dump "$gcprofrootkey"/"$default" |
-		sed "/^[ ]*<entrylist/s/$default\">\$/$profile\">/" |
-		sed '/^[ ]*<schema_key/d') &&
-
-	# Change the name
-	"$gconftool" --type string --set "$profkey"/visible_name "$user" &&
-
-	# Delete "encoding" and "icon" keys
-	"$gconftool" --unset "$profkey"/icon &&
-	"$gconftool" --unset "$profkey"/encoding &&
-
-	# Update the profile list - should be *after* changing name
-	"$gconftool" --type list --list-type string --set "$gclistkey" \
-		"$("$gconftool" --get "$gclistkey" | sed "s/]/,$profile]/")" &&
-
-	# Set as default
-	"$gconftool" --type string --set "$defaultkey" "$profile" ||
-
-	false  # trigger bash's `-e`, if active
-}
-
-gt_gconf() {
-	# Get a new profile key
-	local profile
-	local profkey
-	profile=$(gt_gconf_get_free_profile)
-	if [[ -z "$profile" ]]; then return; fi  # exit gracefully
-	profkey="$gcprofrootkey"/"$profile"
-
-	# Create the new profile
-	gt_gconf_clone_default_profile "$profile"
-
-	# Change settings
-	"$gconftool" --type float  --set "$profkey"/background_darkness     0.885125
-	"$gconftool" --type string --set "$profkey"/background_type         transparent
-	"$gconftool" --type int    --set "$profkey"/default_size_columns    "$cols"
-	"$gconftool" --type int    --set "$profkey"/default_size_rows       "$rows"
-	"$gconftool" --type bool   --set "$profkey"/scrollback_unlimited    true
-	"$gconftool" --type bool   --set "$profkey"/use_custom_default_size true
-	"$gconftool" --type string --set "$profkey"/custom_command \
-		"env TERM=xterm-256color /bin/bash"
-}
+version_lesser "$version" 3.7 ||
+	fatal "Gnome Terminal version $version still uses GConf" \
+		" which is no longer supported. Version 3.8 or above is required."
 
 gt_dconf() {
 	local name=${1:-$user}
@@ -196,9 +76,4 @@ gt_dconf() {
 	dconf write "${path}default" "'${profile:1:-1}'"
 }
 
-
-if version_lesser "$version" 3.7; then
-	gt_gconf
-else
-	gt_dconf
-fi
+gt_dconf
