@@ -1,55 +1,60 @@
-#!/bin/bash -x
-
-# Ubuntu Unity Desktop Environment settings
-
+#!/usr/bin/env bash
+# Copyright (C) 2021 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+#
 # TODO
 # Launcher
 # Remove: Thunderbird, Rhythmbox, LibreOffice Writer, Ubuntu Software, Help, Amazon
 # Add: Terminal, gedit
-
+#
 # NOTE:
 # Custom keybinding shortcuts will not work until a re-login!
 # See https://bugs.launchpad.net/ubuntu/+source/unity-settings-daemon/+bug/1435020
-
+#
 # TODO
 # Keyboard Shortcuts
 # Turn off (laptop) screen	(Fn+F7)	xset dpms force off
 # Switch Monitors
-
 # -----------------------------------------------------------------------------
 
-setuplib=${1:-${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}}
-myname="${0##*/}"
+DESCRIPTION='Ubuntu Unity Desktop Environment'
+ARGS=
 
-usage() { echo "Usage: ${0##*/} [SETUP_LIB]" >&2; exit 1; }
-
-if [[ -r "$setuplib" ]]; then
-	source "$setuplib"
-else
-	echo "Setup library not found! $setuplib" >&2
-	usage
+setuplib=${SETUP_LIB_PATH:-"$(dirname "$(readlink -f "$0")")"/../setuplib}
+if [[ -r "$setuplib" ]]; then source "$setuplib"; else
+	echo "Setup library not found: $setuplib" >&2; exit 1;
 fi
 
+include gsettings
+
+
 # -----------------------------------------------------------------------------
 
+# In Ubuntu 20.04 onwards: re-add Global Menu for Firefox
+# https://askubuntu.com/questions/1304442
+# https://askubuntu.com/questions/1288516
 
 # Install Unity, pre-setting lightdm as default login manager
-$SETUP_RUN sudo debconf-set-selections <<< "lightdm	shared/default-x-display-manager	select	lightdm"
-package_install ubuntu-unity-desktop
+setup_run sudo debconf-set-selections <<< "lightdm	shared/default-x-display-manager	select	lightdm"
+install_package ubuntu-unity-desktop
 
 # Re-Enable Guest Sessions
 # To Revert (disable): sudo rm -- "$conf"
+# https://askubuntu.com/a/915417/11015
+# https://help.ubuntu.com/community/CustomizeGuestSession
+# Be aware of:
+# https://bugs.launchpad.net/ubuntu/+source/lightdm/+bug/1663157
 conf=/etc/lightdm/lightdm.conf.d/40-enable-guest.conf
 if ! [[ -f "$conf" ]]; then
 	printf "[Seat:*]\nallow-guest=true\n" |
-	$SETUP_RUN sudo tee -- "$conf"
+	setup_run sudo tee -- "$conf"
 fi
 
 # Hide Keyboard Indicator
-$SETUP_RUN gsettings set  com.canonical.indicator.keyboard  visible  false
+gsettings set com.canonical.indicator.keyboard  visible  false
 
 # Fix warning when running Wine and other 32-bit software
 # 'ERROR: ld.so: object 'libgtk3-nocsd.so.0' from LD_PRELOAD cannot be preloaded (cannot open shared object file): ignored.'
 # See /usr/share/doc/gtk3-nocsd/README.Debian
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=823914
-package_install libgtk3-nocsd0:i386
+install_package libgtk3-nocsd0:i386
