@@ -32,13 +32,14 @@ monitors=()
 enable=()
 
 print_monitors() {
-	while read -r output hex conn; do
-		echo "# $output	$conn	$(xxd -r -p <<< "$hex")"
-	done < <(xrandr --prop | tr -d '\r' | awk '
+	while read -r output conn hex; do
+		echo "# $output	$conn	$(xxd -r -p <<< "${hex:-2d}")"
+	done < <(LC_ALL=C xrandr --prop | tr -d '\r' | awk '
 	!/^[ \t]/ {
-		if (output && hex) print output, hex, conn
+		if (ok) print output, conn, hex
 		output=$1
 		conn=output; sub(/-.*$/, "", conn)
+		ok=(output && (substr($2, 0, 1) == "c"))  # Connected output
 		hex=""
 		h=0
 	}
@@ -54,12 +55,11 @@ print_monitors() {
 				hex = hex (name "")
 			}
 		}
-		if (! hex) hex = "-"  # Garbage for xxd -r, which silently ignores it
 		h=0
 	}
 	h {sub(/[ \t]+/, ""); hex = hex ($0 "")}
-	/EDID.*:/ {h=1}
-	END {if (output && hex) print output, hex, conn}
+	/EDID.*:/ {h=1; ok=(output && 1)}
+	END {if (ok) print output, conn, hex}
 	' | sort)
 }
 

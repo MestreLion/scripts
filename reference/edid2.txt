@@ -19,23 +19,6 @@ DVI-I-1 connected primary 2560x1440+1920+0 (normal left inverted right x axis y 
 	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
 		0 1 
 	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
-	EDID: 
-		00ffffffffffff00232f9b0400000000
-		28150103a53c2278226fb1a7554c9e25
-		0c505400000001010101010101010101
-		010101010101565e00a0a0a029503020
-		350055502100001a000000fc00445541
-		4c2d4456490a20202020000000fc000a
-		202020202020202020202020000000fc
-		000a2020202020202020202020200111
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
 	BorderDimensions: 4 
 		supported: 4
 	Border: 0 0 0 0 

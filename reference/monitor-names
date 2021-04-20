@@ -39,15 +39,16 @@ print_monitors() {
 	if [[ -f "${1:-}" ]]; then
 		local input=(cat -- "$1")
 	else
-		local input=(xrandr --prop)
+		local input=(LC_ALL=C xrandr --prop)
 	fi
-	while read -r output hex conn; do
-		echo "# $output	$conn	$(xxd -r -p <<< "$hex")"
+	while read -r output conn hex; do
+		echo "# $output	$conn	$(xxd -r -p <<< "${hex:-2d}")"
 	done < <("${input[@]}" | tr -d '\r' | awk '
 	!/^[ \t]/ {
-		if (output && hex) print output, hex, conn
+		if (ok) print output, conn, hex
 		output=$1
 		conn=output; sub(/-.*$/, "", conn)
+		ok=(output && (substr($2, 0, 1) == "c"))  # Connected output
 		hex=""
 		h=0
 	}
@@ -63,12 +64,11 @@ print_monitors() {
 				hex = hex (name "")
 			}
 		}
-		if (! hex) hex = "-"  # Garbage for xxd -r, which silently ignores it
 		h=0
 	}
 	h {sub(/[ \t]+/, ""); hex = hex ($0 "")}
-	/EDID.*:/ {h=1}
-	END {if (output && hex) print output, hex, conn}
+	/EDID.*:/ {h=1; ok=(output && 1)}
+	END {if (ok) print output, conn, hex}
 	' | sort)
 }
 
@@ -76,19 +76,14 @@ print_debug() {
 	if [[ -f "${1:-}" ]]; then
 		local input=(cat -- "$1")
 	else
-		local input=(xrandr --prop)
+		local input=(LC_ALL=C xrandr --prop)
 	fi
 	"${input[@]}" | tr -d '\r' | awk '
-	BEGIN {
-		hex = ""
-		output = ""
-		conn = ""
-		i = 0
-	}
 	!/^[ \t]/ {
-		if (output && hex) print output, hex, conn
+		if (ok) print output, conn, hex
 		output=$1
 		conn=output; sub(/-.*$/, "", conn)
+		ok=(output && (substr($2, 0, 1) == "c"))  # Connected output
 		hex=""
 		h=0
 	}
@@ -107,16 +102,19 @@ print_debug() {
 				hex = hex (name "")
 			}
 		}
-		if (! hex) hex = "-"  # Garbage for xxd -r, which silently ignores it
 		h=0
 	}
 	h {
 		sub(/[ \t]+/, "");
-		hex = hex $0;
+		hex = hex ($0 "");
 		print "\tEDID data in line " NR ": " $0;
 	}
-	/EDID.*:/ {h=1; print "Found EDID begin block for output " output " in line " NR}
-	END {if (output && hex) print output, hex, conn}
+	/EDID.*:/ {
+		h=1;
+		ok=(output && 1)
+		print "\nFound EDID begin block for output " output " in line " NR
+	}
+	END {if (ok) print output, conn, hex}
 	'
 }
 
