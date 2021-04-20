@@ -49,8 +49,10 @@ print_monitors() {
 		for (i = 2; i <= n; i++) {
 			name = substr(names[i], 0, 26) "0a"
 			sub(/0a.*/, "", name)
-			hex = hex (name "")
-			break
+			if (name) {
+				if (hex) name = "20" (name "")
+				hex = hex (name "")
+			}
 		}
 		if (! hex) hex = "-"  # Garbage for xxd -r, which silently ignores it
 		h=0

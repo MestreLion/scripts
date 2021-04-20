@@ -58,8 +58,10 @@ print_monitors() {
 		for (i = 2; i <= n; i++) {
 			name = substr(names[i], 0, 26) "0a"
 			sub(/0a.*/, "", name)
-			hex = hex (name "")
-			break
+			if (name) {
+				if (hex) name = "20" (name "")
+				hex = hex (name "")
+			}
 		}
 		if (! hex) hex = "-"  # Garbage for xxd -r, which silently ignores it
 		h=0
@@ -70,14 +72,13 @@ print_monitors() {
 	' | sort)
 }
 
-# Incomplete
 print_debug() {
 	if [[ -f "${1:-}" ]]; then
 		local input=(cat -- "$1")
 	else
 		local input=(xrandr --prop)
 	fi
-	"${input[@]}" | tr -d '\r' | gawk '
+	"${input[@]}" | tr -d '\r' | awk '
 	BEGIN {
 		hex = ""
 		output = ""
@@ -95,12 +96,16 @@ print_debug() {
 	/[:.]/ && h {
 		print "EDID for output " output " ended in line " NR-1 ". Full EDID data: \n" hex
 		n = split(hex, names, "000000fc00")
+		print "\tName fragments:", n-1
 		hex = ""
 		for (i = 2; i <= n; i++) {
 			name = substr(names[i], 0, 26) "0a"
+			print "\tName fragment " i - 1 ": " name
 			sub(/0a.*/, "", name)
-			hex = hex "" (name "")
-			break
+			if (name) {
+				if (hex) name = "20" (name "")
+				hex = hex (name "")
+			}
 		}
 		if (! hex) hex = "-"  # Garbage for xxd -r, which silently ignores it
 		h=0
