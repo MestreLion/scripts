@@ -1,33 +1,36 @@
-#!/bin/bash -e
-
-# Setup gnome-terminal
-
+#!/usr/bin/env bash
+# Copyright (C) 2021 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+#
 # Create a new profile named after USER, titled
 # Enable 256 colors (not needed anymore)
 # Enable transparency
 # Increase rows and columns
 # Unlimited scroll
-
+#
 # Up to Ubuntu 12.04 (v3.4.11): gconf
 # v3.8 onwards: dconf/gsettings
-
+#
 # for gsettings: https://wiki.gnome.org/Apps/Terminal/FAQ
-
+#
 # -----------------------------------------------------------------------------
 
-usage() { echo "Usage: ${1:+$1 }${0##*/}${USAGE:+ $USAGE}" >&2; exit 1; }
-setuplib=${SETUP_LIB:-$(dirname "$(readlink -f "$0")")/../setuplib}
+DESCRIPTION='Gnome Terminal profile and preferences'
+ARGS='[COLS] [ROWS]'
+
+setuplib=${SETUP_LIB_PATH:-"$(dirname "$(readlink -f "$0")")"/../setuplib}
 if [[ -r "$setuplib" ]]; then source "$setuplib"; else
-	echo "Setup library not found: $setuplib" >&2; usage '[SETUP_LIB=<path>]'
+	echo "Setup library not found: $setuplib" >&2; exit 1;
 fi
 
+include dconf
+
 # -----------------------------------------------------------------------------
 
-cols=${1:-${SETUP_GNOME_TERMINAL_COLS:-180}}
-rows=${2:-${SETUP_GNOME_TERMINAL_ROWS:-60}}
+cols=${1:-${SETUP_GNOME_TERMINAL_COLS:-180}}; integer "$cols" "COLS"
+rows=${2:-${SETUP_GNOME_TERMINAL_ROWS:-60}};  integer "$rows" "ROWS"
 
-integer "$cols" "COLS" || usage
-integer "$rows" "ROWS" || usage
+# -----------------------------------------------------------------------------
 
 user=${USER,,}
 user=${user^}
@@ -176,10 +179,10 @@ gt_dconf() {
 		message "Create Gnome Terminal profile: $name (${profile:1:-1})"
 		profiles=$(dconf read "${path}list")
 		if [[ "${profiles: -2}" == "']" ]]; then sep=', '; fi
-		$SETUP_RUN dconf write "${path}list" "${profiles::-1}${sep}'${profile:1:-1}']"
+		dconf write "${path}list" "${profiles::-1}${sep}'${profile:1:-1}']"
 	fi
 	# Created with: dconf dump "${path}${profile}" | sort
-	$SETUP_RUN dconf load "${path}${profile}" < <(sed -Ez 's/\n +//g' <<-EOF
+	dconf load "${path}${profile}" < <(sed -Ez 's/\n +//g' <<-EOF
 		[/]
 		background-transparency-percent=12
 		default-size-columns=${cols}
@@ -190,7 +193,7 @@ gt_dconf() {
 		visible-name='${name}'
 	EOF
 	)
-	$SETUP_RUN dconf write "${path}default" "'${profile:1:-1}'"
+	dconf write "${path}default" "'${profile:1:-1}'"
 }
 
 
