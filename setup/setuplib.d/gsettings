@@ -7,24 +7,24 @@ include gvariant
 
 # Wrapper to gsettings, automatically invoking setup_run on set
 # and dispatching to extra commands
-gset() {
+gsettings() {
 	cmd=$1
 	shift
 	case "$cmd" in
-	set ) setup_run gsettings set "$@";;
-	list) gset_list "$@";;
-	*   ) gsettings "$cmd" "$@";;
+	set ) setup_run command gsettings set "$@";;
+	list) gsettings_list "$@";;
+	*   ) command gsettings "$cmd" "$@";;
 	esac
 }
 
-gset_list() {
+gsettings_list() {
 	local op=$1      # Operation to perform: include, remove, clear/new, set
 	local schema=$2  # GSettings schema
 	local key=$3     # GSettings key
 	local type=$4    # List item type. See gvariant_array()
 	shift 4          # Remaining arguments are list items
 
-	local list=$(gset get "$schema" "$key")
+	local list=$(gsettings get "$schema" "$key")
 	list=$(gvariant_array "$op" "$type" "$list" "$@")
-	gset set "$schema" "$key" "$list"
+	gsettings set "$schema" "$key" "$list"
 }
