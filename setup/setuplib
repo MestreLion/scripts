@@ -122,7 +122,6 @@ include() {
 		if ! [[ -f "$lib" && -r "$lib" ]]; then
 			fatal "Library not accessible: ${lib}"
 		fi
-		# shellcheck disable=SC1090
 		source "$lib"
 	done
 }
@@ -162,7 +161,7 @@ argument(){
 }
 integer() {
 	if ! [[ "$1" != *[!0-9]* ]]; then
-		echo "'$1'${2:+" in ${2}"} is not an integer." >&2
+		echo "${2:+"${2} is "}not an integer: $1" >&2
 		usage 1
 	fi
 }

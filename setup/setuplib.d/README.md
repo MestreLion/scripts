@@ -4,15 +4,15 @@ Setup Library Extensions
 Directory for Bash libraries to extend [`setuplib`](../setuplib) functionality.
 
 - Files here are sourced on-demand by [`setuplib`](../setuplib) on `include()`
--- It source files at `SETUP_LIB_DIR`, by default at `$(dirname setuplib)/setuplib.d`
+  - It source files at `SETUP_LIB_DIR`, by default at `$(dirname setuplib)/setuplib.d`
 
 - All function names **must** be prefixed to match the file name. Absolutely no exceptions!
--- Makes it possible to track where a given function was defined. As a bonus it avoids collisions.
--- No problem using cryptic names such as `nm`: the file header will have a description
+  - Makes it possible to track where a given function was defined. As a bonus it avoids collisions.
+  - No problem using cryptic names such as `nm`: the file header will have a description
 
 - Main files should be extensionless, so scripts can source using `include name`
--- Support files, not meant for the scripts, can have an extension,
-   such as [`gvariant.py`](./gvariant.py) used by [`gvariant`](./gvariant)
+  - Support files, not meant for the scripts, can have an extension,
+    such as [`gvariant.py`](./gvariant.py) used by [`gvariant`](./gvariant)
 
 - Libraries can also `include` other libraries, and many do.
 
