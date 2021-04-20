@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Copyright (C) 2021 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+# -----------------------------------------------------------------------------
+
+DESCRIPTION='Description'
+ARGS='[OPT_ARG1]'
+
+setuplib=${SETUP_LIB_PATH:-"$(dirname "$(readlink -f "$0")")"/../setuplib}
+if [[ -r "$setuplib" ]]; then source "$setuplib"; else
+	echo "Setup library not found: $setuplib" >&2; exit 1;
+fi
+
+#include somelib
+
+# -----------------------------------------------------------------------------
+
+myvar=${1:-SETUP_MYNAME_MYVAR:-"default"}
+
+# -----------------------------------------------------------------------------

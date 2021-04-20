@@ -1,16 +1,9 @@
 # Constants and support functions to be sourced by setup scripts
-
-#   Copyright (C) 2015 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
-#   License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
-
-# Add this to the top of each setup script:
-#------------------------------------------------------------------------------
-#	DESCRIPTION='Description for usage(), preferably a one-liner'  # Optional
-#	ARGS='[OPTIONAL_ARG_1] [OPTIONAL_ARG_2] ...'  # Optional
-#	setuplib=${SETUP_LIB_PATH:-"$(dirname "$(readlink -f "$0")")"/../setuplib}
-#	if [[ -r "$setuplib" ]]; then source "$setuplib"; else
-#		echo "Setup library not found: $setuplib" >&2; exit 1
-#	fi
+#
+# Copyright (C) 2015 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+#
+# Use setup/template to create new setup scripts
 #------------------------------------------------------------------------------
 
 set -Eeuo pipefail  # exit on any error
@@ -25,7 +18,7 @@ usage() {
 	if ((error)); then
 		echo "$usage" >&2; exit "$error"
 	else
-		echo -e "${DESCRIPTION:+"${DESCRIPTION}\n"}${usage}"; exit
+		echo -e "${DESCRIPTION:+"${DESCRIPTION}\\n"}${usage}"; exit
 	fi
 }
 
