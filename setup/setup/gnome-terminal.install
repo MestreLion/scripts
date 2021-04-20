@@ -60,15 +60,15 @@ done < <(dconf list "$path" | awk '/^:/{print}')
 # above in org.gnome.Terminal.ProfilesList, accesible via `gsettings get`.
 # But for the general case, `dconf list` is the only method.
 
-# If it's a new profile, add to the list
+# If it's a new profile, generate a UUID and add to the list
 if [[ "$profile" ]]; then
-	message "Update Gnome Terminal profile: $name (${profile:1:-1})"
+	uuid=${profile:1:-1}
+	message "Update Gnome Terminal profile: ${name} (${uuid})"
 else
-	profile=":$(uuidgen)/"
-	message "Create Gnome Terminal profile: $name (${profile:1:-1})"
-	profiles=$(dconf read "${path}list")
-	if [[ "${profiles: -2}" == "']" ]]; then sep=', '; fi
-	dconf write "${path}list" "${profiles::-1}${sep}'${profile:1:-1}']"
+	uuid=$(uuidgen)
+	profile=":${uuid}/"
+	message "Create Gnome Terminal profile: ${name} (${uuid})"
+	dconf array include "${path}list" s "$uuid"
 fi
 
 # Customize its settings
@@ -86,4 +86,4 @@ dconf load "${path}${profile}" < <(sed -Ez 's/\n +//g' <<-EOF
 )
 
 # Set as the default profile
-dconf write "${path}default" "'${profile:1:-1}'"
+dconf write "${path}default" "'$uuid'"
