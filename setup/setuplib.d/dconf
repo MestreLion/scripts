@@ -11,13 +11,14 @@ dconf() {
 	cmd=$1
 	shift
 	case "$cmd" in
-	write) setup_run command dconf write "$@";;
-	list ) dconf_list "$@";;
+	load ) ;&
+	write) setup_run command dconf "$cmd" "$@";;
+	array) dconf_array "$@";;
 	*    ) command dconf "$cmd" "$@";;
 	esac
 }
 
-dconf_list() {
+dconf_array() {
 	local op=$1      # Operation to perform: include, remove, clear/new, set
 	local key=$2     # Full path of the DConf key
 	local type=$3    # List item type. See gvariant_array()

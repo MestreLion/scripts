@@ -74,5 +74,5 @@ gsettings set "$gsprefpath".editor  scheme                  'cobalt'    # Fonts 
 gsettings set "$gsprefpath".ui      max-recents             "$recents"  # not in GUI
 
 # Plugins
-gsettings list remove   "$gsplugpath"  active-plugins  s "${plugindel[@]}"
-gsettings list include  "$gsplugpath"  active-plugins  s "${pluginadd[@]}"
+gsettings array remove   "$gsplugpath"  active-plugins  s "${plugindel[@]}"
+gsettings array include  "$gsplugpath"  active-plugins  s "${pluginadd[@]}"

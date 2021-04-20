@@ -11,13 +11,13 @@ gsettings() {
 	cmd=$1
 	shift
 	case "$cmd" in
-	set ) setup_run command gsettings set "$@";;
-	list) gsettings_list "$@";;
-	*   ) command gsettings "$cmd" "$@";;
+	set  ) setup_run command gsettings set "$@";;
+	array) gsettings_array "$@";;
+	*    ) command gsettings "$cmd" "$@";;
 	esac
 }
 
-gsettings_list() {
+gsettings_array() {
 	local op=$1      # Operation to perform: include, remove, clear/new, set
 	local schema=$2  # GSettings schema
 	local key=$3     # GSettings key
