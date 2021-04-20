@@ -46,12 +46,20 @@ gt_dconf() {
 	local path='/org/gnome/terminal/legacy/profiles:/'
 	local profiles= profile= puid= pname= sep=
 
+	# Loop the profiles list
 	while IFS= read -r puid; do
+		# Get the Profile visible-name
+		# Could also use `gsettings get schema:path/puid key`,
+		# but `dconf read path/puid/key` is easier as it doesn't require schema
 		pname=$(dconf read "${path}${puid}visible-name")
 		if [[ "'${name}'" != "$pname" ]]; then continue; fi
 		profile=$puid
 		break
 	done < <(dconf list "$path" | awk '/^:/{print}')
+	# For the specific case of Gnome Terminal, it also mantains the same list
+	# above in org.gnome.Terminal.ProfilesList, accesible via `gsettings get`.
+	# But for the general case, `dconf list` is the only method.
+
 	if [[ "$profile" ]]; then
 		message "Update Gnome Terminal profile: $name (${profile:1:-1})"
 	else
