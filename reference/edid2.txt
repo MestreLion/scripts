@@ -45,24 +45,6 @@ HDMI-0 connected 1920x1080+0+360 (normal left inverted right x axis y axis) 531m
 		465434344c363736550a000000fc0044
 		454c4c204532343134480a20000000fd
 		00384c1e5311000a20202020202000c3
-	BorderDimensions: 4 
-		supported: 4
-	Border: 0 0 0 0 
-		range: (0, 65535)
-	SignalFormat: TMDS 
-		supported: TMDS
-	ConnectorType: HDMI 
-	ConnectorNumber: 1 
-	_ConnectorLocation: 1 
-	non-desktop: 0 
-		supported: 0, 1
-   1920x1080     60.00*+
-   1600x900      60.00  
-   1280x1024     75.02    60.02  
-   1152x864      75.00  
-   1024x768      75.03    60.00  
-   800x600       75.00    60.32  
-   640x480       75.00    59.94  
 DP-0 connected 1920x1080+5920+1057 (normal left inverted right x axis y axis) 477mm x 268mm
 	EDID: 
 		00ffffffffffff004c2dac08465a565a
