@@ -42,47 +42,48 @@ version_greater "$version" "$required" ||
 	fatal "Gnome Terminal version $version still uses GConf" \
 		" which is no longer supported. Version $required or above is required."
 
-gt_dconf() {
-	local name=${1:-$user}
-	local path='/org/gnome/terminal/legacy/profiles:/'
-	local profiles= profile= puid= pname= sep=
+name=${1:-$user}
+path='/org/gnome/terminal/legacy/profiles:/'
+profiles= profile= puid= pname= sep=
 
-	# Loop the profiles list
-	while IFS= read -r puid; do
-		# Get the Profile visible-name
-		# Could also use `gsettings get schema:path/puid key`,
-		# but `dconf read path/puid/key` is easier as it doesn't require schema
-		pname=$(dconf read "${path}${puid}visible-name")
-		if [[ "'${name}'" != "$pname" ]]; then continue; fi
-		profile=$puid
-		break
-	done < <(dconf list "$path" | awk '/^:/{print}')
-	# For the specific case of Gnome Terminal, it also mantains the same list
-	# above in org.gnome.Terminal.ProfilesList, accesible via `gsettings get`.
-	# But for the general case, `dconf list` is the only method.
+# Loop the profiles list to find a profile by name
+while IFS= read -r puid; do
+	# Get the Profile visible-name
+	# Could also use `gsettings get schema:path/puid key`,
+	# but `dconf read path/puid/key` is easier as it doesn't require schema
+	pname=$(dconf read "${path}${puid}visible-name")
+	if [[ "'${name}'" != "$pname" ]]; then continue; fi
+	profile=$puid
+	break
+done < <(dconf list "$path" | awk '/^:/{print}')
+# For the specific case of Gnome Terminal, it also mantains the same list
+# above in org.gnome.Terminal.ProfilesList, accesible via `gsettings get`.
+# But for the general case, `dconf list` is the only method.
 
-	if [[ "$profile" ]]; then
-		message "Update Gnome Terminal profile: $name (${profile:1:-1})"
-	else
-		profile=":$(uuidgen)/"
-		message "Create Gnome Terminal profile: $name (${profile:1:-1})"
-		profiles=$(dconf read "${path}list")
-		if [[ "${profiles: -2}" == "']" ]]; then sep=', '; fi
-		dconf write "${path}list" "${profiles::-1}${sep}'${profile:1:-1}']"
-	fi
-	# Created with: dconf dump "${path}${profile}" | sort
-	dconf load "${path}${profile}" < <(sed -Ez 's/\n +//g' <<-EOF
-		[/]
-		background-transparency-percent=12
-		default-size-columns=${cols}
-		default-size-rows=${rows}
-		scrollback-unlimited=true
-		use-theme-transparency=false
-		use-transparent-background=true
-		visible-name='${name}'
+# If it's a new profile, add to the list
+if [[ "$profile" ]]; then
+	message "Update Gnome Terminal profile: $name (${profile:1:-1})"
+else
+	profile=":$(uuidgen)/"
+	message "Create Gnome Terminal profile: $name (${profile:1:-1})"
+	profiles=$(dconf read "${path}list")
+	if [[ "${profiles: -2}" == "']" ]]; then sep=', '; fi
+	dconf write "${path}list" "${profiles::-1}${sep}'${profile:1:-1}']"
+fi
+
+# Customize its settings
+# Created with: dconf dump "${path}${profile}" | sort
+dconf load "${path}${profile}" < <(sed -Ez 's/\n +//g' <<-EOF
+	[/]
+	background-transparency-percent=12
+	default-size-columns=${cols}
+	default-size-rows=${rows}
+	scrollback-unlimited=true
+	use-theme-transparency=false
+	use-transparent-background=true
+	visible-name='${name}'
 	EOF
-	)
-	dconf write "${path}default" "'${profile:1:-1}'"
-}
+)
 
-gt_dconf
+# Set as the default profile
+dconf write "${path}default" "'${profile:1:-1}'"
