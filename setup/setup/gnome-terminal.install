@@ -32,8 +32,7 @@ rows=${2:-${SETUP_GNOME_TERMINAL_ROWS:-60}};  integer "$rows" "ROWS"
 
 # -----------------------------------------------------------------------------
 
-user=${USER,,}
-user=${user^}
+user=$SETUP_USERNAME
 
 required=3.8
 version=$(gnome-terminal --version | awk '{print $4}')
@@ -73,12 +72,16 @@ fi
 
 # Customize its settings
 # Created with: dconf dump "${path}${profile}" | sort
+# The sed filter is just to allow indenting and formatting long values
 dconf load "${path}${profile}" < <(sed -Ez 's/\n +//g' <<-EOF
 	[/]
+	background-color='rgb(0,0,0)'
 	background-transparency-percent=12
 	default-size-columns=${cols}
 	default-size-rows=${rows}
+	foreground-color='rgb(204,204,204)'
 	scrollback-unlimited=true
+	use-theme-colors=false
 	use-theme-transparency=false
 	use-transparent-background=true
 	visible-name='${name}'

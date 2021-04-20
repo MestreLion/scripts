@@ -41,12 +41,14 @@ if [[ -r "$SETUP_CONFIG" ]]; then source "$SETUP_CONFIG"; fi
 # Setup engine
 
 absdir() { dirname "$(readlink -f "$1")"; }
+username() { getent passwd "${1:-$USER}" | cut -d: -f5 | cut -d, -f1; }
 
 slug=${SETUP_SLUG:-}; slug=${slug##*/}; SETUP_SLUG=${slug:-'setup'}; unset slug
 SETUP_VERBOSE=${SETUP_VERBOSE:-1}
 SETUP_DEBUG=${SETUP_DEBUG:-0}
 SETUP_DRYRUN=${SETUP_DRYRUN:-0}
 SETUP_USER=${SETUP_USER:-${USER,,}}
+SETUP_USERNAME=${SETUP_USERNAME:-$(username)}
 SETUP_LIBS_DIR=${SETUP_LIBS_DIR:-"$(absdir "$BASH_SOURCE")/setuplib.d"}
 
 # DEPRECATED! Use setup_run() directly.
