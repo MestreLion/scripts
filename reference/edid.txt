@@ -19,23 +19,6 @@ DVI-I-1 connected primary 2560x1440+1920+0 (normal left inverted right x axis y 
 	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
 		0 1 
 	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
-	EDID: 
-		00ffffffffffff00232f9b0400000000
-		28150103a53c2278226fb1a7554c9e25
-		0c505400000001010101010101010101
-		010101010101565e00a0a0a029503020
-		350055502100001a000000fc00445541
-		4c2d4456490a20202020000000fc000a
-		202020202020202020202020000000fc
-		000a2020202020202020202020200111
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
-		ffffffffffffffffffffffffffffffff
 	BorderDimensions: 4 
 		supported: 4
 	Border: 0 0 0 0 
@@ -62,24 +45,6 @@ HDMI-0 connected 1920x1080+0+360 (normal left inverted right x axis y axis) 531m
 		465434344c363736550a000000fc0044
 		454c4c204532343134480a20000000fd
 		00384c1e5311000a20202020202000c3
-	BorderDimensions: 4 
-		supported: 4
-	Border: 0 0 0 0 
-		range: (0, 65535)
-	SignalFormat: TMDS 
-		supported: TMDS
-	ConnectorType: HDMI 
-	ConnectorNumber: 1 
-	_ConnectorLocation: 1 
-	non-desktop: 0 
-		supported: 0, 1
-   1920x1080     60.00*+
-   1600x900      60.00  
-   1280x1024     75.02    60.02  
-   1152x864      75.00  
-   1024x768      75.03    60.00  
-   800x600       75.00    60.32  
-   640x480       75.00    59.94  
 DP-0 connected 1920x1080+5920+1057 (normal left inverted right x axis y axis) 477mm x 268mm
 	EDID: 
 		00ffffffffffff004c2dac08465a565a
@@ -137,9 +102,9 @@ DVI-D-0 connected 1440x2560+4480+0 left (normal left inverted right x axis y axi
 		0c505400000001010101010101010101
 		010101010101565e00a0a0a029503020
 		350055502100001a000000fc00445541
-		4c2d4456490a20202020000000fc000a
-		202020202020202020202020000000fc
-		000a2020202020202020202020200111
+		4c2d4456490a20202020000000fc0041
+		42430a202020202020202020000000fc
+		004455410a2020202020202020200111
 		ffffffffffffffffffffffffffffffff
 		ffffffffffffffffffffffffffffffff
 		ffffffffffffffffffffffffffffffff
