@@ -35,11 +35,12 @@ rows=${2:-${SETUP_GNOME_TERMINAL_ROWS:-60}};  integer "$rows" "ROWS"
 user=${USER,,}
 user=${user^}
 
+required=3.8
 version=$(gnome-terminal --version | awk '{print $4}')
 
-version_lesser "$version" 3.7 ||
+version_greater "$version" "$required" ||
 	fatal "Gnome Terminal version $version still uses GConf" \
-		" which is no longer supported. Version 3.8 or above is required."
+		" which is no longer supported. Version $required or above is required."
 
 gt_dconf() {
 	local name=${1:-$user}
