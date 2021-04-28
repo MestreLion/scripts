@@ -1,3 +1,0 @@
-#!/bin/bash
-
-[[ -f ~/.xchat2/voicekill.pl ]] && rm ~/.xchat2/voicekill.pl
