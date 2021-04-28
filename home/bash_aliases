@@ -89,6 +89,25 @@ where() {
 }
 complete -c where
 
+install_packages() {
+	# Avoid marking installed packages as manual by only installing missing ones
+	local pkg=
+	local pkgs=()
+	for pkg in "$@"; do
+		if ! package_installed "$pkg"; then pkgs+=( "$pkg" ); fi
+	done
+	if (("${#pkgs[@]}")); then
+		sudo apt install "${pkgs[@]}"
+	fi
+}
+package_version() {
+	dpkg-query --showformat='${Version}' --show "$1" 2>/dev/null
+}
+package_installed() {
+	local ok
+	ok=$(package_version "$1") && [[ "$ok" ]]
+}
+
 # Profiling:
 # python3 -m cProfile -o myprog.profile ./myprog.py ...
 #
