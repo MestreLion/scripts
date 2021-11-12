@@ -15,7 +15,7 @@ inputgui() {
 	title=${2:-'WhatsApp Web Link'}
 	entry=${3:-}
 	local reply
-	if type -p zenity @>/dev/null && [[ "$TERM" == 'dumb' ]]; then
+	if type -p zenity &>/dev/null && [[ "$TERM" == 'dumb' ]]; then
 		zenity --entry --width 250 --window-icon "${0}.png" --text "$prompt" --title "$title" --modal 2> >(grep -v 'GtkDialog' >&2)  # --entry-text '5521'
 	else
 		read -p "${prompt}: " reply

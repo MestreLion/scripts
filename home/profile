@@ -136,6 +136,11 @@ export DOSBOX_DRIVEC=/dados/Jogos/DOSBox
 export BROWSER=firefox
 
 
+# SetEn -----------------------------------------------------------------------
+
+export SETEN_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/setup/setup.conf
+
+
 # PyCharm ---------------------------------------------------------------------
 
 # As PyCharm invokes ShellCheck without -x it never follows sourced files,

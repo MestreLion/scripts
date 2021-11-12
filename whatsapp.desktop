@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=WhatsApp
+Comment=WhatsApp Web no seu Desktop!
+Icon=whatsapp
+Exec=whatsapp
+Terminal=false
+StartupNotify=true
+Categories=Development;
