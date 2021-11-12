@@ -256,18 +256,21 @@ compare-images() (
 # Minecraft
 _minecraft_saverestore() {
 	local src=$HOME/.minecraft/saves
-	local dst=$HOME/install/minecraft/saves/minecraft-auto/saves
+	local dst=$HOME/install/minecraft/backup/minecraft-auto/saves
 	local mode=${1:-save}
 	if [[ "$mode" == "restore" ]]; then
 		local tmp=$src
 		src=$dst
 		dst=$tmp
 	fi
+	src=${src%/}
+	dst=${dst%/}
 	[[ -d "$src" ]] || { echo "$src does not exist" >&2; return 1; }
-	rm -rf   -- "$dst".bak     &&        # Delete destination backup, if exists
-	mkdir -p -- "$dst"         &&        # Create destination
-	mv       -- "$dst"{,.bak}  &&        # Backup destination
-	cp -r    -- "${src%/}"/ "${dst%/*}"  # Copy Source to Destination
+	rm -rf   -- "$dst".bak             &&  # Delete destination backup, if exists
+	mkdir -p -- "$dst"{,.bak}          &&  # Create destination and its backup
+	cp -pr -t   "$dst".bak -- "$dst"/* &&  # Backup destination content
+	rm -rf   -- "$dst"/*               &&  # Delete destination content
+	cp -pr -t   "$dst"     -- "$src"/*     # Copy Source content to Destination
 }
 minecraft-save()    { _minecraft_saverestore save;    }
 minecraft-restore() { _minecraft_saverestore restore; }
