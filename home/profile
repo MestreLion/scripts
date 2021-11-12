@@ -110,6 +110,9 @@ export JUPYTER_CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}/jupyter
 export PYLINTHOME=${XDG_CACHE_HOME:-$HOME/.cache}/pylint    # Default ~/.pylint.d/
 export PYLINTRC=${XDG_CONFIG_HOME:-$HOME/.config}/pylintrc  # Default ~/.pylintrc
 
+# Pipx
+export PIPX_HOME=${XDG_DATA_HOME}/pipx  # Default ~/.local/pipx
+
 
 # -----------------------------------------------------------------------------
 
@@ -131,3 +134,11 @@ export DOSBOX_DRIVEC=/dados/Jogos/DOSBox
 # DWWW / sensible-browser -----------------------------------------------------
 
 export BROWSER=firefox
+
+
+# PyCharm ---------------------------------------------------------------------
+
+# As PyCharm invokes ShellCheck without -x it never follows sourced files,
+# triggering many SC2034 and related false positives. Workaround by forcing -x
+# https://youtrack.jetbrains.com/issue/IDEA-219176
+export SHELLCHECK_OPTS="-x"

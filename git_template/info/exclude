@@ -5,3 +5,6 @@
 # Python pre-compiled files
 __pycache__
 *.pyc
+
+# PyCharm IDE
+.idea/
