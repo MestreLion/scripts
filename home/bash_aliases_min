@@ -161,8 +161,7 @@ set +o histexpand  # same as set +H
 
 # ------------------------------------------------------------------------------
 
-if   exists screenfetch; then screenfetch
-elif exists neofetch;    then neofetch
-elif exists cowfortune;  then
-	cowfortune | { exists lolcat && lolcat || cat ; }  # So cute!
+# So cute!
+if exists cowfortune;  then
+	cowfortune | { if exists lolcat; then lolcat; else cat; fi; }
 fi
