@@ -1,0 +1,126 @@
+#!/bin/bash -u
+#
+# Show package dependency tree
+# Inspired by https://gist.github.com/damphat/6214499
+#
+# Copyright (C) 2020 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+#------------------------------------------------------------------------------
+
+usage() {
+	if [[ "${1:-}" ]]; then exec >&2; fi
+	cat <<-USAGE
+	Usage: $myname [options] PACKAGE
+	USAGE
+	if [[ "${1:-}" ]] ; then
+		cat <<- USAGE
+		Try '$myname --help' for more information.
+		USAGE
+		exit 1
+	fi
+	cat <<-USAGE
+
+	Show package dependency tree
+
+	Options are passed to apt-rdepends, for example:
+	  -r|--reverse  - show packages that depend on the specified one
+
+	USAGE
+	exit 0
+}
+
+exists()  { type "$@" >/dev/null 2>&1; }
+argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2; usage 1; }
+invalid() { argerr "invalid ${2:-option}: ${1:-}"; }
+missing() { argerr "missing ${1:+$1 }argument${2:+ from $2}."; }
+
+#------------------------------------------------------------------------------
+
+myname=${0##*/}
+opts=()
+args=()
+package=
+
+# Pre-parse for -h|--help, ignoring if after '--'
+for arg in "$@"; do
+	if [[ "$arg" == '--' ]]; then break; fi
+	if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then usage; fi
+done
+while (($#)); do
+	case "$1" in
+	-*) opts+=( "$1" );;
+	* ) args+=( "$1" );;
+	--) shift; break;;
+	esac
+	shift || break
+done
+args+=("$@")
+case ${#args[@]} in
+	0) missing PACKAGE;;
+	1) package=${args[0]}; if [[ -z "$package" ]]; then missing PACKAGE; fi;;
+	*) invalid "${args[1]}" argument;;
+esac
+
+#------------------------------------------------------------------------------
+
+if ! exists apt-rdepends; then
+	echo "Installing pre-requisite apt-rdepends"
+	sudo apt install apt-rdepends  # not the same output as `apt rdepends`!
+fi
+
+#------------------------------------------------------------------------------
+
+declare -gA dep=()
+declare -gA num=()
+pkgs=:
+
+parse_deps() {
+	local root=$1
+	local pkg
+	local category name version
+	while read category name version; do
+		if [[ "$category" == "P" ]];  then
+			pkg=$name
+			dep["$pkg"]=""
+			num["$pkg"]=0
+		else
+			dep["$pkg"]="${dep["$pkg"]} ${name}"
+			num["$pkg"]=$((${num["$pkg"]} + 1))
+		fi
+	done < <(
+		apt-rdepends "${opts[@]}" "$root" |
+		# mark 'P' for package, 'D' for dependency
+		sed -E 's/^/P\t/; s/^P?\t? +[^:]+: /D\t/; s/ \(([^)]+)\)/\t\1/'
+	)
+	walk_deps "$root"
+}
+
+walk_deps() {
+	local root=$1
+	local level=${2:-0}
+	local last=${3:-0}
+	local prefix=${4:-}
+	local T1= T2=
+	local pkg
+	local i=0
+
+	# mark packages already printed to avoid circular dependencies
+	local dupe=; if [[ "$pkgs" == *:${root}:* ]]; then dupe=*; fi
+
+	if ((level++)); then
+		T1=' │  '; if ((last)); then T1='    '; fi
+		T2=' ├─ '; if ((last)); then T2=' ╰─ '; fi
+	fi
+	echo "${prefix}${T2}${root}${dupe}"
+
+	# Do not print children of duplicates, otherwise add it to the "list"
+	if [[ "$dupe" ]]; then return; fi
+
+	pkgs=${pkgs}${root}:
+	prefix="${prefix}${T1}"
+	for pkg in ${dep[$root]:1}; do
+		walk_deps "$pkg" $level $((++i == num[$root])) "$prefix"
+	done
+}
+
+parse_deps "$package"
