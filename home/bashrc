@@ -37,13 +37,13 @@ fi
 # PS1 customization ------------------------------------------------------------
 # http://bashrcgenerator.com/
 
-# Exit code of last command
+# Print exit code of last command if non-zero, and return it
 # Blank if 0, otherwise use $1 as formatting string, '%s ' by default
 # Return the same code, to preserve it between prompts
 # Alternative: \${?/#0/} directly into PS1, but lacks surrounding spaces
-ps1_exitcode() {
+_format_exitcode() {
 	local s=$?
-	(($s)) && printf "${1:-%s }" "$s"
+	if (($s)); then printf "${1:-%s }" "$s"; fi
 	return $s
 }
 
@@ -90,7 +90,7 @@ declare -A c=(
 # Final product
 PS1=${c[RESET]}${c[BOLD]}\
 "${c[PURPLE]}\t ${c[GREEN]}\u@\h ${c[BLUE]}\w "\
-"${c[RED]}\$(__git_ps1 '%s ')${c[YELLOW]}\$(ps1_exitcode)${c[BLUE]}\\$ "\
+"${c[RED]}\$(__git_ps1 '%s ')${c[YELLOW]}\$(_format_exitcode)${c[BLUE]}\\$ "\
 ${c[RESET]}
 
 unset color c
