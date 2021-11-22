@@ -261,7 +261,7 @@ minecraft-restore() { _minecraft_saverestore restore; }
 
 # ------------------------------------------------------------------------------
 
-complete -c where cmdlist cmdcat cmdopen        # commands (executables in $PATH)
-complete -F _comp_pkg_names ubuntu-package why  # packages in repositories
+complete -c where cmdlist cmdcat cmdopen  # commands (executables in $PATH)
+complete -F _comp_pkg_names ubuntu-package why apt-tree  # packages in repositories
 complete-copy ls ll la
 complete-copy dwww-man mand package

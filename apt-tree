@@ -22,9 +22,14 @@ usage() {
 
 	Show package dependency tree
 
-	Options are passed to apt-rdepends, for example:
+	Options:
+	  -h|--help     - show this page.
+
+	Other options are passed to 'apt-rdepends', for example:
 	  -r|--reverse  - show packages that depend on the specified one
 
+	Suggested bash-completion:
+	  complete -F _comp_pkg_names apt-tree
 	USAGE
 	exit 0
 }
