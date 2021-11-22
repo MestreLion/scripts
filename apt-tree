@@ -3,7 +3,7 @@
 # Show package dependency tree
 # Inspired by https://gist.github.com/damphat/6214499
 #
-# Copyright (C) 2020 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# Copyright (C) 2021 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 # License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
 #------------------------------------------------------------------------------
 
