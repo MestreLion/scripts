@@ -1,5 +1,10 @@
 # This is sourced by $SCRIPTS/home/bashrc after it sources $SCRIPTS/home/bash_completion
 
+# SP  ' '  0x20 = · U+00B7 Middle Dot
+# TAB '\t' 0x09 = ￫ U+FFEB Halfwidth Rightwards Arrow
+# CR  '\r' 0x0D = § U+00A7 Section Sign (⏎ U+23CE also works fine)
+# LF  '\n' 0x0A = ¶ U+00B6 Pilcrow Sign (was "Paragraph Sign")
+alias whitespace="sed 's/ /·/g;s/\t/￫/g;s/\r/§/g;s/$/¶/g'"
 alias ls="ls --color=auto --group-directories-first -1"
 alias ll="ls -l --time-style=long-iso"
 alias la="ll -A"
@@ -14,7 +19,8 @@ alias .....="cd ../../../.."
 alias path="echo \$PATH"
 alias fstab="gksudo gedit /etc/fstab"
 alias open="xdg-open"
-alias trash="trash-put"
+alias trash="trash-put"  # requires trash-cli package
+alias rm="trash"
 alias mand="dwww-man"
 alias package="dpkg-www"
 alias ca="CA.pl"
@@ -22,28 +28,24 @@ alias dd-progress="dd status=progress bs=1M iflag=count_bytes"
 alias dd-nocache="dd-progress oflag=nocache,sync"
 alias dfd='df -H -x tmpfs -x squashfs -x devtmpfs'
 alias duh='du -sbh --si'
-alias dud='lsblk --exclude 7'
+alias dud='lsblk --exclude 7'  # 7 = loop devices, most likely snaps
 alias rot13="tr 'A-Za-z' 'N-ZA-Mn-za-m'"
-alias json='python3 -m json.tool'
-
+alias json='python3 -m json.tool'  # 'jq' is a beter alternative, if installed
+alias why='apt rdepends --installed'  # can also be 'aptitude why'
 #alias have="exists"
 
-# SP  ' '  0x20 = · U+00B7 Middle Dot
-# TAB '\t' 0x09 = ￫ U+FFEB Halfwidth Rightwards Arrow
-# CR  '\r' 0x0D = § U+00A7 Section Sign (⏎ U+23CE also works fine)
-# LF  '\n' 0x0A = ¶ U+00B6 Pilcrow Sign (was "Paragraph Sign")
-alias whitespace="sed 's/ /·/g;s/\t/￫/g;s/\r/§/g;s/$/¶/g'"
-
-complete-copy ls ll la
-complete-copy dwww-man mand package
+where() { dpkg --search -- $(type -p "${1:-}"); }
+ubuntu-package() { open "http://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"; }
 
 cdl()     { cd "$@" && ll ; }
 md()      { mkdir "$@" && cd "${@: -1}" ; }
 which()   { builtin type -P "$@" ; }
 sprunge() { local l=${2-bash}; echo $(curl -sSF "sprunge=<${1:--}" http://sprunge.us)${l:+?$l}${3:+#n-$3}; }
+compile() { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
+dmesgw()  { watch -n 0.25 "dmesg $@ | tail -n $((LINES-3))"; }
+relpath() { python3 -c "import os,sys;print(os.path.relpath(*sys.argv[1:3]))" "$@"; }
 epoch()   { date -d@"$1" ; }
 now()     { date +%Y%m%d%H%M%S ; }
-
 timestamp() {
 	if [[ "${1:-}" ]]; then
 		date +%s --date "$1"
@@ -51,6 +53,11 @@ timestamp() {
 		date +%s
 	fi
 }
+
+cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
+cmdcat()  { cat  "$(type -P "$1")" ; }
+cmdopen() { open "$(type -P "$1")" ; }
+
 
 # WIP to be the new open()
 # idea: supress error messages only *after* (and *if*) successfully opened a file
@@ -83,11 +90,6 @@ newopen() {
 		return $err
 	fi
 }
-
-where() {
-	dpkg --search -- $(type -p "${1:-}")
-}
-complete -c where
 
 install_packages() {
 	# Avoid marking installed packages as manual by only installing missing ones
@@ -157,21 +159,6 @@ sri-hash() {
 	echo '" crossorigin="anonymous"></script>'
 }
 
-cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
-cmdcat()  { cat  "$(type -P "$1")" ; }
-cmdopen() { open "$(type -P "$1")" ; }
-complete -c cmdlist cmdcat cmdopen
-
-alias why='apt rdepends --installed'  # can also be 'aptitude why'
-
-ubuntu-package() {
-	open "http://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"
-}
-complete -F _comp_pkg_names ubuntu-package why
-
-compile() { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
-
-
 # unzip featuring an enhanced version of tar's --strip-components=1
 # Usage: unzip-strip ARCHIVE [DESTDIR] [EXTRA_cp_OPTIONS]
 # Derive DESTDIR to current dir and archive filename or toplevel dir
@@ -229,9 +216,6 @@ matrix-fake() {
 	GREP_COLOR="1;32" grep --color "[^ ]"
 }
 
-dmesgw() { watch -n 0.25 "dmesg $@ | tail -n $((LINES-3))"; }
-
-relpath() { python3 -c "import os,sys;print(os.path.relpath(*sys.argv[1:3]))" "$@"; }
 mv-link() (  # any particular reason for this to be a subshell??? relpath() won't work!
 	local newdir=$1
 	local msg1="Move all symlinks from current dir to another path, and make them relative"
@@ -274,3 +258,10 @@ _minecraft_saverestore() {
 }
 minecraft-save()    { _minecraft_saverestore save;    }
 minecraft-restore() { _minecraft_saverestore restore; }
+
+# ------------------------------------------------------------------------------
+
+complete -c where cmdlist cmdcat cmdopen        # commands (executables in $PATH)
+complete -F _comp_pkg_names ubuntu-package why  # packages in repositories
+complete-copy ls ll la
+complete-copy dwww-man mand package
