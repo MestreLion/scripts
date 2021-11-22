@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# also available as the shell function 'compare-images' in bash_aliases
+
+myname="${0##*/}"
+
+usage() {
+	msg="$1\nUsage: $myname <IMAGEFILE> <IMAGEFILE> [IMAGEFILE]\n"
+	if [[ "$TERM" == "dumb" ]] && type zenity >/dev/null 2>&1 ; then
+		msg="${msg//&/&amp;}"
+		msg="${msg//</&lt;}"
+		zenity --info --no-wrap --text "$msg"
+	else
+		printf "%b" "$msg" >&2
+	fi
+	exit 1
+}
+
+case $# in
+	2|3)
+		tempdir=$(mktemp -d) || exit 1
+		trap 'rm -rf -- "$tempdir"' EXIT
+		i=0
+
+		for f in "$@"; do
+			if ! [[ -f "$f" ]]; then usage "Not a file: $f"; fi
+		done
+		{
+		echo # to start pulsating zenity's progress bar
+		i=0
+		while (( $# )) ; do
+			tempfile="${tempdir}/$((++i)) ${1//\//_}"
+			
+			convert "$1" pam:- | xxd > "$tempfile"
+			shift
+		done
+		} |
+		zenity --progress --pulsate --auto-close --auto-kill --title "$myname" \
+		       --text "Comparing $*\n\nThis may take a long time.\n" \
+		        >/dev/null 2>&1
+	;;
+	*) usage "$myname requires either 2 or 3 arguments";;
+esac
+
+meld "$tempdir"/*
