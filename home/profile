@@ -68,9 +68,9 @@ append_path "$HOME/work/git-tools:$HOME/work/wine-tools:$HOME/work/xdg-tools"
 
 export PATH
 
-# Thousand separator in ls filesizes
-# could also use ls -l --block-size="'1" as alias
-export LS_BLOCK_SIZE="'1"
+# Thousand separator in ls, df and du filesizes
+# could also use ls -l --block-size="'1" as alias (escaping the double-quotes)
+export BLOCK_SIZE="'1"
 
 # Locales
 export LANG="en_US.utf8"
