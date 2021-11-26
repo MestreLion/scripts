@@ -39,6 +39,7 @@ cdl()     { cd "$@" && ll ; }
 md()      { mkdir "$@" && cd "${@: -1}" ; }
 compile() { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
 dmesgw()  { watch -n 0.25 "dmesg $@ | tail -n $((LINES-3))"; }
+xtitle()  { printf '\e]2;%s\a' "$*"; }
 epoch()   { date -d@"$1" ; }
 now()     { date +%Y%m%d%H%M%S ; }
 timestamp() {

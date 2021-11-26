@@ -58,6 +58,18 @@ cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
 cmdcat()  { cat  "$(type -P "$1")" ; }
 cmdopen() { open "$(type -P "$1")" ; }
 
+# Set the window title of the terminal emulator
+# Also available as 'xtitle' apt package
+# Empty arguments are ignored by xterm and reset default title in Gnome Terminal
+xtitle() {
+	# tput hs && {[[ "$1" ]] && {tput tsl; printf '%s' "$*"; tput fsl; } || tput dsl; }
+	# But using tput only works with hs-capable TERM, e.g. xterm+sl{,-twm}
+	# xterm can save/restore title with '\e[22;0t' / '\e[23;0t'
+	# See man 5 terminfo / https://invisible-island.net/ncurses/terminfo.ti.html
+	# https://gist.github.com/KevinGoodsell/744284
+	# http://ncurses.scripts.mit.edu/?p=ncurses.git;a=blob;f=misc/terminfo.src;hb=HEAD
+	printf '\e]2;%s\a' "$*"
+}
 
 # WIP to be the new open()
 # idea: supress error messages only *after* (and *if*) successfully opened a file
