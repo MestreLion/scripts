@@ -120,6 +120,7 @@ apt-list-manual() {
 		list=$(gzip -dc "$initial" | sed -n 's/^Package: //p')
 	fi
 
+	# List packages
 	comm -23 <(apt-mark showmanual | sort -u) <(echo "$list" | sort -u)
 
 	# If initial log not found and no manifest provided, show download instructions
@@ -131,7 +132,7 @@ apt-list-manual() {
 	# numeric version including with point release: 20.04.3
 	local version=$(awk -F'="?| ' '/^VERSION=/{print $2}' /etc/*release)
 	local msg=(
-		"Could not find manifest file: ${initial}"
+		"Empty or missing manifest file: ${manifest:-$initial}"
 		"Is this a server? Without a manifest the above list is not accurate."
 		"Download it from: http://releases.ubuntu.com/${version}/"
 		"And try again with: apt-list-manual MANIFEST-FILE"
