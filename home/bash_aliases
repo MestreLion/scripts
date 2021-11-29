@@ -104,6 +104,26 @@ newopen() {
 	fi
 }
 
+apt-list-manual() {
+	# https://askubuntu.com/a/492343/11015
+	local manifest=${1:-/var/log/installer/initial-status.gz}
+	if [[ -f "$manifest" ]]; then
+		comm -23 <(apt-mark showmanual | sort -u) \
+			<(gzip -dc "$manifest" | sed -n 's/^Package: //p' | sort -u)
+		return
+	fi
+	apt-mark showmanual | sort -u
+	# numeric version including with point release: 20.04.3
+	local version=$(awk -F'="?| ' '/^VERSION=/{print $2}' /etc/*release)
+	local msg=(
+		"Could not find manifest file: ${manifest}"
+		"Is this a server? Without a manifest the above list is not accurate."
+		"Download it from: http://releases.ubuntu.com/${version}/"
+		"And try again with: apt-list-manual MANIFEST-FILE"
+	)
+	printf '%s\n' "${msg[@]}" >&2
+}
+
 install_packages() {
 	# Avoid marking installed packages as manual by only installing missing ones
 	local pkg=
