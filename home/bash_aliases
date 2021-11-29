@@ -106,22 +106,37 @@ newopen() {
 
 apt-list-manual() {
 	# https://askubuntu.com/a/492343/11015
-	local manifest=${1:-/var/log/installer/initial-status.gz}
-	if [[ -f "$manifest" ]]; then
-		comm -23 <(apt-mark showmanual | sort -u) \
-			<(gzip -dc "$manifest" | sed -n 's/^Package: //p' | sort -u)
+	local manifest=${1:-}
+	local initial=/var/log/installer/initial-status.gz
+	local list=
+	# User-provided manifest, assume same format as https://releases.ubuntu.com
+	if [[ "$manifest" ]]; then
+		list=$(awk '{print $1}' "$manifest") || {
+			echo "Usage: apt-list-manual [MANIFEST-FILE]" >&2
+			return
+		}
+	# List from system installer log
+	elif [[ -f "$initial" ]]; then
+		list=$(gzip -dc "$initial" | sed -n 's/^Package: //p')
+	fi
+
+	comm -23 <(apt-mark showmanual | sort -u) <(echo "$list" | sort -u)
+
+	# If initial log not found and no manifest provided, show download instructions
+	if [[ "$list" ]]; then
 		return
 	fi
-	apt-mark showmanual | sort -u
+	printf 'ERROR:' >&2
+
 	# numeric version including with point release: 20.04.3
 	local version=$(awk -F'="?| ' '/^VERSION=/{print $2}' /etc/*release)
 	local msg=(
-		"Could not find manifest file: ${manifest}"
+		"Could not find manifest file: ${initial}"
 		"Is this a server? Without a manifest the above list is not accurate."
 		"Download it from: http://releases.ubuntu.com/${version}/"
 		"And try again with: apt-list-manual MANIFEST-FILE"
 	)
-	printf '%s\n' "${msg[@]}" >&2
+	printf '\t%s\n' "${msg[@]}" >&2
 }
 
 install_packages() {
