@@ -13,6 +13,7 @@ export BLOCK_SIZE="'1"
 # No more (poorly and half-) translated --help and man pages, please!
 # https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html
 export LANGUAGE=en_US:en
+export LC_ALL=en_US.UTF-8
 export LC_NUMERIC=pt_BR.UTF-8  # might require sudo locale-gen pt_BR.UTF-8
 
 # ------------------------------------------------------------------------------
