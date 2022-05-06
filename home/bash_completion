@@ -22,10 +22,10 @@ complete-copy() {
 }
 
 # package names
-# functionally identical to /etc/bash_completion.d/devscripts.pkgnames
+# See /usr/share/bash-completion/completions/apt-cache._apt_cache_packages()
 _comp_pkg_names() {
 	local cur; _get_comp_words_by_ref cur
-	COMPREPLY=( $(apt-cache --no-generate pkgnames -- $cur 2>/dev/null) )
+	COMPREPLY=( $(apt-cache --no-generate pkgnames -- "$cur" 2>/dev/null) )
 	return 0
 }
 

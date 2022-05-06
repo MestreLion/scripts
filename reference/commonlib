@@ -193,3 +193,14 @@ unzip_toplevels() {
 	tail -n +4 |
 	head -n -2
 }
+
+msg_gui() {
+	msg=$*
+	if [[ "$TERM" == "dumb" ]] && type zenity >/dev/null 2>&1 ; then
+		msg="${msg//&/&amp;}"
+		msg="${msg//</&lt;}"
+		zenity --info --no-wrap --text "$msg"
+	else
+		printf "%b" "$msg" >&2
+	fi
+}

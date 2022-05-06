@@ -17,7 +17,7 @@ alias ...="cd ../.."
 alias ....="cd ../../.."
 alias .....="cd ../../../.."
 alias path="echo \$PATH"
-alias fstab="gksudo gedit /etc/fstab"
+alias fstab="sudo nano /etc/fstab"
 alias open="xdg-open"
 alias trash="trash-put"  # requires trash-cli package
 #alias rm="trash"  # affects other aliases and funcions
@@ -32,6 +32,7 @@ alias dud='lsblk --exclude 7'  # 7 = loop devices, most likely snaps
 alias rot13="tr 'A-Za-z' 'N-ZA-Mn-za-m'"
 alias json='python3 -m json.tool'  # 'jq' is a beter alternative, if installed
 alias why='apt rdepends --installed'  # can also be 'aptitude why'
+alias dmesg="dmesg --follow"  # welcome 2021!
 
 #alias have="exists"
 
@@ -43,7 +44,6 @@ md()      { mkdir "$@" && cd "${@: -1}" ; }
 which()   { builtin type -P "$@" ; }
 sprunge() { local l=${2-bash}; echo $(curl -sSF "sprunge=<${1:--}" http://sprunge.us)${l:+?$l}${3:+#n-$3}; }
 compile() { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
-dmesgw()  { watch -n 0.25 "dmesg $@ | tail -n $((LINES-3))"; }
 relpath() { python3 -c "import os,sys;print(os.path.relpath(*sys.argv[1:3]))" "$@"; }
 epoch()   { date -d@"$1" ; }
 now()     { date +%Y%m%d%H%M%S ; }
