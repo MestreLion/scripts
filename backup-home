@@ -22,6 +22,7 @@ excludes=(
 options=(
 	--print-statistics
 	--terminal-verbosity 5
+	--exclude-other-filesystems
 	--exclude-special-files   # Exclude all device files, fifo files, socket files, and symbolic links.
 	--include-symbolic-links  # Re-include symbolic links
 )
