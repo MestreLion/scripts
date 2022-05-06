@@ -102,6 +102,13 @@ complete-copy() {
 		eval $(complete -p "$cmd") "$@"
 	fi
 }
+# package names
+# See /usr/share/bash-completion/completions/apt-cache._apt_cache_packages()
+_comp_pkg_names() {
+        local cur; _get_comp_words_by_ref cur
+        COMPREPLY=( $(apt-cache --no-generate pkgnames -- "$cur" 2>/dev/null) )
+        return 0
+}
 
 complete -c where cmdlist cmdcat cmdopen        # commands (executables in $PATH)
 complete -F _comp_pkg_names ubuntu-package why  # packages in repositories
