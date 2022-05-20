@@ -41,6 +41,7 @@ find-newer(){ find "${2:-.}" -type f -newermt "$1" -exec ls -lrt "{}" +; }
 where() { dpkg --search -- $(type -p "${1:-}"); }
 ubuntu-package() { open "http://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"; }
 
+try()     { "$@" 2>/dev/null || :; }
 cdl()     { cd "$@" && ll ; }
 md()      { mkdir "$@" && cd "${@: -1}" ; }
 which()   { builtin type -P "$@" ; }
@@ -155,6 +156,18 @@ package_version() {
 package_installed() {
 	local ok
 	ok=$(package_version "$1") && [[ "$ok" ]]
+}
+
+dump-system-data() {
+	local target=${1:-./system-data}
+	local manifest=${2:-}
+	mkdir -p -- "$target"
+	try dconf dump /                          > "$target"/dconf.txt
+	try cat /etc/fstab                        > "$target"/fstab.txt
+	try cat /etc/apt/sources.list{,.d/*.list} > "$target"/apt-sources.txt
+	try crontab --list                        > "$target"/crontab.txt
+	apt-list-manual "$2"                      > "$target"/apt-packages.txt
+	try sudo fdisk --list                     > "$target"/fdisk.txt
 }
 
 # Profiling:
