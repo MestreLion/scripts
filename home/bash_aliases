@@ -45,15 +45,11 @@ which()   { builtin type -P "$@" ; }
 sprunge() { local l=${2-bash}; echo $(curl -sSF "sprunge=<${1:--}" http://sprunge.us)${l:+?$l}${3:+#n-$3}; }
 compile() { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
 relpath() { python3 -c "import os,sys;print(os.path.relpath(*sys.argv[1:3]))" "$@"; }
-epoch()   { date -d@"$1" ; }
-now()     { date +%Y%m%d%H%M%S ; }
-timestamp() {
-	if [[ "${1:-}" ]]; then
-		date +%s --date "$1"
-	else
-		date +%s
-	fi
-}
+
+_datefmt()  { [[ "$2" ]] && d=(-d"${3:-}${2}") || d=(); date "$1" "${d[@]}"; }
+now()       { _datefmt '--rfc-3339=seconds' "${1:-}" '@'; }
+timestamp() { _datefmt '+%Y%m%d%H%M%S'      "${1:-}" '@'; }
+epoch()     { _datefmt '+%s'                "${1:-}"; }
 
 cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
 cmdcat()  { cat  "$(type -P "$1")" ; }

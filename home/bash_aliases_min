@@ -47,15 +47,11 @@ md()      { mkdir "$@" && cd "${@: -1}" ; }
 compile() { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
 dmesgw()  { watch -n 0.25 "dmesg $@ | tail -n $((LINES-3))"; }
 xtitle()  { printf '\e]2;%s\a' "$*"; }
-epoch()   { date -d@"$1" ; }
-now()     { date +%Y%m%d%H%M%S ; }
-timestamp() {
-	if [[ "${1:-}" ]]; then
-		date +%s --date "$1"
-	else
-		date +%s
-	fi
-}
+
+_datefmt()  { [[ "$2" ]] && d=(-d"${3:-}${2}") || d=(); date "$1" "${d[@]}"; }
+now()       { _datefmt '--rfc-3339=seconds' "${1:-}" '@'; }
+timestamp() { _datefmt '+%Y%m%d%H%M%S'      "${1:-}" '@'; }
+epoch()     { _datefmt '+%s'                "${1:-}"; }
 
 ubuntu-package() { open "http://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"; }
 
