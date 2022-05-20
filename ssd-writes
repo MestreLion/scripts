@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+# ssh-writes - show total bytes written from a device
+#
+# Copyright (C) 2022 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+#------------------------------------------------------------------------------
+
+devices=("$@")
+
+#------------------------------------------------------------------------------
+myname=${0##*/}
+usage() {
+	if [[ "${1:-}" ]] ; then exec >&2; fi
+	cat <<-USAGE
+	Usage: $myname [-h|--help] [DEVICE...]
+	USAGE
+	if [[ "${1:-}" ]] ; then
+		cat <<- USAGE
+		Try '$myname --help' for more information.
+		USAGE
+		exit 1
+	fi
+	cat <<-USAGE
+
+	Show total kbytes written in a partition
+
+	Options:
+	  -h|--help     - show this page.
+
+	If no DEVICE is chosen, show all available devices. If device is a disk
+	instead of a partition, show all partitions of that disk.
+
+	Copyright (C) 2022 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+	USAGE
+	exit 0
+}
+for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
+
+
+while read -r dev fs; do
+	path=/sys/fs/${fs}/${dev##*/}/lifetime_write_kbytes
+	if ! [[ -r "$path" ]]; then continue; fi
+	printf "$(date --rfc-3339=seconds)\t$(date '+%s')\t${dev}\t$(<$path)\n"
+done < <(lsblk -pnlo NAME,FSTYPE,TYPE,MOUNTPOINT "${devices[@]}" |
+	awk '$3 == "part" && $2 && $4 {print $1 "\t" $2}')
+
