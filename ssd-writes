@@ -31,6 +31,9 @@ usage() {
 	If no DEVICE is chosen, show all available devices. If device is a disk
 	instead of a partition, show all partitions of that disk.
 
+	Only works for mounted partitions that have an entry at /sys/fs/*/<DEV>,
+	so usually limited to ext4 partitions.
+
 	Copyright (C) 2022 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
 	USAGE
@@ -39,10 +42,14 @@ usage() {
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
 
 
+now=$(date --rfc-3339=seconds)
+epoch=$(date '+%s')
 while read -r dev fs; do
 	path=/sys/fs/${fs}/${dev##*/}/lifetime_write_kbytes
 	if ! [[ -r "$path" ]]; then continue; fi
-	printf "$(date --rfc-3339=seconds)\t$(date '+%s')\t${dev}\t$(<$path)\n"
+	bytes=$(( "$(< "$path")" * 1024 ))
+	human=$(numfmt "$bytes" --to-unit=G  --format "%9.2f")G
+	printf "${now}\t${epoch}\t${dev}\t${bytes}\t${human}\n"
 done < <(lsblk -pnlo NAME,FSTYPE,TYPE,MOUNTPOINT "${devices[@]}" |
 	awk '$3 == "part" && $2 && $4 {print $1 "\t" $2}')
 
