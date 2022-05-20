@@ -2,7 +2,7 @@
 #
 # progname - short description
 #
-#    Copyright (C) 2021 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#    Copyright (C) 2022 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 #
 # progname - short description
 #
-# Copyright (C) 2021 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# Copyright (C) 2022 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 # License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
 #------------------------------------------------------------------------------
 
@@ -72,6 +72,24 @@ cmdpath() { type -P "$1"; }
 ppath()   { printf '%q' "$@"; }
 skip()    { i=${2:-$file}; message "skipping${i:+ $i}${1:+: $1}"; continue ; }
 quit()    { message "Goodbye!"; exit; }
+require() {
+	local cmd=$1
+	local pkg=${2:-$cmd}
+	local msg='' eol=''
+	if exists "$cmd"; then return; fi
+	if [[ -x /usr/lib/command-not-found ]]; then
+		/usr/lib/command-not-found -- "$cmd" || true
+		eol='\n'
+	else
+		echo "Required command '${cmd}' is not installed." >&2
+		if [[ "$pkg" != '-' ]]; then
+			msg="with:\n\tsudo apt install ${pkg}\n"
+		fi
+	fi
+	echo -e "Please install ${cmd} ${msg}and try again.${eol}" >&2
+	exit 1
+}
+
 
 #------------------------------------------------------------------------------
 
