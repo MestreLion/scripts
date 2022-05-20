@@ -1,6 +1,6 @@
 # Minimal quality-of-life aliases and settings, including PS1
 # Save as ~/.bash_aliases
-#	target=$(find "$HOME"~ -name bash_aliases_min)
+#	target=$(find "$HOME" -name bash_aliases_min)
 #	ln -s "${target#"$HOME"/} "$HOME"/.bash_aliases
 # ------------------------------------------------------------------------------
 
@@ -182,7 +182,15 @@ set +o histexpand  # same as set +H
 
 # ------------------------------------------------------------------------------
 
+# https://github.com/dustinkirkland/byobu/pull/57
+if exists byobu && ! [[ -d "${XDG_DATA_HOME:-$HOME/.local/share}/byobu" ]]; then
+	mkdir -p -- "${XDG_DATA_HOME:-$HOME/.local/share}/byobu"
+fi
+
 # So cute!
 if exists cowfortune;  then
 	cowfortune | { if exists lolcat; then lolcat; else cat; fi; }
 fi
+
+# So useful!
+if exists neofetch; then neofetch; fi

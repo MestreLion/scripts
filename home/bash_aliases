@@ -33,8 +33,10 @@ alias rot13="tr 'A-Za-z' 'N-ZA-Mn-za-m'"
 alias json='python3 -m json.tool'  # 'jq' is a beter alternative, if installed
 alias why='apt rdepends --installed'  # can also be 'aptitude why'
 alias dmesg="dmesg --follow"  # welcome 2021!
-
 #alias have="exists"
+
+#alias find-newer='find . -type f -newermt'  # '10 days ago'
+find-newer(){ find "${2:-.}" -type f -newermt "$1" -exec ls -lrt "{}" +; }
 
 where() { dpkg --search -- $(type -p "${1:-}"); }
 ubuntu-package() { open "http://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"; }
