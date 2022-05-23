@@ -50,6 +50,12 @@ while read -r dev fs; do
 	bytes=$(( "$(< "$path")" * 1024 ))
 	human=$(numfmt "$bytes" --to-unit=G  --format "%9.2f")G
 	printf "${now}\t${epoch}\t${dev}\t${bytes}\t${human}\n"
-done < <(lsblk -pnlo NAME,FSTYPE,TYPE,MOUNTPOINT "${devices[@]}" |
-	awk '$3 == "part" && $2 && $4 {print $1 "\t" $2}')
+done < <(
+	udevadm settle  # sync info obtainable by the lsblk
+	lsblk -pnlo NAME,FSTYPE,TYPE,MOUNTPOINT "${devices[@]}" |
+	awk '$3 == "part" && $2 && $4 {print $1 "\t" $2}'
+)
 
+# for fdisk-list
+# cols=TYPE,NAME,SIZE,FSTYPE,LABEL,PARTLABEL,UUID,PARTFLAGS,VENDOR,MODEL,REV,SERIAL
+# lsblk --noheadings --list --bytes --exclude 7 --output "$cols"
