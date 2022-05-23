@@ -1,0 +1,107 @@
+#!/bin/bash
+#
+# backup-system: Full system backup using rdiff-backup
+#
+# Copyright (C) 2022 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+#
+# Scheduling:
+#   echo '@weekly root /path/to/this 2>> /var/log/backup-system.stderr.log' |
+#   sudo tee /etc/cron.d/backup-system
+#
+# Alternatives:
+#   Simple, single-dir backup:
+#	rsync -a "$source"/ "$target"/
+#   tar backup:
+#	cd "$source" && sudo tar --one-file-system -cvpzf "$target"/backup.tar.xz
+# ------------------------------------------------------------------------------
+
+system=$(lsb_release -sir | tr -d '.\n')
+myself=${0##*/}
+
+source=/
+target=/backup/${system,,}
+
+options=(
+	--verbosity 5             # default is 3, completely silent in a normal run
+	--terminal-verbosity 3    # default is --verbosity level
+	--include-symbolic-links  # would be excluded by --exclude-special-files
+	--exclude-special-files   # Exclude all device files, fifo files, socket files, and symbolic links.
+	--exclude-other-filesystems
+)
+
+excludes=(
+	'/dev/*'
+	'/lost+found'
+	'/media/*'      # not really needed with --exclude-other-filesystems
+	'/proc/*'
+	'/run/*'
+	'/sys/*'
+	'/tmp/*'
+	'/swapfile'
+
+	# Users' homes
+	'/home/*/.local/share/Trash/*'
+	'/home/*/.cache/*'
+	'/home/*/.thumbnails/*'  # Not in Ubuntu 22.04+
+)
+
+# to restore /swapfile:
+# sudo fallocate -l 1G /swapfile
+# sudo chmod 600 /swapfile
+# sudo mkswap /swapfile
+# sudo swapon /swapfile
+
+# ------------------------------------------------------------------------------
+
+is_root() { [[ "$(id -u)" -eq 0 ]]; }
+fatal()   { [[ "${1:-}" ]] && echo "$myself: error: $@" >&2 ; exit 1; }
+exists()  { type "$@" >/dev/null 2>&1; }
+
+usage() {
+	if [[ "${1:-}" ]] ; then exec >&2; fi
+	cat <<-USAGE
+	Usage: ${myself} [SOURCE] [TARGET] [extra-rdiff-options]
+	USAGE
+	if [[ "${1:-}" ]] ; then
+		cat <<- USAGE
+		Try '$myself --help' for more information.
+		USAGE
+		exit 1
+	fi
+	cat <<-USAGE
+
+	Backup the root filesystem using rdiff-backup
+
+	Excludes mounts and other filesystems. Must run as root.
+
+	SOURCE defaults to: ${source}
+	TARGET defaults to: ${target}
+
+	Default excludes:
+	${excludes[@]}
+
+	Copyright (C) 2022 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
+	USAGE
+	exit 0
+}
+for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage; done
+
+source=${1:-/}
+target=${2:-/backup/${system,,}}
+shift 2 || true
+
+# ------------------------------------------------------------------------------
+
+if ! is_root; then
+	echo "Must run as root" >&2
+	exit 1
+fi
+
+options+=( "$@" )
+for exclude in "${excludes[@]}"; do
+	options+=(--exclude="$exclude")
+done
+
+rdiff-backup "${options[@]}" -- "$source" "$target"
