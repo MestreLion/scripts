@@ -29,8 +29,8 @@ alias la="ll -A"
 alias path="echo \$PATH"
 alias fstab="sudo nano /etc/fstab"
 alias open="xdg-open"
-alias trash="trash-put"  # requires trash-cli package
-alias rm="trash"
+alias trash="trash-put"  # requires trash-cli. Do NOT alias rm, affects functions
+alias mand="dwww-man"    # requires dwww
 alias dd-progress="dd status=progress bs=1M iflag=count_bytes"
 alias dd-nocache="dd-progress oflag=nocache,sync"
 alias dfd='df -H -x tmpfs -x squashfs -x devtmpfs'
@@ -39,14 +39,13 @@ alias dud='lsblk --exclude 7'  # 7 = loop devices, most likely snaps
 alias rot13="tr 'A-Za-z' 'N-ZA-Mn-za-m'"
 alias json='python3 -m json.tool'  # 'jq' is a beter alternative, if installed
 alias why='apt rdepends --installed'  # can also be 'aptitude why'
+alias dmesg="dmesg --follow"  # welcome 2021!
 
-exists()  { type "$@" &>/dev/null; }
+try()     { "$@" 2>/dev/null || :; }
 where()   { dpkg --search -- $(type -p "${1:-}"); }
 cdl()     { cd "$@" && ll ; }
 md()      { mkdir "$@" && cd "${@: -1}" ; }
 compile() { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
-dmesgw()  { watch -n 0.25 "dmesg $@ | tail -n $((LINES-3))"; }
-xtitle()  { printf '\e]2;%s\a' "$*"; }
 
 _datefmt()  { [[ "$2" ]] && d=(-d"${3:-}${2}") || d=(); date "$1" "${d[@]}"; }
 now()       { _datefmt '--rfc-3339=seconds' "${1:-}" '@'; }
@@ -58,6 +57,42 @@ ubuntu-package() { open "http://packages.ubuntu.com/search?searchon=names&suite=
 cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
 cmdcat()  { cat  "$(type -P "$1")" ; }
 cmdopen() { open "$(type -P "$1")" ; }
+
+apt-list-manual() {
+	# https://askubuntu.com/a/492343/11015
+	local manifest=${1:-}
+	local initial=/var/log/installer/initial-status.gz
+	local list=
+	# User-provided manifest, assume same format as https://releases.ubuntu.com
+	if [[ "$manifest" ]]; then
+		list=$(awk '{print $1}' "$manifest") || {
+			echo "Usage: apt-list-manual [MANIFEST-FILE]" >&2
+			return
+		}
+	# List from system installer log
+	elif [[ -f "$initial" ]]; then
+		list=$(gzip -dc "$initial" | sed -n 's/^Package: //p')
+	fi
+
+	# List packages
+	comm -23 <(apt-mark showmanual | sort -u) <(echo "$list" | sort -u)
+
+	# If initial log not found and no manifest provided, show download instructions
+	if [[ "$list" ]]; then
+		return
+	fi
+	printf 'ERROR:' >&2
+
+	# numeric version including with point release: 20.04.3
+	local version=$(awk -F'="?| ' '/^VERSION=/{print $2}' /etc/*release)
+	local msg=(
+		"Empty or missing manifest file: ${manifest:-$initial}"
+		"Is this a server? Without a manifest the above list is not accurate."
+		"Download it from: http://releases.ubuntu.com/${version}/"
+		"And try again with: apt-list-manual MANIFEST-FILE"
+	)
+	printf '\t%s\n' "${msg[@]}" >&2
+}
 
 install_packages() {
 	# Avoid marking installed packages as manual by only installing missing ones
@@ -77,6 +112,24 @@ package_installed() {
 	local ok
 	ok=$(package_version "$1") && [[ "$ok" ]]
 }
+
+dump-system-data() {
+	local target=${1:-./system-data}
+	local manifest=${2:-}
+	mkdir -p -- "$target"
+	try dconf dump /                          > "$target"/dconf.txt
+	try cat /etc/fstab                        > "$target"/fstab.txt
+	try cat /etc/apt/sources.list{,.d/*.list} > "$target"/apt-sources.txt
+	try crontab -l                            > "$target"/crontab.txt
+	apt-list-manual "$2"                      > "$target"/apt-packages.txt
+	try sudo fdisk --list                     > "$target"/fdisk.txt
+}
+
+# Other aliases <<<<<----------------------------------------------------------
+
+exists()  { type "$@" &>/dev/null; }
+xtitle()  { printf '\e]2;%s\a' "$*"; }
+snipfile(){ local n=${3:-5}; awk "/${2:-} *>{${n}}/,/<{${n}}/" "${1:-}"; }
 
 # 1337!
 matrix() {
@@ -121,7 +174,7 @@ complete-copy dwww-man mand package
 # Alternative: \${?/#0/} directly into PS1, but lacks surrounding spaces
 _format_exitcode() {
 	local s=$?
-	(($s)) && printf "${1:-%s }" "$s"
+	if (($s)); then printf "${1:-%s }" "$s"; fi
 	return $s
 }
 
