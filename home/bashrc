@@ -11,6 +11,7 @@
 # Supporting Functions ---------------------------------------------------------
 
 exists()  { type "$@" &>/dev/null; }
+snipfile(){ local n=${3:-5}; awk "/${2:-} *>{${n}}/,/<{${n}}/" "${1:-}"; }
 
 # ------------------------------------------------------------------------------
 
@@ -34,67 +35,9 @@ if [ -f "$HOME/work/dosbox/dosbox-tools/dosbox-bashrc" ] ; then
 	source "$HOME/work/dosbox/dosbox-tools/dosbox-bashrc"
 fi
 
-# PS1 customization ------------------------------------------------------------
-# http://bashrcgenerator.com/
+# ------------------------------------------------------------------------------
 
-# Print exit code of last command if non-zero, and return it
-# Blank if 0, otherwise use $1 as formatting string, '%s ' by default
-# Return the same code, to preserve it between prompts
-# Alternative: \${?/#0/} directly into PS1, but lacks surrounding spaces
-_format_exitcode() {
-	local s=$?
-	if (($s)); then printf "${1:-%s }" "$s"; fi
-	return $s
-}
-
-# Git Status
-# See /usr/lib/git-core/git-sh-prompt
-export GIT_PS1_SHOWDIRTYSTATE=1
-export GIT_PS1_SHOWSTASHSTATE=1
-export GIT_PS1_SHOWUNTRACKEDFILES=1
-if ! exists __git_ps1; then
-	# __git_ps1() is transitioning away from git bash completion
-	# See /etc/bash_completion.d/git-prompt
-	if [[ -r /usr/lib/git-core/git-sh-prompt ]]; then
-		source /usr/lib/git-core/git-sh-prompt
-	else
-		# Simpler version
-		__git_ps1() {
-			local s=$?
-			if exists git; then
-				git branch 2>/dev/null |
-				grep '^*' |
-				sed 's/* \(.*\)/\1 /'
-			fi
-			return "$s"
-		}
-	fi
-fi
-
-# Colors
-# '\[' and '\]' are for PS1, not colors: https://mywiki.wooledge.org/BashFAQ/053
-color() { printf '\['; tput setaf "${1:-15}"; printf '\]'; }
-declare -A c=(
-	 [BLACK]=$(color 0)  # "\[\e[30m\]"
-	   [RED]=$(color 1)  # "\[\e[31m\]"
-	 [GREEN]=$(color 2)  # "\[\e[32m\]"
-	[YELLOW]=$(color 3)  # "\[\e[33m\]"
-	  [BLUE]=$(color 4)  # "\[\e[34m\]"
-	[PURPLE]=$(color 5)  # "\[\e[35m\]"
-	  [CYAN]=$(color 6)  # "\[\e[36m\]"
-	 [WHITE]=$(color 7)  # "\[\e[37m\]"
-	  [BOLD]="\[$(tput bold)\]"  # "\[\e[1m\]"
-	 [RESET]="\[$(tput sgr0)\]"  # "\[\e[0m\]"
-)
-
-# Final product
-PS1=${c[RESET]}${c[BOLD]}\
-"${c[PURPLE]}\t ${c[GREEN]}\u@\h ${c[BLUE]}\w "\
-"${c[RED]}\$(__git_ps1 '%s ')${c[YELLOW]}\$(_format_exitcode)${c[BLUE]}\\$ "\
-${c[RESET]}
-
-unset color c
-
+source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'PS1 customization')
 
 # Settings ---------------------------------------------------------------------
 
