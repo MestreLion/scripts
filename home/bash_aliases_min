@@ -2,7 +2,7 @@
 # Save as ~/.bash_aliases
 #	target=$(find "$HOME" -name bash_aliases_min)
 #	ln -s "${target#"$HOME"/} "$HOME"/.bash_aliases
-# -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 # For thousand separator in ls and friends
 # could also use ls -l --block-size="'1" as alias (escaping the double-quotes)
@@ -16,7 +16,7 @@ export LANGUAGE=en_US:en
 export LC_ALL=en_US.UTF-8
 export LC_NUMERIC=pt_BR.UTF-8  # might require sudo locale-gen pt_BR.UTF-8
 
-# Aliases >>>>>----------------------------------------------------------------
+# >>>>> Aliases <<<<<-----------------------------------------------------------
 
 # SP  ' '  0x20 = · U+00B7 Middle Dot
 # TAB '\t' 0x09 = ￫ U+FFEB Halfwidth Rightwards Arrow
@@ -144,14 +144,14 @@ matrix() (
 	return 0
 )
 
-# Other aliases <<<<<----------------------------------------------------------
+# >>>>> Other aliases <<<<<-----------------------------------------------------
 
 exists()    { type "$@" &>/dev/null; }
 xtitle()    { printf '\e]2;%s\a' "$*"; }
-snipfile()  { local n=${3:-5}; awk "/${2:-} *>{${n}}/,/<{${n}}/" "${1:-}"; }
+snipfile()  { local n="{${3:-5},}" s; s="/^# *>$n *${2:-}/"; awk "$s,/<$n/&&!$s" "$1"; }
 arguments() { local i a; for a in "$@"; do echo -e "$((++i))\t${a}"; done; }
 
-# Completion ------------------------------------------------------------------
+# >>>>> Completion <<<<<--------------------------------------------------------
 
 # copies a completion definition for a command to other command(s)
 complete-copy() {
@@ -177,7 +177,7 @@ complete-copy ls ll la
 complete-copy dwww-man mand package
 
 
-# PS1 customization >>>>>------------------------------------------------------
+# >>>>> PS1 customization <<<<<-------------------------------------------------
 # http://bashrcgenerator.com/
 
 # Print exit code of last command if non-zero, and return it
@@ -238,14 +238,13 @@ ${c[RESET]}
 
 unset color c
 
-# <<<<<------------------------------------------------------------------------
-# Settings --------------------------------------------------------------------
+# >>>>> Settings <<<<<----------------------------------------------------------
 
 # Disable the dreaded history expansion for interactive sessions
 # A.K.A 'why echo "foo!bar" do not work?' (but "foo!" and "foo! bar!" does)
 set +o histexpand  # same as set +H
 
-# Local bash_aliases ----------------------------------------------------------
+# >>>> Local bash_aliases <<<<<-------------------------------------------------
 
 BASH_STARTUP=1
 
@@ -260,7 +259,7 @@ unset paths path
 
 if !((BASH_STARTUP)); then unset BASH_STARTUP; return; fi; unset BASH_STARTUP
 
-# Startup commands ------------------------------------------------------------
+# >>>>> Startup commands <<<<<--------------------------------------------------
 
 # https://github.com/dustinkirkland/byobu/pull/57
 if exists byobu && ! [[ -d "${XDG_DATA_HOME:-$HOME/.local/share}/byobu" ]]; then
