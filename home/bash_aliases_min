@@ -42,7 +42,7 @@ alias why='apt rdepends --installed'  # can also be 'aptitude why'
 alias dmesg="dmesg --follow"  # welcome 2021!
 
 try()     { "$@" 2>/dev/null || :; }
-where()   { dpkg --search -- $(type -p "${1:-}"); }
+where()   { dpkg --search -- "$(type -p "$1" || echo "$1")"; }
 cdl()     { cd "$@" && ll ; }
 md()      { mkdir "$@" && cd "${@: -1}" ; }
 compile() { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
@@ -146,9 +146,10 @@ matrix() (
 
 # Other aliases <<<<<----------------------------------------------------------
 
-exists()  { type "$@" &>/dev/null; }
-xtitle()  { printf '\e]2;%s\a' "$*"; }
-snipfile(){ local n=${3:-5}; awk "/${2:-} *>{${n}}/,/<{${n}}/" "${1:-}"; }
+exists()    { type "$@" &>/dev/null; }
+xtitle()    { printf '\e]2;%s\a' "$*"; }
+snipfile()  { local n=${3:-5}; awk "/${2:-} *>{${n}}/,/<{${n}}/" "${1:-}"; }
+arguments() { local i a; for a in "$@"; do echo -e "$((++i))\t${a}"; done; }
 
 # Completion ------------------------------------------------------------------
 
