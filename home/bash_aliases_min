@@ -245,17 +245,32 @@ unset color c
 # A.K.A 'why echo "foo!bar" do not work?' (but "foo!" and "foo! bar!" does)
 set +o histexpand  # same as set +H
 
-# -----------------------------------------------------------------------------
+# Local bash_aliases ----------------------------------------------------------
+
+BASH_STARTUP=1
+
+paths=(
+	"${XDG_CONFIG_HOME:-$HOME/.config}/bash/aliases_local"
+	"${HOME}/.bash_aliases_local"
+)
+for path in "${paths[@]}"; do
+	if [[ -r "$path" ]]; then source "$path"; fi
+done
+unset paths path
+
+if !((BASH_STARTUP)); then unset BASH_STARTUP; return; fi; unset BASH_STARTUP
+
+# Startup commands ------------------------------------------------------------
 
 # https://github.com/dustinkirkland/byobu/pull/57
 if exists byobu && ! [[ -d "${XDG_DATA_HOME:-$HOME/.local/share}/byobu" ]]; then
 	mkdir -p -- "${XDG_DATA_HOME:-$HOME/.local/share}/byobu"
 fi
 
+# So useful!
+if exists neofetch; then neofetch; fi
+
 # So cute!
 if exists cowfortune;  then
 	cowfortune | { if exists lolcat; then lolcat; else cat; fi; }
 fi
-
-# So useful!
-if exists neofetch; then neofetch; fi
