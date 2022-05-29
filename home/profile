@@ -28,6 +28,8 @@ export SCRIPTS=${SCRIPTS:-"$HOME"/work/scripts}
 
 ##############################################################################
 
+snipfile(){ local n="{${3:-5},}" s; s="/^# *>$n *${2:-}/"; awk "$s,/<$n/&&!$s" "$1"; }
+
 # Prepend folders to $PATH, avoiding duplicates
 # Parameters: a single string, ':' separated, cointaining the folders to add
 # This function breaks the string and check each folder to avoid duplicates
@@ -95,25 +97,6 @@ export LC_MEASUREMENT="pt_BR.utf8"
 # Not needed for Python 3
 #export PYTHONIOENCODING=UTF-8
 
-# Not yet implemented on 3.8: https://bugs.python.org/issue29779
-export PYTHONHISTORY=${XDG_CONFIG_HOME:-$HOME/.config}/python_history  # or /python/history
-
-# IPython/Jupiter
-# Both already used XDG_CONFIG_HOME for a while, then reverted :-(
-# https://github.com/jupyter/notebook/issues/2374
-# https://github.com/ipython/ipython/issues/48
-export IPYTHONDIR=${XDG_CONFIG_HOME:-$HOME/.config}/ipython
-export JUPYTER_CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}/jupyter
-
-# PyLint
-# https://github.com/PyCQA/pylint/issues/1364
-export PYLINTHOME=${XDG_CACHE_HOME:-$HOME/.cache}/pylint    # Default ~/.pylint.d/
-export PYLINTRC=${XDG_CONFIG_HOME:-$HOME/.config}/pylintrc  # Default ~/.pylintrc
-
-# Pipx
-export PIPX_HOME=${XDG_DATA_HOME}/pipx  # Default ~/.local/pipx
-
-
 # -----------------------------------------------------------------------------
 
 # Debian Development
@@ -123,8 +106,9 @@ export DEBEMAIL="debian@rodrigosilva.com"
 
 # Dotfiles in $HOME -----------------------------------------------------------
 
-export GNUPGHOME=${XDG_CONFIG_HOME:-$HOME/.config}/gnupg
-
+source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'XDG defs')
+source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'XDG profile')
+source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'Cleanup')
 
 # DOSBox ----------------------------------------------------------------------
 

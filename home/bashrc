@@ -15,6 +15,11 @@ snipfile(){ local n="{${3:-5},}" s; s="/^# *>$n *${2:-}/"; awk "$s,/<$n/&&!$s" "
 
 # ------------------------------------------------------------------------------
 
+source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'XDG defs')
+source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'XDG bashrc')
+
+# ------------------------------------------------------------------------------
+
 # Enable bash-completion, if not already enabled by ~/.bashrc
 if	[ -z "${BASH_COMPLETION_VERSINFO:-}" ] &&
 	[ -f /usr/share/bash-completion/bash_completion ] &&
@@ -49,6 +54,8 @@ set +o histexpand # same as set +H
 #ulimit -c unlimited
 
 # ------------------------------------------------------------------------------
+
+source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'Cleanup')
 
 # So cute!
 exists cowfortune && { cowfortune | { exists lolcat && lolcat || cat ; } } || :
