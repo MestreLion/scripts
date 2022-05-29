@@ -133,18 +133,22 @@ dump-system-data() {
 	try sudo fdisk --list                     > "$target"/fdisk.txt
 }
 
+# 1337!
+matrix() (
+	try tput smcup
+	trap 'try tput rmcup' INT; (
+	tr -c "[:digit:]" " " < /dev/urandom |
+	dd cbs=$COLUMNS conv=unblock status=none |
+	GREP_COLOR="1;32" grep --color "[^ ]"
+	) || true
+	return 0
+)
+
 # Other aliases <<<<<----------------------------------------------------------
 
 exists()  { type "$@" &>/dev/null; }
 xtitle()  { printf '\e]2;%s\a' "$*"; }
 snipfile(){ local n=${3:-5}; awk "/${2:-} *>{${n}}/,/<{${n}}/" "${1:-}"; }
-
-# 1337!
-matrix() {
-	tr -c "[:digit:]" " " < /dev/urandom |
-	dd cbs=$COLUMNS conv=unblock |
-	GREP_COLOR="1;32" grep --color "[^ ]"
-}
 
 # Completion ------------------------------------------------------------------
 

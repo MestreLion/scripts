@@ -147,7 +147,8 @@ unzip-strip() (
 	cp -ar "$@" -t "$destdir" -- "${files[@]}"
 )
 
-# 1337!
+# Even more 1337!
+rename-function matrix matrix-fake
 matrix() {
 	if ! exists cmatrix; then
 		echo "Runing fake matrix, install 'cmatrix' for the real one" >&2
@@ -166,13 +167,6 @@ matrix() {
 		# To enable X11 font, see https://unix.stackexchange.com/a/88734/4919
 		cmatrix -sbu8
 	fi
-}
-
-# Even more 1337!
-matrix-fake() {
-	tr -c "[:digit:]" " " < /dev/urandom |
-	dd cbs=$COLUMNS conv=unblock status=none |
-	GREP_COLOR="1;32" grep --color "[^ ]"
 }
 
 mv-link() (  # any particular reason for this to be a subshell??? relpath() won't work!
