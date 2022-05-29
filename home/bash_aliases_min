@@ -58,6 +58,14 @@ cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
 cmdcat()  { cat  "$(type -P "$1")" ; }
 cmdopen() { open "$(type -P "$1")" ; }
 
+rename-function() {
+	# https://stackoverflow.com/a/34177402/624066
+	if [[ $# != 2 ]]; then echo "rename-function ORIG NEW" >&2; return 1; fi
+	local a; a="$(declare -f "$1")" &&
+	eval "function $2 ${a#*"()"}" &&
+	unset -f "$1"
+}
+
 apt-list-manual() {
 	# https://askubuntu.com/a/492343/11015
 	local manifest=${1:-}
