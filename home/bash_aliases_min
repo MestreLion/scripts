@@ -21,8 +21,22 @@ export LC_NUMERIC=pt_BR.UTF-8  # might require sudo locale-gen pt_BR.UTF-8
 xdg_config=${XDG_CONFIG_HOME:-$HOME/.config}
 xdg_data=${XDG_DATA_HOME:-$HOME/.local/share}
 xdg_cache=${XDG_CACHE_HOME:-$HOME/.cache}
+xdg_state=${XDG_DATA_HOME:-$HOME/.local/state}
+
+xdg_create() {
+	if { type "$1" >/dev/null 2>&1 || [ -e "$1" ]; } && ! [ -d "$2" ]; then
+		mkdir --parents -- "$2"
+	fi
+}
 
 # >>>>> XDG profile <<<<<-------------------------------------------------------
+
+# Some non-compliant software only use XDG_{CONFIG,DATA,CACHE}_HOME if it exists
+for xdg_path in "$xdg_config" "$xdg_data" "$xdg_cache" "$xdg_state"; do
+	if ! [ -d "$xdg_path" ]; then
+		mkdir --parents --mode 700 -- "$xdg_path"
+	fi
+done
 
 # gnupg
 export GNUPGHOME=${xdg_config}/gnupg
@@ -45,21 +59,21 @@ export PYLINTRC=${xdg_config}/pylintrc  # Default ~/.pylintrc
 # Pipx
 export PIPX_HOME=${xdg_data}/pipx  # Default ~/.local/pipx
 
-# Some non-compliant software only use XDG_{CONFIG,DATA}_HOME if it exists
-for xdg_path in "$xdg_config" "$xdg_data"; do
-	if ! [ -d "$xdg_path" ]; then
-		mkdir --parents --mode 700 -- "$xdg_path"
-	fi
-done
+# Wakatime https://wakatime.com/
+export WAKATIME_HOME=${xdg_config}/wakatime  # Default ~/
+
+# PostgreSQL
+export    PGPASSFILE=${xdg_config}/postgresql/pgpass
+export PGSERVICEFILE=${xdg_config}/postgresql/pg_service.conf
+export  PSQL_HISTORY=${xdg_config}/postgresql/psql_history
+xdg_create psql     "${xdg_config}/postgresql"
+
+# https://github.com/dustinkirkland/byobu/pull/57
+xdg_create byobu "${xdg_config}/byobu"
 
 # >>>>> XDG bashrc <<<<<--------------------------------------------------------
 
 alias wget="wget --hsts-file=${xdg_config}/wget-hsts"
-
-# https://github.com/dustinkirkland/byobu/pull/57
-if exists byobu && ! [[ -d "${xdg_data}/byobu" ]]; then
-	mkdir -p -- "${xdg_data}/byobu"
-fi
 
 # >>>>> Aliases <<<<<-----------------------------------------------------------
 
@@ -300,7 +314,7 @@ done
 
 # >>>> Cleanup <<<<<------------------------------------------------------------
 
-unset xdg_{home,config,cache,path}
+unset xdg_{config,data,cache,state,create,path}
 unset color c
 unset paths path
 
