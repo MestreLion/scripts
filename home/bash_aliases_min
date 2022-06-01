@@ -43,8 +43,8 @@ export GNUPGHOME=${xdg_config}/gnupg
 
 # Python
 # Custom python_history not yet implemented: https://bugs.python.org/issue29779
-export PYTHONHISTORY=${xdg_cache}/python_history  # ~/.python_history
-export PYTHONSTARTUP=${xdg_config}/pythonrc       # no default if not set
+export PYTHONHISTORY=${xdg_state}/python_history  # ~/.python_history
+export PYTHONSTARTUP=${xdg_config}/pythonrc       # ignored if not set
 
 # IPython/Jupiter
 # Both already used XDG_CONFIG_HOME for a while, then reverted :-(
@@ -54,24 +54,23 @@ export IPYTHONDIR=${xdg_config}/ipython
 export JUPYTER_CONFIG_DIR=${xdg_config}/jupyter
 
 # PyLint
-# https://github.com/PyCQA/pylint/issues/1364
-export PYLINTHOME=${xdg_cache}/pylint   # Default ~/.pylint.d/
-export PYLINTRC=${xdg_config}/pylintrc  # Default ~/.pylintrc
+export PYLINTHOME=${xdg_state}/pylint   # XDG_CACHE_HOME/pylint
+export PYLINTRC=${xdg_config}/pylintrc  # hardcoded ~/.config/pylintrc
 
 # Pipx
-export PIPX_HOME=${xdg_data}/pipx  # Default ~/.local/pipx
+export PIPX_HOME=${xdg_data}/pipx  # ~/.local/pipx
 
 # Wakatime https://wakatime.com/
-export WAKATIME_HOME=${xdg_config}/wakatime  # Default ~/
+export WAKATIME_HOME=${xdg_config}/wakatime  # ~/
 
 # PostgreSQL
-export    PGPASSFILE=${xdg_config}/postgresql/pgpass
-export PGSERVICEFILE=${xdg_config}/postgresql/pg_service.conf
-export  PSQL_HISTORY=${xdg_config}/postgresql/psql_history
-xdg_create psql     "${xdg_config}/postgresql"
+export PGPASSFILE=${xdg_config}/postgresql/pgpass              # ~/.pgpass
+export PGSERVICEFILE=${xdg_config}/postgresql/pg_service.conf  # ~/.pg_service.conf
+export PSQL_HISTORY=${xdg_state}/psql_history                  # ~/.psql_history
+xdg_create psql "${xdg_config}/postgresql"
 
 # https://github.com/dustinkirkland/byobu/pull/57
-xdg_create byobu "${xdg_config}/byobu"
+xdg_create byobu "${xdg_config}/byobu"  # ~/.byobu
 
 # >>>>> XDG bashrc <<<<<--------------------------------------------------------
 
