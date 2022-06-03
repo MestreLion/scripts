@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Print all environment and command line arguments.
+
+env | sort
+
+echo
+echo "\$0=$0"
+
+i=0
+while (($#)) && ((++i)); do echo "\$$i=$1"; shift; done
