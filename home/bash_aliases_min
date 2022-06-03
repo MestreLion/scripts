@@ -113,6 +113,7 @@ timestamp() { _datefmt '+%Y%m%d%H%M%S'      "${1:-}" '@'; }
 epoch()     { _datefmt '+%s'                "${1:-}"; }
 
 ubuntu-package() { open "http://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"; }
+f2b(){ local j=${1:-sshd}; sudo fail2ban-client status "$j"; }
 
 cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
 cmdcat()  { cat  "$(type -P "$1")" ; }
