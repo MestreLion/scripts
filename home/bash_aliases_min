@@ -314,7 +314,7 @@ for path in "${paths[@]}"; do
 	if [[ -r "$path" ]]; then source "$path"; fi
 done
 
-# >>>> Cleanup <<<<<------------------------------------------------------------
+# >>>>> Cleanup <<<<<------------------------------------------------------------
 
 unset xdg_{config,data,cache,state,create,path}
 unset color c
