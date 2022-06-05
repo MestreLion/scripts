@@ -251,6 +251,12 @@ _format_exitcode() {
 	return $s
 }
 
+_shell_level() {
+	local c=$((SHLVL - 1)); if [[ "${DISPLAY:-}" ]]; then c=$((--c)); fi
+	if ! ((c)); then return; fi; printf "%${c}s" | tr ' ' '*'; printf ' '
+}
+
+
 # Git Status
 # See /usr/lib/git-core/git-sh-prompt
 export GIT_PS1_SHOWDIRTYSTATE=1
@@ -293,7 +299,7 @@ declare -A c=(
 
 # Final product
 PS1=${c[RESET]}${c[BOLD]}\
-"${c[PURPLE]}\t ${c[GREEN]}\u@\h ${c[BLUE]}\w "\
+"${c[PURPLE]}\t ${c[CYAN]}\$(_shell_level)${c[GREEN]}\u@\h ${c[BLUE]}\w "\
 "${c[RED]}\$(__git_ps1 '%s ')${c[YELLOW]}\$(_format_exitcode)${c[BLUE]}\\$ "\
 ${c[RESET]}
 
