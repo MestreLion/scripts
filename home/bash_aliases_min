@@ -83,6 +83,7 @@ alias wget="wget --hsts-file=${xdg_config}/wget-hsts"
 # CR  '\r' 0x0D = § U+00A7 Section Sign (⏎ U+23CE also works fine)
 # LF  '\n' 0x0A = ¶ U+00B6 Pilcrow Sign (was "Paragraph Sign")
 alias whitespace="sed 's/ /·/g;s/\t/￫/g;s/\r/§/g;s/$/¶/g'"
+alias diff="diff -u --color"  # who needs colordiff?
 alias ls="ls --color=auto --group-directories-first -1"
 alias ll="ls -l --time-style=long-iso"
 alias la="ll -A"
