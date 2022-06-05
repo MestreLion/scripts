@@ -36,6 +36,13 @@ super-sudo() {
 }
 alias super-sudo='super-sudo '  # so it runs aliases too
 
+# risky: exits the current shell on any errors
+load-group() {
+	(($#)) || { echo "Usage: load-group GROUP" >&2; return 1; }
+	exec sg "$1" newgrp
+} && complete -W "$(groups)" load-group
+
+
 #alias find-newer='find . -type f -newermt'  # '10 days ago'
 find-newer(){ find "${2:-.}" -type f -newermt "$1" -exec ls -lrt "{}" +; }
 find-orphaned(){ find "${1:-.}" -nouser -or -nogroup; }
