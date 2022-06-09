@@ -260,8 +260,10 @@ _format_exitcode() {
 }
 
 _shell_level() {
+	local s=$?
 	local c=$((SHLVL - 1)); if [[ "${DISPLAY:-}" ]]; then c=$((--c)); fi
-	if ! ((c)); then return; fi; printf "%${c}s" | tr ' ' '*'; printf ' '
+	if ((c)); then printf "%${c}s" | tr ' ' '*'; printf ' '; fi
+	return "$s"
 }
 
 

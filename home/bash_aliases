@@ -36,12 +36,14 @@ super-sudo() {
 }
 alias super-sudo='super-sudo '  # so it runs aliases too
 
+# "Loads" a (newly added) group into the user's current shell
+# Preserves the current effective group (default or not)
 # risky: exits the current shell on any errors
+# not persistent: only a full logout will do so
 load-group() {
 	(($#)) || { echo "Usage: load-group GROUP" >&2; return 1; }
-	exec sg "$1" newgrp
-} && complete -W "$(groups)" load-group
-
+	exec sg "$1" newgrp "$(id -gn)"
+} && complete -W "$(groups "${USER:-$(id -un)}" | cut -d: -f2-)" load-group
 
 #alias find-newer='find . -type f -newermt'  # '10 days ago'
 find-newer(){ find "${2:-.}" -type f -newermt "$1" -exec ls -lrt "{}" +; }
