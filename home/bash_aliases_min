@@ -103,6 +103,11 @@ alias json='python3 -m json.tool'  # 'jq' is a beter alternative, if installed
 alias why='apt rdepends --installed'  # can also be 'aptitude why'
 alias dmesg="dmesg --follow"  # welcome 2021!
 
+# healthchecks.io
+alias hc-open='open "https://healthchecks.io"'
+alias hc-list='exists sch && { sch list --all || :; } || hc-open'
+alias hc='hc-list'
+
 try()     { "$@" 2>/dev/null || :; }
 where()   { dpkg --search -- "$(type -p "$1" || echo "$1")"; }
 cdl()     { cd "$@" && ll ; }
