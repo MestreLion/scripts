@@ -108,6 +108,13 @@ alias hc-open='open "https://healthchecks.io"'
 alias hc-list='exists sch && { sch list --all || :; } || hc-open'
 alias hc='hc-list'
 
+# systemd
+alias status='systemctl status'  # no sudo for status
+for cmd in start stop restart reload; do
+	alias "${cmd}=sudo systemctl ${cmd}"
+done
+unset cmd
+
 try()     { "$@" 2>/dev/null || :; }
 where()   { dpkg --search -- "$(type -p "$1" || echo "$1")"; }
 cdl()     { cd "$@" && ll ; }
