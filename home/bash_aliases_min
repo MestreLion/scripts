@@ -37,6 +37,7 @@ for xdg_path in "$xdg_config" "$xdg_data" "$xdg_cache" "$xdg_state"; do
 		mkdir --parents --mode 700 -- "$xdg_path"
 	fi
 done
+unset xdg_path
 
 # gnupg
 export GNUPGHOME=${xdg_config}/gnupg  # ~/.gnupg
@@ -72,6 +73,8 @@ xdg_create psql "${xdg_config}/postgresql"
 
 # https://github.com/dustinkirkland/byobu/pull/57
 xdg_create byobu "${xdg_config}/byobu"  # ~/.byobu
+
+unset xdg_create
 
 # >>>>> XDG bashrc <<<<<--------------------------------------------------------
 
