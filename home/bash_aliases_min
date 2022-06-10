@@ -25,7 +25,7 @@ xdg_state=${XDG_DATA_HOME:-$HOME/.local/state}
 
 xdg_create() {
 	if { type "$1" >/dev/null 2>&1 || [ -e "$1" ]; } && ! [ -d "$2" ]; then
-		mkdir --parents --mode 700 -- "$2"
+		mkdir --parents -- "$2"
 	fi
 }
 
@@ -40,7 +40,7 @@ done
 
 # gnupg
 export GNUPGHOME=${xdg_config}/gnupg  # ~/.gnupg
-xdg_create gpg "${xdg_config}/gnupg"
+xdg_create gpg "$GNUPGHOME" && chmod 700 -- "$GNUPGHOME"
 
 # Python
 # Custom python_history not yet implemented: https://bugs.python.org/issue29779
