@@ -32,24 +32,17 @@ fi
 
 systemctl_aliases() {
 	local target=/usr/share/bash-completion/completions/systemctl
-	local cmds=(status start stop restart reload)
-	if ! [[ -e "$comp_dir"/status ]]; then
-		cat > "$comp_dir"/status <<-EOF
-			# Alternative:
-			#if ! [ -r $(escape "$target") ]; then return || exit; fi
-			#source -- $(escape "$target")
-			#complete -F _systemctl -- "${cmds[@]}"
+	local cmds=(start stop restart reload)
+	cat > "$comp_dir"/status <<-EOF
+		# Alternative:
+		#source -- $(escape "$target") &>/dev/null || return 1
+		#complete -F _systemctl -- status ${cmds[@]}
 
-			# FIXME: What about error codes? Return 1? 124?
-			if __load_completion systemctl; then
-				eval \$(complete -p systemctl) ${cmds[@]}
-			fi
-		EOF
-	fi
+		__load_completion systemctl || return 1
+		eval \$(complete -p systemctl) status ${cmds[@]}
+	EOF
 	for cmd in "${cmds[@]}"; do
-		if ! [[ -e "$comp_dir"/"$cmd" ]]; then
-			ln -s -- status "$comp_dir"/"$cmd"
-		fi
+		ln -f -s -- status "$comp_dir"/"$cmd"
 	done
 } && systemctl_aliases
 
