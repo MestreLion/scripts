@@ -1,14 +1,34 @@
-# To be sourced by ~/.bash_completion
+# Bash completion static file
+# Sourced by /usr/share/bash-completion/bash_completion in ~/.bashrc
+# via BASH_COMPLETION_USER_FILE set in ./profile
 
-# BASH_COMPLETION_USER_DIR, by default ~/.local/share/bash-completion/completions,
-# is searched for completions *on-demand*, ie, when user types <cmd> and hit <TAB>,
-# also called "dynamic" or "lazy" loading.
-# For static (eager) loading, use either BASH_COMPLETION_COMPAT_DIR, by default
-# /etc/bash_completion.d (no user counterpart), or BASH_COMPLETION_USER_FILE,
-# by default ~/.bash_completion, which sources this file.
-# BASH_COMPLETION_COMPAT_DIR is loaded before BASH_COMPLETION_USER_FILE
-# All of this is done at /usr/share/bash-completion/bash-completion, sourced
-# by ~/.bashrc or $SCRIPTS/home/bashrc (whichever sources it first)
+# This file is for static, eager completions loading, the user equivalent of the
+# system-wide /etc/bash_completion. An additional location for static completions
+# is BASH_COMPLETION_COMPAT_DIR, by default /etc/bash_completion.d, loaded before
+# BASH_COMPLETION_USER_FILE, with no user counterpart. That's why this file also
+# sources ./bash_completion.d/*
+
+# A better alternative for eager loading is lazy loading, also called dynamic
+# or on-demand, where the completion for a given command is only loaded when the
+# user types <cmd> and hits <TAB> for the first time. It requires a diectory with
+# one file per command to be completed
+
+# Lazy-loading directories are:
+# - /usr/share/bash-completion/completions for system-wide completions
+# - BASH_COMPLETION_USER_DIR, by default XDG_DATA_HOME/bash-completion/completions,
+#   which by default evaluates to ~/.local/share/bash-completion/completions,
+#   for user-defined completions
+
+#create_systemctl_aliases() {
+#	local target=/usr/share/bash-completion/completions/systemctl
+#	local comps=${xdg_data}/bash-completion/completions
+#	xdg_create "$target" "$comps"
+#	if ! [[ -r "$comps"/status echo > ln -s -- "$target" "$comps"/status
+#	ln -s -- status "$comps"/"$cmd"
+#	local cmd; }
+#create_systemctl_aliases; unset create_systemctl_aliases
+
+
 
 # copies a completion definition for a command to other command(s)
 complete-copy() {
@@ -43,17 +63,11 @@ __comp_dir_files() {
 # This is intencionally distinct from BASH_COMPLETION_USER_DIR, as a per-user
 # counterpart for static, *eager* loading
 # FIXME: Any particular reason for *wanting* a static, eager loading dir?
-BASH_COMPLETION_DIR_USER="$SCRIPTS/home/bash_completion.d"
-
-if [[ -d $BASH_COMPLETION_DIR_USER &&
-      -r $BASH_COMPLETION_DIR_USER &&
-      -x $BASH_COMPLETION_DIR_USER ]]; then
-	for script in "$BASH_COMPLETION_DIR_USER"/*; do
-		if [[ ${script##*/} != @(*~|*.bak|README*) &&
-		      -f $script &&
-		      -r $script ]]; then
-			source "$script"
-		fi
-	done
-	unset script
-fi
+for script in "$(dirname "${BASH_SOURCE[0]}")"/bash_completion.d/*; do
+	if [[ ${script##*/} != @(*~|*.bak|README*) &&
+	      -f "$script" && -r "$script" ]]
+	then
+		source "$script"
+	fi
+done
+unset script

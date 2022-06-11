@@ -84,7 +84,6 @@ export LC_MONETARY="pt_BR.utf8"
 export LC_PAPER="pt_BR.utf8"
 export LC_MEASUREMENT="pt_BR.utf8"
 
-
 # Python ----------------------------------------------------------------------
 
 # Disabled, use `pip install --user -e` for local projects
@@ -103,6 +102,11 @@ export LC_MEASUREMENT="pt_BR.utf8"
 export DEBFULLNAME="Rodrigo Silva"
 export DEBEMAIL="debian@rodrigosilva.com"
 
+# Custom paths ----------------------------------------------------------------
+
+export BASH_COMPLETION_USER_DIR=${SCRIPTS}/home/bash-completion
+export SETEN_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/setup/setup.conf
+export DOSBOX_DRIVEC=/dados/Jogos/DOSBox
 
 # Dotfiles in $HOME -----------------------------------------------------------
 
@@ -110,20 +114,9 @@ source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'XDG defs')
 source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'XDG profile')
 source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'Cleanup')
 
-# DOSBox ----------------------------------------------------------------------
-
-export DOSBOX_DRIVEC=/dados/Jogos/DOSBox
-
-
 # DWWW / sensible-browser -----------------------------------------------------
 
 export BROWSER=firefox
-
-
-# SetEn -----------------------------------------------------------------------
-
-export SETEN_CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/setup/setup.conf
-
 
 # PyCharm ---------------------------------------------------------------------
 

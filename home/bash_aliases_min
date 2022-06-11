@@ -71,8 +71,15 @@ export PGSERVICEFILE=${xdg_config}/postgresql/pg_service.conf  # ~/.pg_service.c
 export PSQL_HISTORY=${xdg_state}/psql_history                  # ~/.psql_history
 xdg_create psql "${xdg_config}/postgresql"
 
+# Byobu
 # https://github.com/dustinkirkland/byobu/pull/57
-xdg_create byobu "${xdg_config}/byobu"  # ~/.byobu
+BYOBU_CONFIG_DIR=${xdg_config}/byobu  # ~/.byobu
+xdg_create byobu "$BYOBU_CONFIG_DIR"
+
+# Bash completion
+# see ./bash-completion/bash-completion
+export BASH_COMPLETION_USER_DIR=${BASH_COMPLETION_USER_DIR:-${xdg_data}/bash-completion}
+export BASH_COMPLETION_USER_FILE=${BASH_COMPLETION_USER_DIR}/bash_completion  # ~/.bash_completion
 
 unset xdg_create
 
@@ -346,12 +353,14 @@ paths=(
 for path in "${paths[@]}"; do
 	if [[ -r "$path" ]]; then source "$path"; fi
 done
+unset paths paths
 
 # >>>>> Cleanup <<<<<------------------------------------------------------------
 
+# Only for what might be useful beyond initial usage, such as xdg_* and colors
+# Everything else should cleanup by itself after its usage block
 unset xdg_{config,data,cache,state,create,path}
 unset color c
-unset paths path
 
 # >>>>> Startup commands <<<<<--------------------------------------------------
 
