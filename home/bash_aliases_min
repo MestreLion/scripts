@@ -129,7 +129,9 @@ try()     { "$@" 2>/dev/null || :; }
 where()   { dpkg --search -- "$(type -p "$1" || echo "$1")"; }
 cdl()     { cd "$@" && ll ; }
 md()      { mkdir "$@" && cd "${@: -1}" ; }
-compile() { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
+
+compile()  { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
+gcc-specs(){ gcc -v -xc /dev/null -E -Wp,-v 2>&1; }
 
 _datefmt()  { [[ "$2" ]] && d=(-d"${3:-}${2}") || d=(); date "$1" "${d[@]}"; }
 now()       { _datefmt '--rfc-3339=seconds' "${1:-}" '@'; }
@@ -137,7 +139,8 @@ timestamp() { _datefmt '+%Y%m%d%H%M%S'      "${1:-}" '@'; }
 epoch()     { _datefmt '+%s'                "${1:-}"; }
 
 ubuntu-package() { open "http://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"; }
-f2b(){ local j=${1:-sshd}; sudo fail2ban-client status "$j"; }
+f2b() { local j=${1:-sshd}; sudo fail2ban-client status "$j"; }
+make-parallel() { make -j $(nproc --ignore=2) "$@"; }
 
 cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
 cmdcat()  { cat  "$(type -P "$1")" ; }
@@ -157,6 +160,11 @@ manc() {
 	LESS_TERMCAP_so=$bold$(tput setaf 15; tput setab 4) \
 	LESS_TERMCAP_se=$reset \
 	man "$@"
+}
+
+ssh-keygen-ed25519() {
+	local slug=${1:-}; slug=${slug+.$slug}
+	ssh-keygen -a 100 -t ed25519 -f ~/.ssh/id_ed25519"$slug" -C "$USER$slug@$HOSTNAME"
 }
 
 listening-ports() {

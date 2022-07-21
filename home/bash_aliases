@@ -136,9 +136,32 @@ mkvenv() {
 	PYTHONWARNINGS="ignore::DeprecationWarning" pip install --upgrade pip
 }
 
-activate-venv() {
-	:
+# useful for python, pip
+commands-with-prefix() { local prefix=$1; compgen -c "$prefix" | sort -uV; }
+command-latest() {
+	local prefix=$1
+	compgen -c "$prefix" |
+	grep -P "^${prefix}\d[.\d]*\$" |
+	sort -ruV |
+	head -n1
 }
+pip-list-manual() {
+	local pip; pip=${1:-$(command-latest pip)}
+	if ! exists "$pip"; then echo "$pip is not installed" >&2; return 1; fi
+	"$pip" list --user --not-required --exclude pip |
+	awk '{print $1}' | tail -n+3
+}
+pip-autoremove() {
+	local pip; pip=${1:-$(command-latest pip)}
+	local packages
+	if ! exists "$pip"; then echo "$pip is not installed" >&2; return 1; fi
+	packages=$(pip-list-manual "$pip")
+	while [[ "$packages" ]]; do
+		"$pip" uninstall -yr <<< "$packages"
+		packages=$(pip-list-manual "$pip")
+	done
+}
+
 
 sri-hash() {
 	if [[ -z "$1" ]]; then echo "Usage: sri-hash URL" >&2; return; fi
