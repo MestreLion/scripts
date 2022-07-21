@@ -41,6 +41,10 @@ usage() {
 }
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
 
+devlist=$(
+	udevadm settle  # sync info obtainable by the lsblk
+	lsblk -pnlo NAME,FSTYPE,TYPE,MOUNTPOINT "${devices[@]}"
+) || exit $?
 
 now=$(date --rfc-3339=seconds)
 epoch=$(date '+%s')
@@ -50,11 +54,7 @@ while read -r dev fs; do
 	bytes=$(( "$(< "$path")" * 1024 ))
 	human=$(numfmt "$bytes" --to-unit=G  --format "%9.2f")G
 	printf "${now}\t${epoch}\t${dev}\t${bytes}\t${human}\n"
-done < <(
-	udevadm settle  # sync info obtainable by the lsblk
-	lsblk -pnlo NAME,FSTYPE,TYPE,MOUNTPOINT "${devices[@]}" |
-	awk '$3 == "part" && $2 && $4 {print $1 "\t" $2}'
-)
+done < <(awk '$3 == "part" && $2 && $4 {print $1 "\t" $2}' <<< "$devlist")
 
 # for fdisk-list
 # cols=TYPE,NAME,SIZE,FSTYPE,LABEL,PARTLABEL,UUID,PARTFLAGS,VENDOR,MODEL,REV,SERIAL
