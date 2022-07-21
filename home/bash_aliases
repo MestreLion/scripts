@@ -124,16 +124,21 @@ pyprofile3() {
 }
 
 venv() {
-	python3 -m venv "$@"
-}
-
-mkvenv() {
-	local vdir=${1:-}
-	local usage="Creates a Python Virtual Environment, activate it and upgrade its pip\nUsage: mkvenv ENV_DIR"
+	local vdir=${1:-venv}
+	local python=$(compgen -c python | grep -P '^python\d[.\d]*$' | sort -uV)
+	local usage="Creates a Python Virtual Environment, activate and upgrade it"
+	usage+="\nUsage: mkvenv ENV_DIR"
 	if [[ "$vdir" =~ ^(|-h|--help)$ ]]; then echo -e "$usage" >&2; return 1; fi
-	venv "$vdir" &&
+	"$python" -m venv "$vdir" || {
+		echo "Must install dependencies: sudo apt install python3-{pip,venv}" >&2
+		return 1
+	}
 	source "$vdir"/bin/activate &&
-	PYTHONWARNINGS="ignore::DeprecationWarning" pip install --upgrade pip
+	PYTHONWARNINGS="ignore::DeprecationWarning" pip install --upgrade pip setuptools wheel
+}
+# TAB-friendly
+venv-activate() {
+	source "${1:-venv}"/bin/activate
 }
 
 # useful for python, pip
