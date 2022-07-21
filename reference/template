@@ -24,6 +24,7 @@
 #
 # progname - short description
 #
+# This file is part of [PROJNAME], see <https://github.com/MestreLion/[PROJTAG]>
 # Copyright (C) 2022 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 # License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
 #------------------------------------------------------------------------------
