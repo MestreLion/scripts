@@ -1,0 +1,655 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+ Partially inspired by Jan Janssen's Kate syntax highlighting file
+ released under the LGPL (<http://kate-editor.org/syntax/3.2/apache.xml>).
+
+ Author: Jean-Philippe Fleury
+ Copyright (C) 2010-2011 Jean-Philippe Fleury <contact@jpfleury.net>
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Library General Public
+ License as published by the Free Software Foundation; either
+ version 2 of the License, or (at your option) any later version.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Library General Public License for more details.
+
+ You should have received a copy of the GNU Library General Public
+ License along with this library; if not, write to the
+ Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ Boston, MA 02111-1307, USA.
+
+-->
+<language id="apache" _name="Apache Configuration" version="2.0" _section="Others">
+  <metadata>
+    <property name="globs">httpd.conf;httpd2.conf;apache.conf;apache2.conf;.htaccess*;.htpasswd*</property>
+    <property name="line-comment-start">#</property>
+  </metadata>
+
+  <styles>
+    <style id="comment" _name="Comment" map-to="def:comment"/>
+    <style id="decimal" _name="Decimal number" map-to="def:decimal"/>
+    <style id="string" _name="String" map-to="def:string"/>
+    <style id="escaped-character" _name="Escaped character" map-to="def:special-char"/>
+    <style id="variable" _name="Variable" map-to="def:identifier"/>
+    <style id="directives" _name="Directives" map-to="def:keyword"/>
+    <style id="options" _name="Options" map-to="def:type"/>
+  </styles>
+
+  <definitions>
+    <context id="comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
+      <start>#</start>
+      <include>
+        <context ref="def:in-line-comment"/>
+      </include>
+    </context>
+
+    <context id="decimal" style-ref="decimal">
+      <match extended="true">(?&lt;=\s)([1-9][0-9]*|0)(?=(\s|$))</match>
+    </context>
+
+    <context id="double-quoted-string" style-ref="string" end-at-line-end="true" class="string" class-disabled="no-spell-check">
+      <start>"</start>
+      <end>"</end>
+      <include>
+        <context ref="escaped-character"/>
+      </include>
+    </context>
+
+    <context id="escaped-character" style-ref="escaped-character">
+      <match>\\[^\s]</match>
+    </context>
+
+    <context id="back-reference" style-ref="variable">
+      <match>(\$[0-9])|(%[1-9])</match>
+    </context>
+
+    <context id="server-variable" style-ref="variable">
+      <match>%\{[A-Z_]+\}</match>
+    </context>
+
+    <context id="directives" style-ref="directives">
+      <!-- Directives are case-insensitive. See Apache documentation:
+           <http://httpd.apache.org/docs/current/configuring.html#syntax>. -->
+      <prefix>(?i)\b</prefix>
+
+      <!-- String Directives. -->
+      <keyword>AcceptFilter</keyword>
+      <keyword>AccessFileName</keyword>
+      <keyword>Action</keyword>
+      <keyword>AddAltByEncoding</keyword>
+      <keyword>AddAltByType</keyword>
+      <keyword>AddAlt</keyword>
+      <keyword>AddCharset</keyword>
+      <keyword>AddDefaultCharset</keyword>
+      <keyword>AddDescription</keyword>
+      <keyword>AddEncoding</keyword>
+      <keyword>AddHandler</keyword>
+      <keyword>AddIconByEncoding</keyword>
+      <keyword>AddIconByType</keyword>
+      <keyword>AddIcon</keyword>
+      <keyword>AddInputFilter</keyword>
+      <keyword>AddLanguage</keyword>
+      <keyword>AddModuleInfo</keyword>
+      <keyword>AddOutputFilterByType</keyword>
+      <keyword>AddOutputFilter</keyword>
+      <keyword>AddType</keyword>
+      <keyword>Alias</keyword>
+      <keyword>AliasMatch</keyword>
+
+      <!-- To differentiate between the "Allow" and "Deny" directives and the
+           "Deny,Allow" and "Allow,Deny" options in order to have both correctly
+           styled. Example:
+
+             <Directory /docroot>
+               Order Deny,Allow
+               Deny from all
+               Allow from env=let_me_in
+             </Directory>
+      -->
+      <keyword>(?&lt;!Deny,)Allow(?!,Deny)</keyword>
+
+      <keyword>Anonymous</keyword>
+      <keyword>AuthBasicProvider</keyword>
+      <keyword>AuthDBMGroupFile</keyword>
+      <keyword>AuthDBMUserFile</keyword>
+      <keyword>AuthDigestDomain</keyword>
+      <keyword>AuthDigestFile</keyword>
+      <keyword>AuthDigestGroupFile</keyword>
+      <keyword>AuthDigestNonceFormat</keyword>
+      <keyword>AuthDigestProvider</keyword>
+      <keyword>AuthGroupFile</keyword>
+      <keyword>AuthLDAPBindDN</keyword>
+      <keyword>AuthLDAPBindPassword</keyword>
+      <keyword>AuthLDAPCharsetConfig</keyword>
+      <keyword>AuthLDAPGroupAttribute</keyword>
+      <keyword>AuthLDAPUrl</keyword>
+      <keyword>AuthName</keyword>
+      <keyword>AuthUserFile</keyword>
+      <keyword>BrowserMatch</keyword>
+      <keyword>BrowserMatchNoCase</keyword>
+      <keyword>BS2000Account</keyword>
+      <keyword>CacheDisable</keyword>
+      <keyword>CacheEnable</keyword>
+      <keyword>CacheFile</keyword>
+      <keyword>CacheGcClean</keyword>
+      <keyword>CacheGcUnused</keyword>
+      <keyword>CacheRoot</keyword>
+      <keyword>CGIMapExtension</keyword>
+      <keyword>CharsetDefault</keyword>
+      <keyword>CharsetOptions</keyword>
+      <keyword>CharsetSourceEnc</keyword>
+      <keyword>CookieDomain</keyword>
+      <keyword>CookieLog</keyword>
+      <keyword>CookieName</keyword>
+      <keyword>CoreDumpDirectory</keyword>
+      <keyword>CustomLog</keyword>
+      <keyword>DavGenericLockDB</keyword>
+      <keyword>Dav</keyword>
+      <keyword>DavLockDB</keyword>
+      <keyword>DBDParams</keyword>
+      <keyword>DBDPrepareSQL</keyword>
+      <keyword>DBDriver</keyword>
+      <keyword>DefaultIcon</keyword>
+      <keyword>DefaultLanguage</keyword>
+      <keyword>DefaultType</keyword>
+      <keyword>DeflateFilterNote</keyword>
+      <keyword>(?&lt;!Allow,)Deny(?!,Allow)</keyword> <!-- See "Allow" directive comment. -->
+      <keyword>DirectoryIndex</keyword>
+      <keyword>DocumentRoot</keyword>
+      <keyword>ErrorDocument</keyword>
+      <keyword>ErrorLog</keyword>
+      <keyword>Example</keyword>
+      <keyword>ExpiresByType</keyword>
+      <keyword>ExpiresDefault</keyword>
+      <keyword>ExtFilterDefine</keyword>
+      <keyword>ExtFilterOptions</keyword>
+      <keyword>FilterChain</keyword>
+      <keyword>FilterDeclare</keyword>
+      <keyword>FilterProtocol</keyword>
+      <keyword>FilterProvider</keyword>
+      <keyword>FilterTrace</keyword>
+      <keyword>ForceType</keyword>
+      <keyword>ForensicLog</keyword>
+      <keyword>Group</keyword>
+      <keyword>Header</keyword>
+      <keyword>HeaderName</keyword>
+      <keyword>ImapBase</keyword>
+      <keyword>Include</keyword>
+      <keyword>IndexIgnore</keyword>
+      <keyword>IndexOptions</keyword>
+      <keyword>IndexStyleSheet</keyword>
+      <keyword>ISAPICacheFile</keyword>
+      <keyword>LanguagePriority</keyword>
+      <keyword>LDAPSharedCacheFile</keyword>
+      <keyword>LDAPTrustedCA</keyword>
+      <keyword>LDAPTrustedCAType</keyword>
+      <keyword>LDAPTrustedClientCert</keyword>
+      <keyword>LDAPTrustedGlobalCert</keyword>
+      <keyword>Listen</keyword>
+      <keyword>LoadFile</keyword>
+      <keyword>LoadModule</keyword>
+      <keyword>LockFile</keyword>
+      <keyword>LogFormat</keyword>
+      <keyword>MetaDir</keyword>
+      <keyword>MetaSuffix</keyword>
+      <keyword>MimeMagicFile</keyword>
+      <keyword>MMapFile</keyword>
+      <keyword>NameVirtualHost</keyword>
+      <keyword>NoProxy</keyword>
+      <keyword>NWSSLTrustedCerts</keyword>
+      <keyword>NWSSLUpgradeable</keyword>
+      <keyword>PassEnv</keyword>
+      <keyword>PidFile</keyword>
+      <keyword>ProxyBlock</keyword>
+      <keyword>ProxyDomain</keyword>
+      <keyword>ProxyPass</keyword>
+      <keyword>ProxyPassReverseCookieDomain</keyword>
+      <keyword>ProxyPassReverseCookiePath</keyword>
+      <keyword>ProxyPassReverse</keyword>
+      <keyword>ProxyRemote</keyword>
+      <keyword>ProxyRemoteMatch</keyword>
+      <keyword>ReadmeName</keyword>
+      <keyword>Redirect</keyword>
+      <keyword>RedirectMatch</keyword>
+      <keyword>RedirectPermanent</keyword>
+      <keyword>RedirectTemp</keyword>
+      <keyword>RemoveCharset</keyword>
+      <keyword>RemoveEncoding</keyword>
+      <keyword>RemoveHandler</keyword>
+      <keyword>RemoveInputFilter</keyword>
+      <keyword>RemoveLanguage</keyword>
+      <keyword>RemoveOutputFilter</keyword>
+      <keyword>RemoveType</keyword>
+      <keyword>RequestHeader</keyword>
+      <keyword>Require</keyword>
+      <keyword>RewriteBase</keyword>
+      <keyword>RewriteCond</keyword>
+      <keyword>RewriteLock</keyword>
+      <keyword>RewriteLog</keyword>
+      <keyword>RewriteMap</keyword>
+      <keyword>RewriteRule</keyword>
+      <keyword>ScoreBoardFile</keyword>
+      <keyword>ScriptAlias</keyword>
+      <keyword>ScriptAliasMatch</keyword>
+      <keyword>Script</keyword>
+      <keyword>ScriptLog</keyword>
+      <keyword>ScriptSock</keyword>
+      <keyword>SecureListen</keyword>
+      <keyword>ServerAdmin</keyword>
+      <keyword>ServerAlias</keyword>
+      <keyword>ServerName</keyword>
+      <keyword>ServerPath</keyword>
+      <keyword>ServerRoot</keyword>
+      <keyword>SetEnvIf</keyword>
+      <keyword>SetEnvIfNoCase</keyword>
+      <keyword>SetEnv</keyword>
+      <keyword>SetHandler</keyword>
+      <keyword>SetInputFilter</keyword>
+      <keyword>SetOutputFilter</keyword>
+      <keyword>SSIEndTag</keyword>
+      <keyword>SSIErrorMsg</keyword>
+      <keyword>SSIStartTag</keyword>
+      <keyword>SSITimeFormat</keyword>
+      <keyword>SSIUndefinedEcho</keyword>
+      <keyword>SSLCACertificateFile</keyword>
+      <keyword>SSLCACertificatePath</keyword>
+      <keyword>SSLCADNRequestFile</keyword>
+      <keyword>SSLCADNRequestPath</keyword>
+      <keyword>SSLCARevocationFile</keyword>
+      <keyword>SSLCARevocationPath</keyword>
+      <keyword>SSLCertificateChainFile</keyword>
+      <keyword>SSLCertificateFile</keyword>
+      <keyword>SSLCertificateKeyFile</keyword>
+      <keyword>SSLCipherSuite</keyword>
+      <keyword>SSLCryptoDevice</keyword>
+      <keyword>SSLHonorCiperOrder</keyword>
+      <keyword>SSLPassPhraseDialog</keyword>
+      <keyword>SSLProxyCACertificateFile</keyword>
+      <keyword>SSLProxyCACertificatePath</keyword>
+      <keyword>SSLProxyCARevocationFile</keyword>
+      <keyword>SSLProxyCARevocationPath</keyword>
+      <keyword>SSLProxyCipherSuite</keyword>
+      <keyword>SSLProxyMachineCertificateFile</keyword>
+      <keyword>SSLProxyMachineCertificatePath</keyword>
+      <keyword>SSLProxyProtocol</keyword>
+      <keyword>SSLRandomSeed</keyword>
+      <keyword>SSLRequire</keyword>
+      <keyword>SSLRequireSSL</keyword>
+      <keyword>SSLUserName</keyword>
+      <keyword>SuexecUserGroup</keyword>
+      <keyword>TransferLog</keyword>
+      <keyword>TypesConfig</keyword>
+      <keyword>UnsetEnv</keyword>
+      <keyword>UserDir</keyword>
+      <keyword>User</keyword>
+      <keyword>VirtualDocumentRootIP</keyword>
+      <keyword>VirtualDocumentRoot</keyword>
+      <keyword>VirtualScriptAliasIP</keyword>
+      <keyword>VirtualScriptAlias</keyword>
+      <keyword>Win32DisableAcceptEx</keyword>
+
+      <!-- Integer Directives. -->
+      <keyword>AllowCONNECT</keyword>
+      <keyword>AssignUserID</keyword>
+      <keyword>AuthDigestNonceLifetime</keyword>
+      <keyword>AuthDigestShmemSize</keyword>
+      <keyword>CacheDefaultExpire</keyword>
+      <keyword>CacheDirLength</keyword>
+      <keyword>CacheDirLevels</keyword>
+      <keyword>CacheForceCompletion</keyword>
+      <keyword>CacheGcDaily</keyword>
+      <keyword>CacheGcInterval</keyword>
+      <keyword>CacheGcMemUsage</keyword>
+      <keyword>CacheLastModifiedFactor</keyword>
+      <keyword>CacheMaxExpire</keyword>
+      <keyword>CacheMaxFileSize</keyword>
+      <keyword>CacheMinFileSize</keyword>
+      <keyword>CacheSize</keyword>
+      <keyword>CacheTimeMargin</keyword>
+      <keyword>ChildPerUserID</keyword>
+      <keyword>CookieExpires</keyword>
+      <keyword>DavMinTimeout</keyword>
+      <keyword>DBDExptime</keyword>
+      <keyword>DBDKeep</keyword>
+      <keyword>DBDMax</keyword>
+      <keyword>DBDMin</keyword>
+      <keyword>DBDPersist</keyword>
+      <keyword>DeflateBufferSize</keyword>
+      <keyword>DeflateCompressionLevel</keyword>
+      <keyword>DeflateMemLevel</keyword>
+      <keyword>DeflateWindowSize</keyword>
+      <keyword>IdentityCheckTimeout</keyword>
+      <keyword>ISAPIReadAheadBuffer</keyword>
+      <keyword>KeepAliveTimeout</keyword>
+      <keyword>LDAPCacheEntries</keyword>
+      <keyword>LDAPCacheTTL</keyword>
+      <keyword>LDAPConnectionTimeout</keyword>
+      <keyword>LDAPOpCacheEntries</keyword>
+      <keyword>LDAPOpCacheTTL</keyword>
+      <keyword>LDAPSharedCacheSize</keyword>
+      <keyword>LimitInternalRecursion</keyword>
+      <keyword>LimitRequestBody</keyword>
+      <keyword>LimitRequestFieldsize</keyword>
+      <keyword>LimitRequestFields</keyword>
+      <keyword>LimitRequestLine</keyword>
+      <keyword>LimitXMLRequestBody</keyword>
+      <keyword>ListenBacklog</keyword>
+      <keyword>MaxClients</keyword>
+      <keyword>MaxKeepAliveRequests</keyword>
+      <keyword>MaxMemFree</keyword>
+      <keyword>MaxRequestsPerChild</keyword>
+      <keyword>MaxRequestsPerThread</keyword>
+      <keyword>MaxSpareServers</keyword>
+      <keyword>MaxSpareThreads</keyword>
+      <keyword>MaxThreads</keyword>
+      <keyword>MaxThreadsPerChild</keyword>
+      <keyword>MCacheMaxObjectCount</keyword>
+      <keyword>MCacheMaxObjectSize</keyword>
+      <keyword>MCacheMaxStreamingBuffer</keyword>
+      <keyword>MCacheMinObjectSize</keyword>
+      <keyword>MCacheSize</keyword>
+      <keyword>MinSpareServers</keyword>
+      <keyword>MinSpareThreads</keyword>
+      <keyword>NumServers</keyword>
+      <keyword>ProxyIOBufferSize</keyword>
+      <keyword>ProxyMaxForwards</keyword>
+      <keyword>ProxyReceiveBufferSize</keyword>
+      <keyword>ProxyTimeout</keyword>
+      <keyword>RewriteLogLevel</keyword>
+      <keyword>RLimitCPU</keyword>
+      <keyword>RLimitMEM</keyword>
+      <keyword>RLimitNPROC</keyword>
+      <keyword>ScriptLogBuffer</keyword>
+      <keyword>ScriptLogLength</keyword>
+      <keyword>SendBufferSize</keyword>
+      <keyword>ServerLimit</keyword>
+      <keyword>SSLProxyVerifyDepth</keyword>
+      <keyword>SSLSessionCacheTimeout</keyword>
+      <keyword>SSLVerifyDepth</keyword>
+      <keyword>StartServers</keyword>
+      <keyword>StartThreads</keyword>
+      <keyword>ThreadLimit</keyword>
+      <keyword>ThreadsPerChild</keyword>
+      <keyword>ThreadStackSize</keyword>
+      <keyword>TimeOut</keyword>
+
+      <!-- Alternative Directives. -->
+      <keyword>AcceptMutex</keyword>
+      <keyword>AcceptPathInfo</keyword>
+      <keyword>AllowEncodedSlashes</keyword>
+      <keyword>AllowOverride</keyword>
+      <keyword>Anonymous_Authoritative</keyword>
+      <keyword>Anonymous_LogEmail</keyword>
+      <keyword>Anonymous_MustGiveEmail</keyword>
+      <keyword>Anonymous_NoUserID</keyword>
+      <keyword>Anonymous_VerifyEmail</keyword>
+      <keyword>AuthAuthoritative</keyword>
+      <keyword>AuthBasicAuthoritative</keyword>
+      <keyword>AuthBasicProvider</keyword>
+      <keyword>AuthDBMAuthoritative</keyword>
+      <keyword>AuthDBMType</keyword>
+      <keyword>AuthDefaultAuthoritative</keyword>
+      <keyword>AuthDigestAlgorithm</keyword>
+      <keyword>AuthDigestNcCheck</keyword>
+      <keyword>AuthDigestQop</keyword>
+      <keyword>AuthLDAPAuthoritative</keyword>
+      <keyword>AuthLDAPCompareDNOnServer</keyword>
+      <keyword>AuthLDAPDereferenceAliases</keyword>
+      <keyword>AuthLDAPEnabled</keyword>
+      <keyword>AuthLDAPFrontPageHack</keyword>
+      <keyword>AuthLDAPGroupAttributeIsDN</keyword>
+      <keyword>AuthLDAPRemoteUserIsDN</keyword>
+      <keyword>AuthType</keyword>
+      <keyword>AuthzDBMAuthoritative</keyword>
+      <keyword>AuthzDBMType</keyword>
+      <keyword>AuthzDefaultAuthoritative</keyword>
+      <keyword>AuthzGroupFileAuthoritative</keyword>
+      <keyword>AuthzLDAPAuthoritative</keyword>
+      <keyword>AuthzOwnerAuthoritative</keyword>
+      <keyword>AuthzUserAuthoritative</keyword>
+      <keyword>BufferedLogs</keyword>
+      <keyword>CacheExpiryCheck</keyword>
+      <keyword>CacheIgnoreCacheControl</keyword>
+      <keyword>CacheIgnoreHeaders</keyword>
+      <keyword>CacheIgnoreNoLastMod</keyword>
+      <keyword>CacheNegotiatedDocs</keyword>
+      <keyword>CacheStoreNoStore</keyword>
+      <keyword>CacheStorePrivate</keyword>
+      <keyword>CheckSpelling</keyword>
+      <keyword>ContentDigest</keyword>
+      <keyword>CookieStyle</keyword>
+      <keyword>CookieTracking</keyword>
+      <keyword>CoreDumpDirectory</keyword>
+      <keyword>CustomLog</keyword>
+      <keyword>DavDepthInfinity</keyword>
+      <keyword>DirectorySlash</keyword>
+      <keyword>DumpIOInput</keyword>
+      <keyword>DumpIOOutput</keyword>
+      <keyword>EnableExceptionHook</keyword>
+      <keyword>EnableMMAP</keyword>
+      <keyword>EnableSendfile</keyword>
+      <keyword>ExpiresActive</keyword>
+      <keyword>ExtendedStatus</keyword>
+      <keyword>FileETag</keyword>
+      <keyword>ForceLanguagePriority</keyword>
+      <keyword>HostnameLookups</keyword>
+      <keyword>IdentityCheck</keyword>
+      <keyword>ImapDefault</keyword>
+      <keyword>ImapMenu</keyword>
+      <keyword>IndexOrderDefault</keyword>
+      <keyword>ISAPIAppendLogToErrors</keyword>
+      <keyword>ISAPIAppendLogToQuery</keyword>
+      <keyword>ISAPIFakeAsync</keyword>
+      <keyword>ISAPILogNotSupported</keyword>
+      <keyword>KeepAlive</keyword>
+      <keyword>LDAPTrustedMode</keyword>
+      <keyword>LDAPVerifyServerCert</keyword>
+      <keyword>LogLevel</keyword>
+      <keyword>MCacheRemovalAlgorithm</keyword>
+      <keyword>MetaFiles</keyword>
+      <keyword>ModMimeUsePathInfo</keyword>
+      <keyword>MultiviewsMatch</keyword>
+
+      <!-- To differentiate between the "Options" directive and the "Options"
+           option in order to have both correctly styled. Example of the
+           "Options" directive:
+
+             Options -Indexes
+
+           Example of the "Options" option:
+
+             AllowOverride Options=All
+
+           See <http://httpd.apache.org/docs/current/mod/core.html#allowoverride>
+           for the "Options" option.
+      -->
+      <keyword>Options(?!=)</keyword>
+
+      <keyword>Order</keyword>
+      <keyword>ProtocolEcho</keyword>
+      <keyword>ProxyBadHeader</keyword>
+      <keyword>ProxyErrorOverride</keyword>
+      <keyword>ProxyPreserveHost</keyword>
+      <keyword>ProxyRequests</keyword>
+      <keyword>ProxyVia</keyword>
+      <keyword>RewriteEngine</keyword>
+      <keyword>RewriteOptions</keyword>
+      <keyword>Satisfy</keyword>
+      <keyword>ScriptInterpreterSource</keyword>
+      <keyword>ServerSignature</keyword>
+      <keyword>ServerTokens</keyword>
+      <keyword>SSLEngine</keyword>
+      <keyword>SSLMutex</keyword>
+      <keyword>SSLOptions</keyword>
+      <keyword>SSLProtocol</keyword>
+      <keyword>SSLProxyEngine</keyword>
+      <keyword>SSLProxyVerify</keyword>
+      <keyword>SSLSessionCache</keyword>
+      <keyword>SSLVerifyClient</keyword>
+      <keyword>UseCanonicalName</keyword>
+      <keyword>XBitHack</keyword>
+    </context>
+
+    <context id="section-directive-open">
+      <match>(&lt;\w+)([^#&gt;]*)(&gt;)</match>
+      <include>
+        <context sub-pattern="1" style-ref="directives"/>
+        <context sub-pattern="2" style-ref="string"/>
+        <context sub-pattern="3" style-ref="directives"/>
+      </include>
+    </context>
+
+    <context id="section-directive-close" style-ref="directives">
+      <match>&lt;/\w+&gt;</match>
+    </context>
+
+    <context id="options" style-ref="options">
+      <prefix>(?i)\b</prefix> <!-- Case-insensitive too. -->
+
+      <keyword>alert</keyword>
+      <keyword>All</keyword>
+      <keyword>Allow,Deny</keyword>
+      <keyword>always</keyword>
+      <keyword>Any</keyword>
+      <keyword>Ascending</keyword>
+      <keyword>AuthConfig</keyword>
+      <keyword>auth-int</keyword>
+      <keyword>auth</keyword>
+      <keyword>Basic</keyword>
+      <keyword>Block</keyword>
+      <keyword>CompatEnvVars</keyword>
+      <keyword>Connection</keyword>
+      <keyword>Cookie2</keyword>
+      <keyword>Cookie</keyword>
+      <keyword>crit</keyword>
+      <keyword>Date</keyword>
+      <keyword>DB</keyword>
+      <keyword>dbm:</keyword>
+      <keyword>dc:</keyword>
+      <keyword>debug</keyword>
+      <keyword>Default</keyword>
+      <keyword>Deny,Allow</keyword>
+      <keyword>Descending</keyword>
+      <keyword>Description</keyword>
+      <keyword>Digest</keyword>
+      <keyword>DNS</keyword>
+      <keyword>Double</keyword>
+      <keyword>EMail</keyword>
+      <keyword>emerg</keyword>
+      <keyword>error</keyword>
+      <keyword>ExecCGI</keyword>
+      <keyword>ExportCertData</keyword>
+      <keyword>FakeBasicAuth</keyword>
+      <keyword>Fallback</keyword>
+      <keyword>fcntl</keyword>
+      <keyword>fcntl:</keyword>
+      <keyword>FileInfo</keyword>
+      <keyword>file:</keyword>
+      <keyword>Filters</keyword>
+      <keyword>finding</keyword>
+      <keyword>flock</keyword>
+      <keyword>flock:</keyword>
+      <keyword>FollowSymLinks</keyword>
+      <keyword>formatted</keyword>
+      <keyword>Full</keyword>
+      <keyword>GDBM</keyword>
+      <keyword>GDSF</keyword>
+      <keyword>Handlers</keyword>
+      <keyword>Ignore</keyword>
+      <keyword>Includes</keyword>
+      <keyword>IncludesNOEXEC</keyword>
+      <keyword>Indexes</keyword>
+      <keyword>info</keyword>
+      <keyword>inherit</keyword>
+      <keyword>INode</keyword>
+      <keyword>IsError</keyword>
+      <keyword>Keep-Alive</keyword>
+      <keyword>Limit</keyword>
+      <keyword>LRU</keyword>
+      <keyword>Major</keyword>
+      <keyword>map</keyword>
+      <keyword>MD5</keyword>
+      <keyword>MD5-sess</keyword>
+      <keyword>Minimal</keyword>
+      <keyword>Min</keyword>
+      <keyword>Minor</keyword>
+      <keyword>MTime</keyword>
+      <keyword>MultiViews</keyword>
+      <keyword>Mutual-failure</keyword>
+      <keyword>Name</keyword>
+      <keyword>NDBM</keyword>
+      <keyword>NegotiatedOnly</keyword>
+      <keyword>Netscape</keyword>
+      <keyword>never</keyword>
+      <keyword>nocontent</keyword>
+      <keyword>no</keyword>
+      <keyword>None</keyword>
+      <keyword>nonenotnull</keyword>
+      <keyword>notice</keyword>
+      <keyword>Off</keyword>
+      <keyword>On</keyword>
+      <keyword>optional</keyword>
+      <keyword>optional_no_ca</keyword>
+      <keyword>Options</keyword>
+      <keyword>OptRenegotiate</keyword>
+      <keyword>OS</keyword>
+      <keyword>posixsem</keyword>
+      <keyword>Prefer</keyword>
+      <keyword>Prod</keyword>
+      <keyword>ProductOnly</keyword>
+      <keyword>Proxy-Authenticate</keyword>
+      <keyword>Proxy-Authorization</keyword>
+      <keyword>pthread</keyword>
+      <keyword>referer</keyword>
+      <keyword>Registry</keyword>
+      <keyword>Registry-Strict</keyword>
+      <keyword>require</keyword>
+      <keyword>RFC2109</keyword>
+      <keyword>RFC2965</keyword>
+      <keyword>Script</keyword>
+      <keyword>SDBM</keyword>
+      <keyword>searching</keyword>
+      <keyword>semiformatted</keyword>
+      <keyword>sem</keyword>
+      <keyword>shm:</keyword>
+      <keyword>Size</keyword>
+      <keyword>SSL</keyword>
+      <keyword>SSLv2</keyword>
+      <keyword>SSLv3</keyword>
+      <keyword>StartBody</keyword>
+      <keyword>STARTTLS</keyword>
+      <keyword>StdEnvVars</keyword>
+      <keyword>StrictRequire</keyword>
+      <keyword>SymLinksIfOwnerMatch</keyword>
+      <keyword>sysvsem</keyword>
+      <keyword>TE</keyword>
+      <keyword>TLS</keyword>
+      <keyword>TLSv1</keyword>
+      <keyword>Trailers</keyword>
+      <keyword>Transfer-Encoding</keyword>
+      <keyword>unformatted</keyword>
+      <keyword>Upgrade</keyword>
+      <keyword>warn</keyword>
+      <keyword>yes</keyword>
+    </context>
+
+    <context id="apache" class="no-spell-check">
+      <include>
+        <context ref="comment"/>
+        <context ref="decimal"/>
+        <context ref="double-quoted-string"/>
+        <context ref="escaped-character"/>
+        <context ref="back-reference"/>
+        <context ref="server-variable"/>
+        <context ref="directives"/>
+        <context ref="section-directive-open"/>
+        <context ref="section-directive-close"/>
+        <context ref="options"/>
+      </include>
+    </context>
+  </definitions>
+</language>

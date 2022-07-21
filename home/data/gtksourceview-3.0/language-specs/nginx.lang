@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language id="nginx" _name="Nginx conf file" version="2.0" _section="Other">
+  <metadata>
+    <property name="mimetypes">text/x-nginx-conf-file;application/x-nginx-conf-file</property>
+    <property name="globs">nginx.conf;default.conf;*gi_params;proxy_params;fastcgi*.conf;default</property>
+    <property name="line-comment-start">#</property>
+  </metadata>
+
+  <styles>
+    <style id="comment" _name="Comment" map-to="def:comment"/>
+    <style id="string" _name="String" map-to="def:string"/>
+    <style id="name" _name="Keyword" map-to="def:keyword"/>
+    <style id="variable" _name="Variable" map-to="def:type"/>
+    <style id="special-char"  _name="Escaped Character" map-to="def:special-char"/>
+    <style id="decimal" _name="Decimal" map-to="def:decimal"/>
+    <style id="float" _name="Floating point number" map-to="def:floating-point"/>
+    <style id="boolean" _name="Boolean Value" map-to="def:boolean"/>
+  </styles>
+
+  <definitions>
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
+      <start>#</start>
+    </context>
+    
+    <context id="block" end-parent="true" once-only="true" extend-parent="true">
+      <start>\{</start>
+      <end>\}</end>
+      <include>
+        <context ref="line-comment"/>
+        <context ref="directive"/>
+      </include>
+    </context>
+    
+    <context id="variable" style-ref="variable">
+      <match>\$\{?\w+\}?</match>
+    </context>
+    
+    <context id="string_dbl" style-ref="string" end-at-line-end="true" class="string" class-disabled="no-spell-check">
+      <start>"</start>
+      <end>"</end>
+      <include>
+        <context id="double_escape" style-ref="special-char">
+          <match>\\(?:"|$)</match>
+        </context>
+        <context ref="variable" />
+      </include>
+    </context>
+    
+    <context id="string" style-ref="string" end-at-line-end="true" class="string" class-disabled="no-spell-check">
+      <start>'</start>
+      <end>'</end>
+      <include>
+        <context id="single_escape" style-ref="special-char">
+          <match>\\(?:'|\$)</match>
+        </context>
+        <context ref="variable" />
+      </include>
+    </context>
+    
+    <context id="decimal" style-ref="decimal">
+      <match>-?(?:[1-9][0-9]*|0)(?![.eE])(?=\s|;|$)</match>
+    </context>
+
+    <context id="float" style-ref="float">
+      <match>-?(?:[1-9][0-9]*|0)(?:\.[0-9]+)?(?:[eE][+\-]?[0-9]+)?(?=\s|;|$)</match>
+    </context>
+    
+    <context id="boolean" style-ref="boolean">
+      <match>(?:on|off|true|false)</match>
+    </context>
+    
+    <context id="value" class="string" class-disabled="no-spell-check">
+      <match>[^\s;{}"']+</match>
+    </context>
+
+    <context id="parameters">
+      <include>
+        <context ref="line-comment"/>
+        <context ref="float" />
+        <context ref="decimal" />
+        <context ref="boolean" />
+        <context ref="variable" />
+        <context ref="value"/>
+        <context ref="string_dbl"/>
+        <context ref="string"/>
+        <context ref="block"/>
+      </include>
+    </context>
+    
+    <context id="directive">
+      <start>[\w./-]+</start>
+      <end>;</end>
+      <include>
+        <context sub-pattern="0" style-ref="name" where="start"/>
+        <context ref="parameters" />
+      </include>
+    </context>
+    
+    <context id="nginx" class="no-spell-check">
+      <include>
+        <context ref="line-comment"/>
+        <context ref="directive"/>
+      </include>
+    </context>
+    
+  </definitions>
+</language>
