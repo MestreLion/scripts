@@ -143,6 +143,22 @@ cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
 cmdcat()  { cat  "$(type -P "$1")" ; }
 cmdopen() { open "$(type -P "$1")" ; }
 
+manc() {
+	# inspired by https://www.howtogeek.com/683134/
+	local reset=$(tput sgr0)
+	local bold=$(tput bold)
+	# md=Bold: bold blue (4)
+	# us=Italic/Underline: bold bright yellow (8 + 1 + 2 = 11)
+	# so=Standout: bold bright white (8 + 4 + 2 + 1 = 15) on blue (4)
+	LESS_TERMCAP_md=$bold$(tput setaf 4) \
+	LESS_TERMCAP_me=$reset \
+	LESS_TERMCAP_us=$bold$(tput setaf 11) \
+	LESS_TERMCAP_ue=$reset \
+	LESS_TERMCAP_so=$bold$(tput setaf 15; tput setab 4) \
+	LESS_TERMCAP_se=$reset \
+	man "$@"
+}
+
 listening-ports() {
 	if exists netstat; then
 		sudo netstat -ltunp
@@ -330,11 +346,16 @@ declare -A c=(
 	 [RESET]="\[$(tput sgr0)\]"  # "\[\e[0m\]"
 )
 
+
+# Bare-bones
+# PS1='\[\e[0m\e[1m\e[35m\]\t \[\e[32m\]\u@\h \[\e[34m\]\w \[\e[33m\]\[\e[34m\]\$ \[\e[0m\]'
+# PS2='> '
+
 # Final product
-PS1=${c[RESET]}${c[BOLD]}\
+PS1="${c[RESET]}${c[BOLD]}"\
 "${c[PURPLE]}\t ${c[CYAN]}\$(_shell_level)${c[GREEN]}\u@\h ${c[BLUE]}\w "\
 "${c[RED]}\$(__git_ps1 '%s ')${c[YELLOW]}\$(_format_exitcode)${c[BLUE]}\\$ "\
-${c[RESET]}
+"${c[RESET]}"
 
 # >>>>> Settings <<<<<----------------------------------------------------------
 

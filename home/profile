@@ -70,19 +70,24 @@ append_path "$HOME/work/git-tools:$HOME/work/wine-tools:$HOME/work/xdg-tools"
 
 export PATH
 
-# Thousand separator in ls, df and du filesizes
-# could also use ls -l --block-size="'1" as alias (escaping the double-quotes)
-export BLOCK_SIZE="'1"
-
 # Locales
 export LANG="en_US.utf8"
 export LANGUAGE="en_US:en"
+export LC_ALL="en_US.utf8"
 export LC_MESSAGES="en_US.utf8"
 export LC_NUMERIC="pt_BR.utf8" # qt4 (and maybe others) unfortunately use this
 export LC_TIME="pt_BR.utf8"
 export LC_MONETARY="pt_BR.utf8"
 export LC_PAPER="pt_BR.utf8"
 export LC_MEASUREMENT="pt_BR.utf8"
+
+# Thousand separator in ls, df and du filesizes
+# could also use ls -l --block-size="'1" as alias (escaping the double-quotes)
+export BLOCK_SIZE="'1"
+
+# Customized `less` pager for man, to help with colors and percentages
+export MANPAGER='less -R -s -M +Gg'
+
 
 # Python ----------------------------------------------------------------------
 
