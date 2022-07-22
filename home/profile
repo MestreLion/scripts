@@ -85,8 +85,32 @@ export LC_MEASUREMENT="pt_BR.utf8"
 # could also use ls -l --block-size="'1" as alias (escaping the double-quotes)
 export BLOCK_SIZE="'1"
 
+
+# Man, Less, Colors -----------------------------------------------------------
+# Enable native colors and colorize bold and underline
+# https://felipec.wordpress.com/2021/06/05/adventures-with-man-color/
+
 # Customized `less` pager for man, to help with colors and percentages
-export MANPAGER='less -R -s -M +Gg'
+export MANPAGER='less --RAW-CONTROL-CHARS --LONG-PROMPT +Gg'
+# -r, --raw-control-chars: output "raw" control characters.
+# -R, --RAW-CONTROL-CHARS: same as -r but only for ANSI color escape sequences.
+# -s, --squeeze-blank-lines: Squeeze multiple blank lines.
+# -M, --LONG-PROMPT: prompt even more verbosely than more.
+# +Gg: read till EOF then go back, to enable percentage and total line count
+
+# Colorize bold and underline
+# --use-color and -D were added to less in v576 (2021-02-04),
+# See manc() for an older solution
+if (( "$(less --version | awk '{print $2; exit}')" >= 576 )); then
+	MANPAGER+=' --use-color --color=d+r --color=u+b'
+	MANROFFOPT='-c'
+fi
+
+# Enable man/groff native colors (for pages that actually use colors)
+# Might not be needed in Ubuntu 22.04. See /etc/groff/man.local and `man grotty`
+# Test with `man git` and `GROFF_SGR=1 man git` (blue URL links)
+# Breaks manc() if not used with GROFF_NO_SGR=1
+export GROFF_SGR=1
 
 
 # Python ----------------------------------------------------------------------

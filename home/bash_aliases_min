@@ -152,13 +152,15 @@ manc() {
 	local bold=$(tput bold)
 	# md=Bold: bold blue (4)
 	# us=Italic/Underline: bold bright yellow (8 + 1 + 2 = 11)
-	# so=Standout: bold bright white (8 + 4 + 2 + 1 = 15) on blue (4)
+	# so=Standout (search, prompt): black (0) on white (4 + 2 + 1 = 7)
+	# GROFF_NO_SGR=1 is needed if GROFF_SGR is set, see $SCRIPTS/home/profile
 	LESS_TERMCAP_md=$bold$(tput setaf 4) \
 	LESS_TERMCAP_me=$reset \
 	LESS_TERMCAP_us=$bold$(tput setaf 11) \
 	LESS_TERMCAP_ue=$reset \
-	LESS_TERMCAP_so=$bold$(tput setaf 15; tput setab 4) \
+	LESS_TERMCAP_so=$(tput setaf 0; tput setab 7) \
 	LESS_TERMCAP_se=$reset \
+	GROFF_NO_SGR=1 \
 	man "$@"
 }
 
