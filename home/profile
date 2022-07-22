@@ -106,6 +106,9 @@ if (( "$(less --version | awk '{print $2; exit}')" >= 576 )); then
 	MANROFFOPT='-c'
 fi
 
+# Alternative: use most (sudo apt install most) that auto-colorizes man pages
+#export MANPAGER='most'
+
 # Enable man/groff native colors (for pages that actually use colors)
 # Might not be needed in Ubuntu 22.04. See /etc/groff/man.local and `man grotty`
 # Test with `man git` and `GROFF_SGR=1 man git` (blue URL links)
