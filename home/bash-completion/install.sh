@@ -8,8 +8,8 @@ user_dir=${BASH_COMPLETION_USER_DIR:-${xdg_data}/bash-completion}
 comp_dir=${user_dir}/completions
 here=$(dirname -- "$(readlink -f -- "$0")")
 
+exists() { type "$@" &>/dev/null; }
 escape() { printf '%q' "$@"; }
-
 create_dirs() {
 	local path=$1
 	local mode=${2:-}
@@ -34,6 +34,8 @@ systemctl_aliases() {
 	local target=/usr/share/bash-completion/completions/systemctl
 	local cmds=(start stop restart reload)
 	cat > "$comp_dir"/status <<-EOF
+		# Created by ${here}/install.sh
+
 		# Alternative:
 		#source -- $(escape "$target") &>/dev/null || return 1
 		#complete -F _systemctl -- status ${cmds[@]}
@@ -46,3 +48,14 @@ systemctl_aliases() {
 	done
 } && systemctl_aliases
 
+argcomplete_aliases() {
+	local cmds=(
+		pipx
+	)
+	local cmd
+	for cmd in "${cmds[@]}"; do
+		if ! exists "$cmd"; then continue; fi
+		printf '# Created by %s/install.sh\n' "$here" |
+		cat - <(register-python-argcomplete "$cmd") > "$comp_dir"/"$cmd"
+	done
+} && exists register-python-argcomplete && argcomplete_aliases

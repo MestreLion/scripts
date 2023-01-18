@@ -14,11 +14,12 @@
 # one file per command to be completed
 
 # Lazy-loading directories are:
-# - /usr/share/bash-completion/completions for system-wide completions
-# - BASH_COMPLETION_USER_DIR, by default XDG_DATA_HOME/bash-completion/completions,
-#   which by default evaluates to ~/.local/share/bash-completion/completions,
-#   for user-defined completions
+# - system-wide completions: /usr/share/bash-completion/completions
+# - user-defined completions: BASH_COMPLETION_USER_DIR/completions, where
+#   BASH_COMPLETION_USER_DIR is by default XDG_DATA_HOME/bash-completion,
+#   so by default it evaluates to ~/.local/share/bash-completion/completions
 
+# Moved to install.sh
 #create_systemctl_aliases() {
 #	local target=/usr/share/bash-completion/completions/systemctl
 #	local comps=${xdg_data}/bash-completion/completions
@@ -27,8 +28,6 @@
 #	ln -s -- status "$comps"/"$cmd"
 #	local cmd; }
 #create_systemctl_aliases; unset create_systemctl_aliases
-
-
 
 # copies a completion definition for a command to other command(s)
 complete-copy() {
