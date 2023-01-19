@@ -204,3 +204,19 @@ msg_gui() {
 		printf "%b" "$msg" >&2
 	fi
 }
+
+# see bash_aliases_min for an extended 3-functions version
+install_packages() {
+	# Avoid marking installed packages as manual by only installing missing ones
+	local pkg=
+	local pkgs=()
+	local ok
+	for pkg in "$@"; do
+		# shellcheck disable=SC1083
+		ok=$(dpkg-query --showformat=\${Version} --show "$pkg" 2>/dev/null || true)
+		if [[ -z "$ok" ]]; then pkgs+=( "$pkg" ); fi
+	done
+	if (("${#pkgs[@]}")); then
+		sudo apt install "${pkgs[@]}"
+	fi
+}
