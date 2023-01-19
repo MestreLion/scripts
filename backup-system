@@ -11,7 +11,9 @@
 #
 # Alternatives:
 #   Simple, single-dir backup:
-#	rsync -a "$source"/ "$target"/
+#	source=/media/"$USER"/a
+#	target=/media/"$USER"/b
+#	rsync -a --info=progress2 --no-inc-recursive "${source%\/}"/ "${target%\/}"/
 #   tar backup:
 #	cd "$source" && sudo tar --one-file-system -cvpzf "$target"/backup.tar.xz
 # ------------------------------------------------------------------------------
