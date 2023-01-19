@@ -101,33 +101,38 @@ newopen() {
 }
 
 # Profiling:
-# python3 -m cProfile -o myprog.profile ./myprog.py ...
+# python3 -m cProfile -o profile.profile ./myprog.py ...
 #
 # pip3 install --user gprof2dot
-# gprof2dot -f pstats myprog.profile -o myprog.dot
-# xdg-open myprog.dot  # requires GraphViz
+# gprof2dot -f pstats profile.profile -o profile.dot
+# xdg-open profile.dot  # requires GraphViz
 #
 # pip3 install --user snakeviz
 # snakeviz myprog.profile  # outputs lots of errors, but URL provided works
 
 pyprofile() {
-	(($#)) || { echo "Usage: pyprofile <COMMAND> [ARGS...]" >&2; return 1; }
-	python -m cProfile --sort=time "$@" |
-	{ awk -v l=$((LINES-10)) '/ncalls  tottime/{t=l}t==1{exit}t>0{t--}{print}'
-	cat - >/dev/null; }
-}
-pyprofile3() {
 	(($#)) || { echo "Usage: pyprofile3 <COMMAND> [ARGS...]" >&2; return 1; }
-	python3 -m cProfile --sort=time "$@" |
+	# Use PYTHON or the system python3 (`-m` is available since Python 3.7)
+	local python=${PYTHON:-python3}
+	"$python" -m cProfile --sort=time "$@" |
 	{ awk -v l=$((LINES-10)) '/ncalls  tottime/{t=l}t==1{exit}t>0{t--}{print}'
 	cat - >/dev/null; }
 }
 
+pyprofile-view() {
+	(($#)) || { echo "Usage: pyprofile3-view <COMMAND> [ARGS...]" >&2; return 1; }
+	local python=${PYTHON:-python3}
+	local dotfile=pyprofile.$(timestamp).dot
+	"$python" -m cProfile -o pyprofile.pstats "$@" &&
+	gprof2dot -f pstats pyprofile.pstats -o "$dotfile" &&
+	xdg-open "$dotfile"
+}
+
 venv() {
 	local vdir=${1:-venv}
-	local python=$(compgen -c python | grep -P '^python\d[.\d]*$' | sort -uV)
+	local python=$(compgen -c python | grep -P '^python\d[.\d]*$' | sort -ruV | head -n1)
 	local usage="Creates a Python Virtual Environment, activate and upgrade it"
-	usage+="\nUsage: mkvenv ENV_DIR"
+	usage+="\nUsage: venv ENV_DIR"
 	if [[ "$vdir" =~ ^(|-h|--help)$ ]]; then echo -e "$usage" >&2; return 1; fi
 	"$python" -m venv "$vdir" || {
 		echo "Must install dependencies: sudo apt install python3-{pip,venv}" >&2
