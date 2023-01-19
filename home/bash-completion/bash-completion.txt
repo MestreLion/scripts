@@ -1,0 +1,13 @@
+If you're reading this as a symlink to ~/.local/share/bash-completion,
+this is a friendly reminder that you customized your BASH_COMPLETION_USER_DIR,
+most likely in ~/.profile, so this path is no longer used by bash completions.
+
+The custom path for lazy completions in this environment is:
+$BASH_COMPLETION_USER_DIR/completions
+
+# -----------------------------------------------------------------------------
+
+If instead you want to symlink this file to the default BASH_COMPLETION_USER_DIR
+path to serve as the future friendly reminder seen above, run this command from
+the same directory as this file:
+ln -srT -- "$(pwd)"/bash-completion.txt "${XDG_DATA_HOME:-$HOME/.local/share}"/bash-completion
