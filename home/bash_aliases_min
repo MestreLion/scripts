@@ -78,7 +78,7 @@ xdg_create byobu "$BYOBU_CONFIG_DIR"
 
 # Bash completion
 # see ./bash-completion/bash-completion
-export BASH_COMPLETION_USER_DIR=${BASH_COMPLETION_USER_DIR:-${xdg_data}/bash-completion}
+export BASH_COMPLETION_USER_DIR=${BASH_COMPLETION_USER_DIR:-${xdg_data}/bash-completion}  # default
 export BASH_COMPLETION_USER_FILE=${BASH_COMPLETION_USER_DIR}/bash_completion  # ~/.bash_completion
 
 unset xdg_create
@@ -112,6 +112,7 @@ alias rot13="tr 'A-Za-z' 'N-ZA-Mn-za-m'"
 alias json='python3 -m json.tool'  # 'jq' is a beter alternative, if installed
 alias why='apt rdepends --installed'  # can also be 'aptitude why'
 alias dmesg="dmesg --follow"  # welcome 2021!
+alias windows-serial="strings /sys/firmware/acpi/tables/MSDM"
 
 # healthchecks.io
 alias hc-open='open "https://healthchecks.io"'
@@ -221,6 +222,7 @@ apt-list-manual() {
 	printf '\t%s\n' "${msg[@]}" >&2
 }
 
+# see references/commonlib for a standalone version
 install_packages() {
 	# Avoid marking installed packages as manual by only installing missing ones
 	local pkg=
@@ -293,7 +295,7 @@ _comp_pkg_names() {
 complete -c where cmdlist cmdcat cmdopen        # commands (executables in $PATH)
 complete -F _comp_pkg_names ubuntu-package why  # packages in repositories
 complete-copy ls ll la
-complete-copy dwww-man mand package
+complete-copy dwww-man mand manc
 
 # >>>>> PS1 customization <<<<<-------------------------------------------------
 # http://bashrcgenerator.com/
