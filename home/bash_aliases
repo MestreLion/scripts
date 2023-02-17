@@ -18,6 +18,7 @@ alias .....="cd ../../../.."
 alias package="dpkg-www"  # requires dpkg-www
 alias ca="CA.pl"
 alias apt-add-ppa="apt-manage"  # from repolib: https://github.com/pop-os/repolib
+alias rogue-ssh="roguepc -r ssh rogue &"
 #alias have="exists"
 
 args() { local i=0; while (($#)); do echo "$((++i))=$1"; shift; done; }
