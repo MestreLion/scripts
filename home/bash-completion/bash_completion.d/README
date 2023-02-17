@@ -1,2 +1,3 @@
-User counterpart of /etc/bash_completion.d
-Place here any personal bash completion files
+User counterpart of /etc/bash_completion.d, for eagerly-loaded completions
+Place any personal bash completion files here
+See ../bash_completion file for more info

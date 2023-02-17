@@ -48,6 +48,7 @@ systemctl_aliases() {
 	done
 } && systemctl_aliases
 
+# TODO: use an associative array to unify pipx and pip installers
 argcomplete_aliases() {
 	local cmds=(
 		pipx
@@ -58,4 +59,11 @@ argcomplete_aliases() {
 		printf '# Created by %s/install.sh\n' "$here" |
 		cat - <(register-python-argcomplete "$cmd") > "$comp_dir"/"$cmd"
 	done
-} && exists register-python-argcomplete && argcomplete_aliases
+}
+if exists register-python-argcomplete; then argcomplete_aliases; fi
+
+# TODO: use ( $(compgen -c pip | grep -P '^pip\d[.\d]*$' | sort -ruV) ) for all pip variants
+if exists pip; then
+	printf '# Created by %s/install.sh\n' "$here" |
+	cat - <(pip completion --bash) > "$comp_dir"/pip
+fi
