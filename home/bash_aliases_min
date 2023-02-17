@@ -386,7 +386,7 @@ paths=(
 for path in "${paths[@]}"; do
 	if [[ -r "$path" ]]; then source "$path"; fi
 done
-unset paths paths
+unset paths path
 
 # >>>>> Cleanup <<<<<------------------------------------------------------------
 
@@ -397,7 +397,7 @@ unset color c
 
 # >>>>> Startup commands <<<<<--------------------------------------------------
 
-if !((BASH_STARTUP)); then unset BASH_STARTUP; return; fi; unset BASH_STARTUP
+if ! ((BASH_STARTUP)); then unset BASH_STARTUP; return; fi; unset BASH_STARTUP
 
 # So useful!
 if exists neofetch; then neofetch; fi
