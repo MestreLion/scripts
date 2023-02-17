@@ -1,10 +1,9 @@
+# Do NOT add common artifacts here, those belong to .gitignore!
+# Add personal files only, such as IDE settings
+
 # Eclipse and Pydev (.pyproject)
 .*project
 .settings/
-
-# Python pre-compiled files
-__pycache__
-*.pyc
 
 # PyCharm IDE
 .idea/
