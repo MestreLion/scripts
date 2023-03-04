@@ -1,11 +1,22 @@
 #!/bin/bash
-size=${1:-1G}
+#
+# https://www.guyrutenberg.com/2020/08/23/quickly-generate-lots-of-random-data/
+# https://superuser.com/a/793003/68321
+#
+# AES-128 CTR chosen as AES is Hardware-accelerated on most modern CPUs (~2015)
+#
+# Check algoritms performance with `openssl speed [-evp] [ALGO...]`
+# 14.30GiB/s: pv -B 1M /dev/zero > /dev/null
+#  4.15GiB/s: pv -B 1M /dev/zero | cat > /dev/null
+#
+
+size=${1:-10G}
 benchmark=${2:-dd}
 
 # ---------------------
 
 benchmark_pv() {
-	pv -s "$size" -S > /dev/null
+	pv -B 4M -Ss "$size" > /dev/null
 }
 
 benchmark_dd() {
@@ -33,7 +44,8 @@ openssl_ciphers() {
 }
 
 openssl_fast_ciphers() {
-	printf '%s\n' -aes-{128,192,256}-{ctr,ecb}
+	# AES ECB is faster but not suitable for most needs
+	printf '%s\n' aes-{128,192,256}-ctr chacha20
 }
 
 opensslenc() {
@@ -50,13 +62,16 @@ openssl_none() {
 }
 
 openssl_fastest() {
-	opensslenc -aes-128-ecb  # ~1,85GiB/s
+	opensslenc -aes-128-ctr  # ~1,84GiB/s (ecb is ~1,88GiB/s)
 }
 
 
 # ---------------------
 
 benchmark=benchmark_$benchmark
+
+message "Theoretical limit: /dev/zero with no pipes"
+"$benchmark" < /dev/zero
 
 message "Reference: /dev/zero"
 devzero | "$benchmark"
@@ -70,5 +85,5 @@ openssl_none | "$benchmark"
 
 while IFS= read -r cipher; do
 	message "OpenSSL $cipher"
-	opensslenc "$cipher" | "$benchmark"
+	opensslenc -"$cipher" | "$benchmark"
 done < <(openssl_fast_ciphers)
