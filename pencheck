@@ -24,7 +24,7 @@ mydir=$(dirname "$(readlink -f "$0")")
 dirbase=$myname
 checksum=sha256sum  # must have --binary, --check and --ignore-missing
 verify=${myname}-verify
-checkfile=${myname}-sha256sum.txt
+checkfile=${myname}-${checksum}.txt
 
 #------------------------------------------------------------------------------
 
@@ -119,8 +119,8 @@ usage() {
 	exit 0
 }
 
-files=()
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
+args=()
 while (($#)); do
 	case "$1" in
 	-q|--quiet      ) verbose=0;;
@@ -134,22 +134,24 @@ while (($#)); do
 	--dirbasename=* ) dirbase=${1#*=};;
 	--) shift; break;;
 	-*) invalid "$1";;
-	* ) files+=( "$1" );;
+	* ) args+=( "$1" );;
 	esac
 	shift || break
 done
-files+=("$@")
+args+=("$@")
 
 #------------------------------------------------------------------------------
 
-if ((${#files[@]} < 1)); then missing "MOUNTDIR"; fi
-if ((${#files[@]} > 1)); then invalid "${files[1]}" argument; fi
+if ((${#args[@]} < 1)); then missing "MOUNTDIR"; fi
+if ((${#args[@]} > 1)); then invalid "${args[1]}" argument; fi
 
-mountdir=${files[0]%/}
+mountdir=${args[0]%/}
 [[ -d "$mountdir" ]] || argerr "MOUNTDIR is not a valid directory: $mountdir"
 
 dirbase=${dirbase%/}  # will also consider '/' as missing, which is sensible
 [[ "$dirbase" ]] || missing 'DIR' '--dirbase'
+
+outdir=$mountdir/$dirbase
 
 # integer automatically checks for missing
 integer "$count" '--count'
@@ -185,33 +187,34 @@ trap 'rm -rf -- "$tmpdir"' EXIT
 freespace "$tmpdir" "$totalsize"
 
 workdir=$tmpdir/$dirbase
+script=$workdir/$verify
 mkdir --parents -- "$workdir"
-cd -- "$workdir"
 for i in $(seq --equal-width "$count"); do
-	garbage "$size" > ./"$myname"-"$i".bin
+	garbage "$size" > "$workdir"/"$myname"-"$i".bin
 done
-"$checksum" --binary *.bin > ./"$checkfile"
-cat > ./"$verify" <<-EOF
+cd -- "$workdir"
+"$checksum" --binary *.bin > "$workdir"/"$checkfile"
+cat > "$script" <<-EOF
 	#!/bin/sh
 	cd -- "\$(dirname "\$(readlink -f "\$0")")"
 	$checksum --check --ignore-missing "\$@" -- ./$checkfile
 EOF
-chmod +x -- ./"$verify"
+chmod +x -- "$script"
 
 message "Verify test files"
-sync -- ./*
-./"$verify" "${checksumopts[@]}"
+sync -- "$workdir"/*
+"$script" "${checksumopts[@]}"
 cd - &>/dev/null
 
-message "Transfer test data to: $mountdir/$dirbase"
+message "Transfer test data to: $outdir"
 # test again, just in case $mountdir is the same filesystem as $tmpdir
 freespace "$mountdir" "$totalsize"
 # If only Debian's rsync had --drop-cache :-(
-rsync "${rsyncopts[@]}" --recursive -- "$workdir" "$mountdir"
+rsync "${rsyncopts[@]}" --recursive -- "$workdir" "$mountdir"  # NOT $outdir!
 
 message "Wait for files to be actually written on device"
-sync --file-system -- "$mountdir"/"$dirbase"/*  # intentionally sync whole fs
+sync --file-system -- "$outdir"/*  # intentionally sync whole fs
 
 message "Test storage"
 # Some filesystems may be automounted as noexec (e.g. FAT), hence invoking sh
-sh "$mountdir"/"$dirbase"/"$verify" "${checksumopts[@]}"
+sh "$outdir"/"$verify" "${checksumopts[@]}"
