@@ -47,10 +47,6 @@ load-group() {
 	exec sg "$1" newgrp "$(id -gn)"
 } && complete -W "$(groups "${USER:-$(id -un)}" | cut -d: -f2-)" load-group
 
-#alias find-newer='find . -type f -newermt'  # '10 days ago'
-find-newer(){ find "${2:-.}" -type f -newermt "$1" -exec ls -lrt "{}" +; }
-find-orphaned(){ find "${1:-.}" -nouser -or -nogroup; }
-
 which()   { builtin type -P "$@" ; }
 sprunge() { local l=${2-bash}; echo $(curl -sSF "sprunge=<${1:--}" http://sprunge.us)${l:+?$l}${3:+#n-$3}; }
 
