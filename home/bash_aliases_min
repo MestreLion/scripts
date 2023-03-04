@@ -113,6 +113,8 @@ alias json='python3 -m json.tool'  # 'jq' is a beter alternative, if installed
 alias why='apt rdepends --installed'  # can also be 'aptitude why'
 alias dmesg="dmesg --follow"  # welcome 2021!
 alias windows-serial="strings /sys/firmware/acpi/tables/MSDM"
+alias ntfs-fix-perms-owner="chmod -R a=r,u+w,a+X"
+alias ntfs-fix-perms-group="chmod -R a=rw,o-w,a+X"
 
 # healthchecks.io
 alias hc-open='open "https://healthchecks.io"'
@@ -148,12 +150,21 @@ cmdcat()  { cat  "$(type -P "$1")" ; }
 cmdopen() { open "$(type -P "$1")" ; }
 
 find-orphaned-paths(){ find "${@:-.}" -nouser -or -nogroup; }
+find-broken-symlinks(){ find "${@:-.}" -xtype l; }  # https://unix.stackexchange.com/a/38691/4919
 find-newer(){
 	if [[ -z "${1:-}" ]]; then
 		echo "Usage: find-newer DATE_SPEC [PATH]  # '10 days ago'" >&2
 		return 1
 	fi
 	find "${2:-.}" -type f -newermt "$1" -exec ls -lrt "{}" +;
+}
+
+delete-empty-directories() { find "${@:-.}" -type d -empty -delete; }
+delete-duplicate-files() {
+	if ! exists rdfind; then sudo apt install rdfind; fi
+	rdfind -deleteduplicates true -makeresultsfile false "$@" &&
+	if (( $# > 1 )); then shift; fi &&
+	delete-empty-directories "$@"
 }
 
 manc() {
