@@ -6,9 +6,12 @@
 # AES-128 CTR chosen as AES is Hardware-accelerated on most modern CPUs (~2015)
 #
 # Check algoritms performance with `openssl speed [-evp] [ALGO...]`
-# 14.30GiB/s: pv -B 1M /dev/zero > /dev/null
+# 18.20GiB/s: pv -B 1M /dev/zero > /dev/null (19.5 with dd)
 #  4.15GiB/s: pv -B 1M /dev/zero | cat > /dev/null
-#
+#  3.37GiB/s: OpenSSL none
+#  2.88GiB/s: OpenSSL aes-128-ctr
+#  2.57GiB/s: OpenSSL aes-256-ctr
+#  1.12GiB/s: OpenSSL chacha20
 
 size=${1:-10G}
 benchmark=${2:-dd}
@@ -16,25 +19,15 @@ benchmark=${2:-dd}
 # ---------------------
 
 benchmark_pv() {
-	pv -B 4M -Ss "$size" > /dev/null
+	pv -B 1M -Ss "$size" "${1:-/dev/zero}"
 }
 
 benchmark_dd() {
-	dd of=/dev/null bs=1M iflag=fullblock,count_bytes count="$size" status=progress
+	dd bs=1M iflag=fullblock,count_bytes count="$size" status=progress if="${1:-/dev/zero}"
 }
 
 message() {
 	printf '\n%s\n' "$@"
-}
-
-# ---------------------
-
-devzero() {
-	cat /dev/zero
-}
-
-devurandom() {
-	cat /dev/urandom
 }
 
 # ---------------------
@@ -50,19 +43,16 @@ openssl_fast_ciphers() {
 
 opensslenc() {
 	openssl enc "$@" -pbkdf2 \
-	  -pass pass:"$(dd if=/dev/urandom bs=128 count=1 status=none | base64)" \
-	  < /dev/zero \
-	  2> /dev/null  # avoid 'error writing file' when benchmark closes pipe
-	# can also be fixed with `head -c "$size" /dev/zero | openssl ...`,
-	# at a ~10% performance hit
+	  -pass pass:"$(dd if=/dev/urandom bs=16 count=1 status=none | base64)" \
+	  > /dev/null
 }
 
 openssl_none() {
-	opensslenc -none
+	openssl enc -none > /dev/null
 }
 
 openssl_fastest() {
-	opensslenc -aes-128-ctr  # ~1,84GiB/s (ecb is ~1,88GiB/s)
+	opensslenc -aes-128-ctr  # ~2,85GiB/s (ecb is ~2,88GiB/s)
 }
 
 
@@ -70,20 +60,20 @@ openssl_fastest() {
 
 benchmark=benchmark_$benchmark
 
-message "Theoretical limit: /dev/zero with no pipes"
-"$benchmark" < /dev/zero
+message "Theoretical CPU/RAM limit: /dev/zero with no pipes"
+"$benchmark" >/dev/null
 
-message "Reference: /dev/zero"
-devzero | "$benchmark"
-
-# Too slow!
-#message "/dev/urandom"
-#devurandom | "$benchmark"
+message "Reference: /dev/zero | cat"
+"$benchmark" | cat >/dev/null
 
 message "OpenSSL none"
-openssl_none | "$benchmark"
+"$benchmark" | openssl_none
 
 while IFS= read -r cipher; do
 	message "OpenSSL $cipher"
-	opensslenc -"$cipher" | "$benchmark"
-done < <(openssl_fast_ciphers)
+	"$benchmark" | opensslenc -"$cipher" >/dev/null
+done < <(openssl_fast_ciphers)  # or openssl_ciphers for all
+
+# Too slow!
+#message "/dev/urandom"
+#"$benchmark" /dev/urandom
