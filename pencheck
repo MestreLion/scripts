@@ -87,7 +87,7 @@ usage() {
 
 	Options:
 	  -h|--help    - show this page.
-	  -v|--verbose - print more details about what is being done.
+	  -q|--quiet   - suppress informative messages.
 
 	  -c|--count NUM       - Number of test files. [Default: $count]
 	  -s|--size SIZE       - Size of each test file. [Default: $size]
@@ -119,7 +119,11 @@ usage() {
 	exit 0
 }
 
-for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage ; done
+# Pre-parse for -h|--help, ignoring if after '--'
+for arg in "$@"; do
+	if [[ "$arg" == '--' ]]; then break; fi
+	if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then usage; fi
+done
 args=()
 while (($#)); do
 	case "$1" in
@@ -171,11 +175,13 @@ if ((verbose)); then
 	rsyncopts=(--info=progress2)
 	ddopts=(status=progress)
 	pvopts=()
+	exec 3>&1
 else
 	checksumopts=(--quiet)
 	rsyncopts=()
 	ddopts=(status=none)
 	pvopts=(--quiet)
+	exec 3>/dev/null
 fi
 
 #------------------------------------------------------------------------------
@@ -192,8 +198,10 @@ mkdir --parents -- "$workdir"
 for i in $(seq --equal-width "$count"); do
 	garbage "$size" > "$workdir"/"$myname"-"$i".bin
 done
+
+message "Calculate test files checksum using '$checksum'"
 cd -- "$workdir"
-"$checksum" --binary *.bin > "$workdir"/"$checkfile"
+"$checksum" --binary *.bin | tee "$workdir"/"$checkfile" >&3
 cat > "$script" <<-EOF
 	#!/bin/sh
 	cd -- "\$(dirname "\$(readlink -f "\$0")")"
@@ -203,12 +211,15 @@ chmod +x -- "$script"
 
 message "Verify test files"
 sync -- "$workdir"/*
-"$script" "${checksumopts[@]}"
+sh "$script" "${checksumopts[@]}"
 cd - &>/dev/null
 
 message "Transfer test data to: $outdir"
 # test again, just in case $mountdir is the same filesystem as $tmpdir
 freespace "$mountdir" "$totalsize"
+# Copy script and checksum file first
+mkdir --parents -- "$outdir"
+cp -t "$outdir" -- "$script" "$workdir"/"$checkfile"
 # If only Debian's rsync had --drop-cache :-(
 rsync "${rsyncopts[@]}" --recursive -- "$workdir" "$mountdir"  # NOT $outdir!
 
