@@ -21,8 +21,11 @@ verbose=1
 myname=${0##*/}
 mydir=$(dirname "$(readlink -f "$0")")
 
+# checksum command must have --binary, --check and --ignore-missing
+# TODO: use xxh*sum when (and if) it adds --ignore-missing
+# https://github.com/Cyan4973/xxHash/issues/811
+checksum=md5sum
 dirbase=$myname
-checksum=sha256sum  # must have --binary, --check and --ignore-missing
 verify=${myname}-verify
 checkfile=${myname}-${checksum}.txt
 
@@ -48,14 +51,18 @@ iec()     { si_iec "$1" iec-i; }
 bytesfmt(){ numfmt --grouping "$@"; }
 sizemsg() { echo "$(${2:-si} $1) ${3:+$3 }($(bytesfmt $1) bytes)"; }
 
+# An extremely fast way of generating pseudo-random garbage test data
+# Use a fast openssl algo to encrypt /dev/zero, MUCH faster than /dev/urandom or shred
+# See also ./reference/randspeed
 garbage() {
+	# User-defined --block-size does not apply here when dealing with /dev/zero
 	if exists pv; then
-		pv "${pvopts[@]}" --buffer-size "$bs" --stop-at-size --size "$size"
+		pv "${pvopts[@]}" --buffer-size 1M --stop-at-size --size "$size"
 	else
-		dd "${ddopts[@]}" bs="$bs" iflag=count_bytes,fullblock count="$size"
+		dd "${ddopts[@]}" bs=1M iflag=count_bytes,fullblock count="$size"
 	fi < /dev/zero |
 	openssl enc -aes-128-ctr -pbkdf2 -nosalt -pass \
-		"pass:$(dd if=/dev/urandom bs=128 count=1 2>/dev/null | base64)"
+		"pass:$(dd status=none if=/dev/urandom bs=16 count=1 | base64)"
 }
 freespace() {
 	local path=$1
