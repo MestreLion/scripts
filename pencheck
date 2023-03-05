@@ -26,7 +26,7 @@ mydir=$(dirname "$(readlink -f "$0")")
 # https://github.com/Cyan4973/xxHash/issues/811
 checksum=md5sum
 dirbase=$myname
-verify=${myname}-verify
+verify=${myname}-verify.sh
 checkfile=${myname}-${checksum}.txt
 
 #------------------------------------------------------------------------------
@@ -211,6 +211,9 @@ cd -- "$workdir"
 "$checksum" --binary *.bin | tee "$workdir"/"$checkfile" >&3
 cat > "$script" <<-EOF
 	#!/bin/sh
+	# Check data consistency of test files
+	# Created by pencheck: https://github.com/MestreLion/scripts
+	echo "Checking data consistency of test files, this might take a while..."
 	cd -- "\$(dirname "\$(readlink -f "\$0")")"
 	$checksum --check --ignore-missing "\$@" -- ./$checkfile
 EOF
@@ -226,7 +229,7 @@ message "Transfer test data to: $outdir"
 freespace "$mountdir" "$totalsize"
 # Copy script and checksum file first
 mkdir --parents -- "$outdir"
-cp -t "$outdir" -- "$script" "$workdir"/"$checkfile"
+mv -t "$outdir" -- "$script" "$workdir"/"$checkfile"
 # If only Debian's rsync had --drop-cache :-(
 rsync "${rsyncopts[@]}" --recursive -- "$workdir" "$mountdir"  # NOT $outdir!
 
