@@ -115,6 +115,7 @@ alias dmesg="dmesg --follow"  # welcome 2021!
 alias windows-serial="strings /sys/firmware/acpi/tables/MSDM"
 alias ntfs-fix-perms-owner="chmod -R a=r,u+w,a+X"
 alias ntfs-fix-perms-group="chmod -R a=rw,o-w,a+X"
+alias 7z-ultra="7z a -mx"  # requires p7zip
 
 # healthchecks.io
 alias hc-open='open "https://healthchecks.io"'
@@ -272,6 +273,76 @@ dump-system-data() {
 	try crontab -l                            > "$target"/crontab.txt
 	apt-list-manual "$2"                      > "$target"/apt-packages.txt
 	try sudo fdisk --list                     > "$target"/fdisk.txt
+}
+
+backup-simple() {
+	local usage="Usage: backup-simple [-h|--help] [RSYNC_OPTS] SOURCE_DIR TARGET_DIR"
+	local arg
+	local opts=()
+	local args=()
+	# Pre-parse for -h|--help, ignoring if after '--'
+	for arg in "$@"; do
+		if [[ "$arg" == '--' ]]; then break; fi
+		if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
+			printf "Simple backup with rsync\n${usage}\n" >&2; return
+		fi
+	done
+	while (($#)); do
+		case "$1" in
+		--) shift; break;;
+		-*) opts+=( "$1" );;
+		* ) args+=( "$1" );;
+		esac
+		shift || break
+	done
+	args+=( "$@" )
+	if (( ${#args[@]} != 2 )) || [[ -z "${args[0]}" ]] || [[ -z "${args[1]}" ]]; then
+		printf "error: invalid or missing arguments\n${usage}\n" >&2
+		return 1
+	fi
+	local source=${args[0]}
+	local target=${args[1]}
+	#-a, --archive            archive mode; equals -rlptgoD (no -H,-A,-X)
+	#	-r, --recursive       recurse into directories
+	#	-l, --links           copy symlinks as symlinks
+	#	-p, --perms           preserve permissions
+	#	-t, --times           preserve modification times
+	#	-g, --group           preserve group
+	#	-o, --owner           preserve owner (super-user only)
+	#	-D                    same as --devices --specials
+	#		--devices         preserve device files (super-user only)
+	#		--specials        preserve special files
+	#	not
+	#	-H, --hard-links      preserve hard links
+	#	-A, --acls            preserve ACLs (implies -p)
+	#	-X, --xattrs          preserve extended attributes
+	#-x, --one-file-system    don't cross filesystem boundaries
+	#-S, --sparse             handle sparse files efficiently
+	# --no-inc-recursive      disable the incremental recursion mode
+	#                         (for full dir scanning instead of incremental)
+	# --info=progress2        outputs statistics based on the whole transfer
+	#                         (must not use --verbose or flags that output filenames)
+	#
+	# Other options:
+	#-v, --verbose            increase verbosity
+	#-h, --human-readable     output numbers in a human-readable format
+	#--numeric-ids            don't map uid/gid values by user/group name
+	#--inplace                update destination files in-place (conflicts with --sparse)
+	#--progress               show progress during transfer (implies --verbose)
+	#	--info=flist2,name,progress
+	local cmd=(
+		rsync -axS --info=progress2 --no-inc-recursive
+		--exclude='lost+found'
+		#--exclude='.Trash*'
+		--exclude='System Volume Information'
+		#--exclude='RECYCLER'
+		#--exclude='$Recycle.Bin'
+		"${opts[@]}"
+		"${source%\/}"/
+		"${target%\/}"/
+	)
+	printf '%q ' "${cmd[@]}"; printf '\n'
+	"${cmd[@]}"
 }
 
 # 1337!
