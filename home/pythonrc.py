@@ -34,8 +34,9 @@ def write_history(path):
     except OSError:
         pass
 
-if sys.version_info[0] < 3:
-    FileNotFoundError = IOError
+
+# noinspection PyShadowingBuiltins
+FileNotFoundError = IOError if sys.version_info[0] < 3 else FileNotFoundError
 
 history = os.path.join(os.environ.get('XDG_CACHE_HOME') or
                        os.path.expanduser('~/.cache'),
