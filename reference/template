@@ -66,11 +66,10 @@ integer() { [[ "$1" ]] || missing "${3:-NUM}" "${2:-}"; [[ "$1" != *[!0-9]* ]] |
             argerr "${2:+${3:-NUM} argument in $2 is }not an integer: $1"; }
 sizefmt() { [[ "$1" ]] || missing "${3:-SIZE}" "${2:-}";
             echo $(numfmt --from=auto -- "$1" || fatal); }
-exists()  { type "$@" >/dev/null 2>&1; }
 si()      { numfmt --to=si --suffix 'B' "$@"; }
 relpath() { python3 -c "import os,sys;print(os.path.relpath(*sys.argv[1:3]))" "$@"; }
 cmdpath() { type -P "$1"; }
-ppath()   { printf '%q' "$@"; }
+escape()  { printf '%q' "$@"; }  # perhaps change to $1, as $@ will not work as expected
 skip()    { i=${2:-$file}; message "skipping${i:+ $i}${1:+: $1}"; continue ; }
 quit()    { message "Goodbye!"; exit; }
 require() {
