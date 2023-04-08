@@ -103,7 +103,7 @@ alias fstab="sudo nano /etc/fstab"
 alias open="xdg-open"
 alias trash="trash-put"  # requires trash-cli. Do NOT alias rm, affects functions
 alias mand="dwww-man"    # requires dwww
-alias dd-progress="dd status=progress bs=1M iflag=count_bytes"
+alias dd-progress="dd status=progress bs=1M iflag=fullblock,count_bytes"
 alias dd-nocache="dd-progress oflag=nocache,sync"
 alias dfd='df -H -x tmpfs -x squashfs -x devtmpfs'
 alias duh='du -sbh --si'
