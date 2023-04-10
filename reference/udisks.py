@@ -1,4 +1,5 @@
 # Listing Drives using UDisks
+# https://github.com/storaged-project/udisks/issues/747
 # http://storaged.org/doc/udisks2-api/latest/
 # 2 approaches:
 # - Call UDisks daemon directly via DBus calls
