@@ -1,7 +1,7 @@
 # Minimal quality-of-life aliases and settings, including PS1
 # Save as ~/.bash_aliases
 #	target=$(find "$HOME" -name bash_aliases_min)
-#	ln -s "${target#"$HOME"/} "$HOME"/.bash_aliases
+#	ln -s "${target#"$HOME"/}" "$HOME"/.bash_aliases
 # ------------------------------------------------------------------------------
 
 # For thousand separator in ls and friends
