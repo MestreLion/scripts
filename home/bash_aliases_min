@@ -1,7 +1,16 @@
 # Minimal quality-of-life aliases and settings, including PS1
-# Save as ~/.bash_aliases
-#	target=$(find "$HOME" -name bash_aliases_min)
-#	ln -s "${target#"$HOME"/}" "$HOME"/.bash_aliases
+# https://github.com/MestreLion/scripts/home/bash_aliases_min
+#
+# Save or symlink to ~/.bash_aliases:
+# - If you cloned the repository:
+#	ln -vTfrs -- "$(find ~ -name bash_aliases_min)" ~/.bash_aliases
+# - If you just want this single file:
+#	xdg=${XDG_CONFIG_HOME:-$HOME/.config}; file=$xdg/bash/bash_aliases_min
+#	mkdir -vp -m 0700 -- "$xdg"; mkdir -vp -- "${file%/*}"
+#	url=https://raw.githubusercontent.com/MestreLion/scripts/main/home/bash_aliases_min
+#	wget --hsts-file=$xdg/wget-hsts -O "$file" -- "$url"
+#	ln -vTfrs -- "$file" "$HOME"/.bash_aliases
+#	unset -- xdg file url
 # ------------------------------------------------------------------------------
 
 # For thousand separator in ls and friends
@@ -77,7 +86,8 @@ BYOBU_CONFIG_DIR=${xdg_config}/byobu  # ~/.byobu
 xdg_create byobu "$BYOBU_CONFIG_DIR"
 
 # Bash completion
-# see ./bash-completion/bash-completion
+# See ./bash-completion/bash-completion, or
+# https://github.com/MestreLion/scripts/tree/main/home/bash-completion/bash-completion
 export BASH_COMPLETION_USER_DIR=${BASH_COMPLETION_USER_DIR:-${xdg_data}/bash-completion}  # default
 export BASH_COMPLETION_USER_FILE=${BASH_COMPLETION_USER_DIR}/bash_completion  # ~/.bash_completion
 
