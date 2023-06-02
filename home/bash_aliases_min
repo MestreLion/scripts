@@ -366,6 +366,38 @@ matrix() (
 	return 0
 )
 
+# https://unix.stackexchange.com/questions/269078
+sudo-function() {
+	(($#)) || { echo "Usage: sudo-function FUNC [ARGS...]" >&2; return 1; }
+	sudo bash -c "$(declare -f "$1");$(printf ' %q' "$@")"
+}
+super-sudo() {
+	(($#)) || { echo "Usage: super-sudo CMD [ARGS...]" >&2; return 1; }
+	local def ftype; ftype=$(type -t $1) ||
+	{ echo "not found: $1" >&2; return 1; }
+	if [[ "$ftype" == "function" ]]; then def=$(declare -f "$1")
+	else def=$(declare -p PATH); fi  # file or builtin
+	sudo bash -c "${def};$(printf ' %q' "$@")"
+}
+alias super-sudo='super-sudo '  # so it runs aliases too
+
+add-system-user() {
+	(($#)) || { echo "Usage: add-system-user USER [NAME]" >&2; return 1; }
+	local user=$1
+	local name=${2:-}
+	echo "Create system user '$user'"
+	useropts=(
+		--system  # implies --shell /usr/sbin/nologin
+		--group   # create its group, otherwise system users are put in nogroup
+		--quiet   # no error if system user already exists
+		--home "/var/lib/$user"  # default /home/<USER> even for system users
+	)
+	if [[ "$name" ]]; then
+		useropts+=( --gecos "$name" )
+	fi
+	sudo adduser "${useropts[@]}" -- "$user"
+}
+
 # >>>>> Other aliases <<<<<-----------------------------------------------------
 
 exists()    { type "$@" &>/dev/null; }
