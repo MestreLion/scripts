@@ -33,9 +33,7 @@
 complete-copy() {
 	local cmd="$1"
 	shift
-	if complete -p "$cmd" &>/dev/null &&
-	   type "$@"          &>/dev/null
-	then
+	if complete -p "$cmd" &>/dev/null && type "$@" &>/dev/null; then
 		eval $(complete -p "$cmd") "$@"
 	fi
 }
@@ -64,7 +62,7 @@ __comp_dir_files() {
 # FIXME: Any particular reason for *wanting* a static, eager loading dir?
 for script in "$(dirname "${BASH_SOURCE[0]}")"/bash_completion.d/*; do
 	if [[ ${script##*/} != @(*~|*.bak|README*) &&
-	      -f "$script" && -r "$script" ]]
+		-f "$script" && -r "$script" ]]
 	then
 		source "$script"
 	fi

@@ -99,11 +99,11 @@ alias ls="ls --color=auto --group-directories-first -1"
 alias ll="ls -l --time-style=long-iso"
 alias la="ll -A"
 alias path="echo \$PATH"
-alias fstab="sudo nano /etc/fstab"
+alias fstab="sudo editor /etc/fstab"
 alias open="xdg-open"
 alias trash="trash-put"  # requires trash-cli. Do NOT alias rm, affects functions
 alias mand="dwww-man"    # requires dwww
-alias dd-progress="dd status=progress bs=1M iflag=fullblock,count_bytes"
+alias dd-progress="sudo dd status=progress bs=1M iflag=fullblock,count_bytes"
 alias dd-nocache="dd-progress oflag=nocache,sync"
 alias dfd='df -H -x tmpfs -x squashfs -x devtmpfs'
 alias duh='du -sbh --si'
@@ -187,7 +187,7 @@ manc() {
 }
 
 ssh-keygen-ed25519() {
-	local slug=${1:-}; slug=${slug+.$slug}
+	local slug=${1:-}; slug=${slug:+.$slug}
 	ssh-keygen -a 100 -t ed25519 -f ~/.ssh/id_ed25519"$slug" -C "$USER$slug@$HOSTNAME"
 }
 
@@ -365,22 +365,21 @@ arguments() { local i a; for a in "$@"; do echo -e "$((++i))\t${a}"; done; }
 
 # >>>>> Completion <<<<<--------------------------------------------------------
 
-# copies a completion definition for a command to other command(s)
+# Copies a completion definition for a command to other command(s)
+# Only works with loaded completions, mostly eager ones.
 complete-copy() {
 	local cmd="$1"
 	shift
-	if complete -p "$cmd" &>/dev/null &&
-	   type "$@"          &>/dev/null
-	then
+	if complete -p "$cmd" &>/dev/null && type "$@" &>/dev/null; then
 		eval $(complete -p "$cmd") "$@"
 	fi
 }
 # package names
 # See /usr/share/bash-completion/completions/apt-cache._apt_cache_packages()
 _comp_pkg_names() {
-        local cur; _get_comp_words_by_ref cur
-        COMPREPLY=( $(apt-cache --no-generate pkgnames -- "$cur" 2>/dev/null) )
-        return 0
+	local cur; _get_comp_words_by_ref cur
+	COMPREPLY=( $(apt-cache --no-generate pkgnames -- "$cur" 2>/dev/null) )
+	return 0
 }
 
 complete -c where cmdlist cmdcat cmdopen        # commands (executables in $PATH)
