@@ -8,7 +8,7 @@
 #	xdg=${XDG_CONFIG_HOME:-$HOME/.config}; file=$xdg/bash/bash_aliases_min
 #	mkdir -vp -m 0700 -- "$xdg"; mkdir -vp -- "${file%/*}"
 #	url=https://raw.githubusercontent.com/MestreLion/scripts/main/home/bash_aliases_min
-#	wget --hsts-file=$xdg/wget-hsts -O "$file" -- "$url"
+#	wget --hsts-file="$xdg"/wget-hsts -O "$file" -- "$url"
 #	ln -vTfrs -- "$file" "$HOME"/.bash_aliases
 #	unset -- xdg file url
 # ------------------------------------------------------------------------------
