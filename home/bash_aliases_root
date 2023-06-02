@@ -1,0 +1,525 @@
+# Bare-bones quality-of-life aliases and settings, including PS1, for root
+# https://github.com/MestreLion/scripts/home/bash_aliases_root
+#
+# Save or symlink to /root/.bash_aliases:
+# - If you cloned the repository:
+#	ln -vTfrs -- "$(find / -name bash_aliases_min)" ~root/.bash_aliases
+# - If you just want this single file:
+#	xdg=${XDG_CONFIG_HOME:-$HOME/.config}; file=$xdg/bash/bash_aliases_root
+#	mkdir -vp -m 0700 -- "$xdg"; mkdir -vp -- "${file%/*}"
+#	url=https://raw.githubusercontent.com/MestreLion/scripts/main/home/bash_aliases_root
+#	wget --hsts-file=$xdg/wget-hsts -O "$file" -- "$url"
+#	ln -vTfrs -- "$file" "$HOME"/.bash_aliases
+#	unset -- xdg file url
+# ------------------------------------------------------------------------------
+
+# For thousand separator in ls and friends
+# could also use ls -l --block-size="'1" as alias (escaping the double-quotes)
+# Setting env vars in ~/.bash_aliases only works for interactive shells.
+# Use ~/.profile or ~/.pam_environment to properly set them.
+export BLOCK_SIZE="'1"
+
+# >>>>> XDG defs <<<<<----------------------------------------------------------
+
+xdg_config=${XDG_CONFIG_HOME:-$HOME/.config}
+xdg_data=${XDG_DATA_HOME:-$HOME/.local/share}
+xdg_cache=${XDG_CACHE_HOME:-$HOME/.cache}
+xdg_state=${XDG_DATA_HOME:-$HOME/.local/state}
+
+xdg_create() {
+	if { type "$1" >/dev/null 2>&1 || [ -e "$1" ]; } && ! [ -d "$2" ]; then
+		mkdir --parents -- "$2"
+	fi
+}
+
+# >>>>> XDG profile <<<<<-------------------------------------------------------
+
+# Some non-compliant software only use XDG_{CONFIG,DATA,CACHE}_HOME if it exists
+for xdg_path in "$xdg_config" "$xdg_data" "$xdg_cache" "$xdg_state"; do
+	if ! [ -d "$xdg_path" ]; then
+		mkdir --parents --mode 700 -- "$xdg_path"
+	fi
+done
+unset xdg_path
+
+# gnupg
+export GNUPGHOME=${xdg_config}/gnupg  # ~/.gnupg
+xdg_create gpg "$GNUPGHOME" && chmod 700 -- "$GNUPGHOME"
+
+# Python
+# Custom python_history not yet implemented: https://bugs.python.org/issue29779
+export PYTHONHISTORY=${xdg_state}/python_history  # ~/.python_history
+export PYTHONSTARTUP=${xdg_config}/pythonrc       # ignored if not set
+
+# IPython/Jupiter
+# Both already used XDG_CONFIG_HOME for a while, then reverted :-(
+# https://github.com/jupyter/notebook/issues/2374
+# https://github.com/ipython/ipython/issues/48
+export IPYTHONDIR=${xdg_config}/ipython
+export JUPYTER_CONFIG_DIR=${xdg_config}/jupyter
+
+# PyLint
+export PYLINTHOME=${xdg_state}/pylint   # XDG_CACHE_HOME/pylint
+export PYLINTRC=${xdg_config}/pylintrc  # hardcoded ~/.config/pylintrc
+
+# Pipx
+export PIPX_HOME=${xdg_data}/pipx  # ~/.local/pipx
+
+# Wakatime https://wakatime.com/
+export WAKATIME_HOME=${xdg_config}/wakatime  # ~/
+
+# PostgreSQL
+export PGPASSFILE=${xdg_config}/postgresql/pgpass              # ~/.pgpass
+export PGSERVICEFILE=${xdg_config}/postgresql/pg_service.conf  # ~/.pg_service.conf
+export PSQL_HISTORY=${xdg_state}/psql_history                  # ~/.psql_history
+xdg_create psql "${xdg_config}/postgresql"
+
+# Byobu
+# https://github.com/dustinkirkland/byobu/pull/57
+BYOBU_CONFIG_DIR=${xdg_config}/byobu  # ~/.byobu
+xdg_create byobu "$BYOBU_CONFIG_DIR"
+
+# Bash completion
+# See ./bash-completion/bash-completion, or
+# https://github.com/MestreLion/scripts/tree/main/home/bash-completion/bash-completion
+export BASH_COMPLETION_USER_DIR=${BASH_COMPLETION_USER_DIR:-${xdg_data}/bash-completion}  # default
+export BASH_COMPLETION_USER_FILE=${BASH_COMPLETION_USER_DIR}/bash_completion  # ~/.bash_completion
+
+unset xdg_create
+
+# >>>>> XDG bashrc <<<<<--------------------------------------------------------
+
+alias wget="wget --hsts-file=${xdg_config}/wget-hsts"
+
+# >>>>> Aliases <<<<<-----------------------------------------------------------
+
+# SP  ' '  0x20 = · U+00B7 Middle Dot
+# TAB '\t' 0x09 = ￫ U+FFEB Halfwidth Rightwards Arrow
+# CR  '\r' 0x0D = § U+00A7 Section Sign (⏎ U+23CE also works fine)
+# LF  '\n' 0x0A = ¶ U+00B6 Pilcrow Sign (was "Paragraph Sign")
+alias whitespace="sed 's/ /·/g;s/\t/￫/g;s/\r/§/g;s/$/¶/g'"
+alias diff="diff -u --color"  # who needs colordiff?
+alias ls="ls --color=auto --group-directories-first -1"
+alias ll="ls -l --time-style=long-iso"
+alias la="ll -A"
+alias path="echo \$PATH"
+alias fstab="sudo editor /etc/fstab"
+alias trash="trash-put"  # requires trash-cli. Do NOT alias rm, affects functions
+alias dd-progress="dd status=progress bs=1M iflag=fullblock,count_bytes"
+alias dd-nocache="dd-progress oflag=nocache,sync"
+alias dfd='df -H -x tmpfs -x squashfs -x devtmpfs'
+alias duh='du -sbh --si'
+alias dud='lsblk --exclude 7'  # 7 = loop devices, most likely snaps
+alias rot13="tr 'A-Za-z' 'N-ZA-Mn-za-m'"
+alias json='python3 -m json.tool'  # 'jq' is a beter alternative, if installed
+alias why='apt rdepends --installed'  # can also be 'aptitude why'
+alias dmesg="dmesg --follow"  # welcome 2021!
+alias windows-serial="strings /sys/firmware/acpi/tables/MSDM"
+alias ntfs-fix-perms-owner="chmod -R a=r,u+w,a+X"
+alias ntfs-fix-perms-group="chmod -R a=rw,o-w,a+X"
+alias 7z-ultra="7z a -mx"  # requires p7zip
+
+# systemd
+for cmd in status start stop restart reload; do
+	alias "${cmd}=systemctl ${cmd}"
+done
+unset cmd
+
+try()     { "$@" 2>/dev/null || :; }
+where()   { dpkg --search -- "$(type -p "$1" || echo "$1")"; }
+cdl()     { cd "$@" && ll ; }
+md()      { mkdir "$@" && cd "${@: -1}" ; }
+
+compile()  { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
+gcc-specs(){ gcc -v -xc /dev/null -E -Wp,-v 2>&1; }
+
+_datefmt()  { [[ "$2" ]] && d=(-d"${3:-}${2}") || d=(); date "$1" "${d[@]}"; }
+now()       { _datefmt '--rfc-3339=seconds' "${1:-}" '@'; }
+timestamp() { _datefmt '+%Y%m%d%H%M%S'      "${1:-}" '@'; }
+epoch()     { _datefmt '+%s'                "${1:-}"; }
+
+f2b() { local j=${1:-sshd}; sudo fail2ban-client status "$j"; }
+make-parallel() { make -j $(nproc --ignore=2) "$@"; }
+
+cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
+cmdcat()  { cat  "$(type -P "$1")" ; }
+cmdopen() { open "$(type -P "$1")" ; }
+
+find-orphaned-paths(){ find "${@:-.}" -nouser -or -nogroup; }
+find-broken-symlinks(){ find "${@:-.}" -xtype l; }  # https://unix.stackexchange.com/a/38691/4919
+find-newer(){
+	if [[ -z "${1:-}" ]]; then
+		echo "Usage: find-newer DATE_SPEC [PATH]  # '10 days ago'" >&2
+		return 1
+	fi
+	find "${2:-.}" -type f -newermt "$1" -exec ls -lrt "{}" +;
+}
+
+delete-empty-directories() { find "${@:-.}" -type d -empty -delete; }
+delete-duplicate-files() {
+	if ! exists rdfind; then sudo apt install rdfind; fi
+	rdfind -deleteduplicates true -makeresultsfile false "$@" &&
+	if (( $# > 1 )); then shift; fi &&
+	delete-empty-directories "$@"
+}
+
+manc() {
+	# inspired by https://www.howtogeek.com/683134/
+	local reset=$(tput sgr0)
+	local bold=$(tput bold)
+	# md=Bold: bold blue (4)
+	# us=Italic/Underline: bold bright yellow (8 + 1 + 2 = 11)
+	# so=Standout (search, prompt): black (0) on white (4 + 2 + 1 = 7)
+	# GROFF_NO_SGR=1 is needed if GROFF_SGR is set, see $SCRIPTS/home/profile
+	LESS_TERMCAP_md=$bold$(tput setaf 4) \
+	LESS_TERMCAP_me=$reset \
+	LESS_TERMCAP_us=$bold$(tput setaf 11) \
+	LESS_TERMCAP_ue=$reset \
+	LESS_TERMCAP_so=$(tput setaf 0; tput setab 7) \
+	LESS_TERMCAP_se=$reset \
+	GROFF_NO_SGR=1 \
+	man "$@"
+}
+
+ssh-keygen-ed25519() {
+	local slug=${1:-}; slug=${slug:+.$slug}
+	ssh-keygen -a 100 -t ed25519 -f ~/.ssh/id_ed25519"$slug" -C "$USER$slug@$HOSTNAME"
+}
+
+listening-ports() {
+	if exists netstat; then
+		sudo netstat -ltunp
+	else
+		sudo lsof -nP -iTCP -sTCP:LISTEN
+	fi
+}
+
+rename-function() {
+	# https://stackoverflow.com/a/34177402/624066
+	if [[ $# != 2 ]]; then echo "rename-function ORIG NEW" >&2; return 1; fi
+	local a; a="$(declare -f "$1")" &&
+	eval "function $2 ${a#*"()"}" &&
+	unset -f "$1"
+}
+
+apt-list-manual() {
+	# https://askubuntu.com/a/492343/11015
+	local manifest=${1:-}
+	local initial=/var/log/installer/initial-status.gz
+	local list=
+	# User-provided manifest, assume same format as https://releases.ubuntu.com
+	if [[ "$manifest" ]]; then
+		list=$(awk '{print $1}' "$manifest") || {
+			echo "Usage: apt-list-manual [MANIFEST-FILE]" >&2
+			return
+		}
+	# List from system installer log
+	elif [[ -f "$initial" ]]; then
+		list=$(gzip -dc "$initial" | sed -n 's/^Package: //p')
+	fi
+
+	# List packages
+	comm -23 <(apt-mark showmanual | sort -u) <(echo "$list" | sort -u)
+
+	# If initial log not found and no manifest provided, show download instructions
+	if [[ "$list" ]]; then
+		return
+	fi
+	printf 'ERROR:' >&2
+
+	# numeric version including with point release: 20.04.3
+	local version=$(awk -F'="?| ' '/^VERSION=/{print $2}' /etc/*release)
+	local msg=(
+		"Empty or missing manifest file: ${manifest:-$initial}"
+		"Is this a server? Without a manifest the above list is not accurate."
+		"Download it from: http://releases.ubuntu.com/${version}/"
+		"And try again with: apt-list-manual MANIFEST-FILE"
+	)
+	printf '\t%s\n' "${msg[@]}" >&2
+}
+
+# see references/commonlib for a standalone version
+install_packages() {
+	# Avoid marking installed packages as manual by only installing missing ones
+	local pkg=
+	local pkgs=()
+	for pkg in "$@"; do
+		if ! package_installed "$pkg"; then pkgs+=( "$pkg" ); fi
+	done
+	if (("${#pkgs[@]}")); then
+		sudo apt install "${pkgs[@]}"
+	fi
+}
+package_version() {
+	dpkg-query --showformat='${Version}' --show "$1" 2>/dev/null
+}
+package_installed() {
+	local ok
+	ok=$(package_version "$1") && [[ "$ok" ]]
+}
+
+dump-system-data() {
+	local target=${1:-./system-data}
+	local manifest=${2:-}
+	mkdir -p -- "$target"
+	try dconf dump /                          > "$target"/dconf.txt
+	try cat /etc/fstab                        > "$target"/fstab.txt
+	try cat /etc/apt/sources.list{,.d/*.list} > "$target"/apt-sources.txt
+	try crontab -l                            > "$target"/crontab.txt
+	apt-list-manual "$2"                      > "$target"/apt-packages.txt
+	try sudo fdisk --list                     > "$target"/fdisk.txt
+}
+
+backup-simple() {
+	local usage="Usage: backup-simple [-h|--help] [RSYNC_OPTS] SOURCE_DIR TARGET_DIR"
+	local arg
+	local opts=()
+	local args=()
+	# Pre-parse for -h|--help, ignoring if after '--'
+	for arg in "$@"; do
+		if [[ "$arg" == '--' ]]; then break; fi
+		if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
+			printf "Simple backup with rsync\n${usage}\n" >&2; return
+		fi
+	done
+	while (($#)); do
+		case "$1" in
+		--) shift; break;;
+		-*) opts+=( "$1" );;
+		* ) args+=( "$1" );;
+		esac
+		shift || break
+	done
+	args+=( "$@" )
+	if (( ${#args[@]} != 2 )) || [[ -z "${args[0]}" ]] || [[ -z "${args[1]}" ]]; then
+		printf "error: invalid or missing arguments\n${usage}\n" >&2
+		return 1
+	fi
+	local source=${args[0]}
+	local target=${args[1]}
+	#-a, --archive            archive mode; equals -rlptgoD (no -H,-A,-X)
+	#	-r, --recursive       recurse into directories
+	#	-l, --links           copy symlinks as symlinks
+	#	-p, --perms           preserve permissions
+	#	-t, --times           preserve modification times
+	#	-g, --group           preserve group
+	#	-o, --owner           preserve owner (super-user only)
+	#	-D                    same as --devices --specials
+	#		--devices         preserve device files (super-user only)
+	#		--specials        preserve special files
+	#	not
+	#	-H, --hard-links      preserve hard links
+	#	-A, --acls            preserve ACLs (implies -p)
+	#	-X, --xattrs          preserve extended attributes
+	#-x, --one-file-system    don't cross filesystem boundaries
+	#-S, --sparse             handle sparse files efficiently
+	# --no-inc-recursive      disable the incremental recursion mode
+	#                         (for full dir scanning instead of incremental)
+	# --info=progress2        outputs statistics based on the whole transfer
+	#                         (must not use --verbose or flags that output filenames)
+	#
+	# Other options:
+	#-v, --verbose            increase verbosity
+	#-h, --human-readable     output numbers in a human-readable format
+	#--numeric-ids            don't map uid/gid values by user/group name
+	#--inplace                update destination files in-place (conflicts with --sparse)
+	#--progress               show progress during transfer (implies --verbose)
+	#	--info=flist2,name,progress
+	local cmd=(
+		rsync -axS --info=progress2 --no-inc-recursive
+		--exclude='lost+found'
+		#--exclude='.Trash*'
+		--exclude='System Volume Information'
+		#--exclude='RECYCLER'
+		#--exclude='$Recycle.Bin'
+		"${opts[@]}"
+		"${source%\/}"/
+		"${target%\/}"/
+	)
+	printf '%q ' "${cmd[@]}"; printf '\n'
+	"${cmd[@]}"
+}
+
+# 1337!
+matrix() (
+	try tput smcup
+	trap 'try tput rmcup' INT; (
+	tr -c "[:digit:]" " " < /dev/urandom |
+	dd cbs=$COLUMNS conv=unblock status=none |
+	GREP_COLOR="1;32" grep --color "[^ ]"
+	) || true
+	return 0
+)
+
+# https://unix.stackexchange.com/questions/269078
+sudo-function() {
+	(($#)) || { echo "Usage: sudo-function FUNC [ARGS...]" >&2; return 1; }
+	sudo bash -c "$(declare -f "$1");$(printf ' %q' "$@")"
+}
+super-sudo() {
+	(($#)) || { echo "Usage: super-sudo CMD [ARGS...]" >&2; return 1; }
+	local def ftype; ftype=$(type -t $1) ||
+	{ echo "not found: $1" >&2; return 1; }
+	if [[ "$ftype" == "function" ]]; then def=$(declare -f "$1")
+	else def=$(declare -p PATH); fi  # file or builtin
+	sudo bash -c "${def};$(printf ' %q' "$@")"
+}
+alias super-sudo='super-sudo '  # so it runs aliases too
+
+add-system-user() {
+	(($#)) || { echo "Usage: add-system-user USER [NAME]" >&2; return 1; }
+	local user=$1
+	local name=${2:-}
+	echo "Create system user '$user'"
+	useropts=(
+		--system  # implies --shell /usr/sbin/nologin
+		--group   # create its group, otherwise system users are put in nogroup
+		--quiet   # no error if system user already exists
+		--home "/var/lib/$user"  # default /home/<USER> even for system users
+	)
+	if [[ "$name" ]]; then
+		useropts+=( --gecos "$name" )
+	fi
+	sudo adduser "${useropts[@]}" -- "$user"
+}
+
+# >>>>> Other aliases <<<<<-----------------------------------------------------
+
+exists()    { type "$@" &>/dev/null; }
+xtitle()    { printf '\e]2;%s\a' "$*"; }
+snipfile()  { local n="{${3:-5},}" s; s="/^# *>$n *${2:-}/"; awk "$s,/<$n/&&!$s" "$1"; }
+arguments() { local i a; for a in "$@"; do echo -e "$((++i))\t${a}"; done; }
+
+# >>>>> Completion <<<<<--------------------------------------------------------
+
+# Copies a completion definition for a command to other command(s)
+# Only works with loaded completions, mostly eager ones.
+complete-copy() {
+	local cmd="$1"
+	shift
+	if complete -p "$cmd" &>/dev/null && type "$@" &>/dev/null; then
+		eval $(complete -p "$cmd") "$@"
+	fi
+}
+# package names
+# See /usr/share/bash-completion/completions/apt-cache._apt_cache_packages()
+_comp_pkg_names() {
+	local cur; _get_comp_words_by_ref cur
+	COMPREPLY=( $(apt-cache --no-generate pkgnames -- "$cur" 2>/dev/null) )
+	return 0
+}
+
+complete -c where cmdlist cmdcat cmdopen        # commands (executables in $PATH)
+complete -F _comp_pkg_names ubuntu-package why  # packages in repositories
+complete-copy ls ll la
+complete-copy dwww-man mand manc
+
+# >>>>> PS1 customization <<<<<-------------------------------------------------
+# http://bashrcgenerator.com/
+
+# Print exit code of last command if non-zero, and return it
+# Blank if 0, otherwise use $1 as formatting string, '%s ' by default
+# Return the same code, to preserve it between prompts
+# Alternative: \${?/#0/} directly into PS1, but lacks surrounding spaces
+_format_exitcode() {
+	local s=$?
+	if (($s)); then printf "${1:-%s }" "$s"; fi
+	return $s
+}
+
+_shell_level() {
+	local s=$?
+	local c=$((SHLVL - 1)); if [[ "${DISPLAY:-}" ]]; then c=$((--c)); fi
+	if ((c)); then printf "%${c}s" | tr ' ' '*'; printf ' '; fi
+	return "$s"
+}
+
+
+# Git Status
+# See /usr/lib/git-core/git-sh-prompt
+export GIT_PS1_SHOWDIRTYSTATE=1
+export GIT_PS1_SHOWSTASHSTATE=1
+export GIT_PS1_SHOWUNTRACKEDFILES=1
+if ! exists __git_ps1; then
+	# __git_ps1() is transitioning away from git bash completion
+	# See /etc/bash_completion.d/git-prompt
+	if [[ -r /usr/lib/git-core/git-sh-prompt ]]; then
+		source /usr/lib/git-core/git-sh-prompt
+	else
+		# Simpler version
+		__git_ps1() {
+			local s=$?
+			if exists git; then
+				git branch 2>/dev/null |
+				grep '^*' |
+				sed 's/* \(.*\)/\1 /'
+			fi
+			return "$s"
+		}
+	fi
+fi
+
+# Colors
+# '\[' and '\]' are for PS1, not colors: https://mywiki.wooledge.org/BashFAQ/053
+color() { printf '\['; tput setaf "${1:-15}"; printf '\]'; }
+declare -A c=(
+	 [BLACK]=$(color 0)  # "\[\e[30m\]"
+	   [RED]=$(color 1)  # "\[\e[31m\]"
+	 [GREEN]=$(color 2)  # "\[\e[32m\]"
+	[YELLOW]=$(color 3)  # "\[\e[33m\]"
+	  [BLUE]=$(color 4)  # "\[\e[34m\]"
+	[PURPLE]=$(color 5)  # "\[\e[35m\]"
+	  [CYAN]=$(color 6)  # "\[\e[36m\]"
+	 [WHITE]=$(color 7)  # "\[\e[37m\]"
+	  [BOLD]="\[$(tput bold)\]"  # "\[\e[1m\]"
+	 [RESET]="\[$(tput sgr0)\]"  # "\[\e[0m\]"
+)
+
+
+# Bare-bones
+# PS1='\[\e[0m\e[1m\e[35m\]\t \[\e[32m\]\u@\h \[\e[34m\]\w \[\e[33m\]\[\e[34m\]\$ \[\e[0m\]'
+# PS2='> '
+
+# Final product
+PS1="${c[RESET]}${c[BOLD]}"\
+"${c[PURPLE]}\t ${c[CYAN]}\$(_shell_level)${c[GREEN]}\u@\h ${c[BLUE]}\w "\
+"${c[RED]}\$(__git_ps1 '%s ')${c[YELLOW]}\$(_format_exitcode)${c[RED]}\\$ "\
+"${c[RESET]}"
+
+# >>>>> Settings <<<<<----------------------------------------------------------
+
+# Disable the dreaded history expansion for interactive sessions
+# A.K.A 'why echo "foo!bar" do not work?' (but "foo!" and "foo! bar!" does)
+set +o histexpand  # same as set +H
+
+# >>>> Local bash_aliases <<<<<-------------------------------------------------
+
+BASH_STARTUP=1
+
+paths=(
+	"${XDG_CONFIG_HOME:-$HOME/.config}/bash/aliases_local"
+	"${HOME}/.bash_aliases_local"
+)
+for path in "${paths[@]}"; do
+	if [[ -r "$path" ]]; then source "$path"; fi
+done
+unset paths path
+
+# >>>>> Cleanup <<<<<------------------------------------------------------------
+
+# Only for what might be useful beyond initial usage, such as xdg_* and colors
+# Everything else should cleanup by itself after its usage block
+unset xdg_{config,data,cache,state,create,path}
+unset color c
+
+# >>>>> Startup commands <<<<<--------------------------------------------------
+
+if ! ((BASH_STARTUP)); then unset BASH_STARTUP; return; fi; unset BASH_STARTUP
+
+# So useful!
+if exists neofetch; then neofetch; fi
+
+# So cute!
+if exists cowfortune;  then
+	cowfortune | { if exists lolcat; then lolcat; else cat; fi; }
+fi
