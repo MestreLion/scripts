@@ -51,6 +51,20 @@ xtitle() {
 	printf '\e]2;%s\a' "$*"
 }
 
+# Packages in a (enabled) repository (or PPA)
+# Try: apt-repository-packages ppa amd64
+# TODO: better filtering ($@), first list matching repos then concatenate all for grep
+apt-repository-packages() {
+	(($#)) || { echo "Usage: apt-repository-packages REPOSITORY [ARCH]" >&2; return 1; }
+	local filter=$1
+	local arch=${2:-}
+	while IFS= read repo; do
+		echo "$repo" >&2
+		grep '^Package: ' "$repo" | cut -d' ' -f2 | sort -u
+		echo >&2
+	done < <(find /var/lib/apt/lists -name "*${filter}*${arch}_Packages" 2>/dev/null)
+}
+
 # WIP to be the new open()
 # idea: supress error messages only *after* (and *if*) successfully opened a file
 # all messages before from launcher itself (gio open/xdg-open) should be printed
