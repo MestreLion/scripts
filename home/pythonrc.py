@@ -1,5 +1,12 @@
 # Enable custom ~/.python_history location on Python interactive console
-# Set PYTHONSTARTUP to this file on ~/.profile or similar for this to work
+# Set PYTHONSTARTUP to this file on ~/.profile or similar
+# See https://github.com/MestreLion/scripts/home/
+#
+# Copyright (C) 2023 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+# ------------------------------------------------------------------------------
+
+# References:
 # https://docs.python.org/3/using/cmdline.html#envvar-PYTHONSTARTUP
 # https://docs.python.org/3/library/readline.html#example
 # https://github.com/python/cpython/blob/main/Lib/site.py @ enablerlcompleter()
