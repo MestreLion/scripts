@@ -45,8 +45,8 @@ def write_history(path):
 # noinspection PyShadowingBuiltins
 FileNotFoundError = IOError if sys.version_info[0] < 3 else FileNotFoundError
 
-history = os.path.join(os.environ.get('XDG_CACHE_HOME') or
-                       os.path.expanduser('~/.cache'),
+history = os.path.join(os.environ.get('XDG_STATE_HOME') or
+                       os.path.expanduser('~/.local/state'),
                        'python{}_history'.format(sys.version_info[0]))
 try:
     readline.read_history_file(history)
