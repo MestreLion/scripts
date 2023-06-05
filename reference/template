@@ -38,7 +38,7 @@ verbose=0
 
 #------------------------------------------------------------------------------
 
-myself=${0##*/}
+self=${0##*/}
 here=$(dirname "$(readlink -f "$0")")
 
 #------------------------------------------------------------------------------
@@ -49,11 +49,11 @@ green()   { tput setaf 2; bold "$@"; }
 fatal()   { if (($#)); then { red "$@"; echo; } >&2; fi; exit 1; }
 message() { if (($# && verbose)); then green '* ' "$@"; echo; fi; }
 
-fatal()   { if (($#)); then echo "$myself: error: $1" >&2; fi; exit ${2:-1}; }
-fatal()   { if (($#)); then echo "$myself: error: $@" >&2; fi; exit 1; }
+fatal()   { if (($#)); then echo "$self: error: $1" >&2; fi; exit ${2:-1}; }
+fatal()   { if (($#)); then echo "$self: error: $@" >&2; fi; exit 1; }
 message() { if (($# && verbose)); then printf '%s\n' "$@"; fi; }
 
-argerr()  { printf "%s: %s\n" "$myself" "${1:-error}" >&2; usage 1; }
+argerr()  { printf "%s: %s\n" "$self" "${1:-error}" >&2; usage 1; }
 invalid() { argerr "invalid ${2:-option}: ${1:-}"; }
 missing() { argerr "missing ${1:+$1 }argument${2:+ from $2}."; }
 
@@ -96,11 +96,11 @@ require() {
 usage() {
 	if [[ "${1:-}" ]] ; then exec >&2; fi
 	cat <<-USAGE
-	Usage: $myself [options]
+	Usage: $self [options]
 	USAGE
 	if [[ "${1:-}" ]] ; then
 		cat <<- USAGE
-		Try '$myself --help' for more information.
+		Try '$self --help' for more information.
 		USAGE
 		exit 1
 	fi
