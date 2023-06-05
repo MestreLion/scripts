@@ -1,5 +1,6 @@
 # This is sourced by $SCRIPTS/home/bashrc after it sources $SCRIPTS/home/bash_completion
 
+# shellcheck source=./bash_aliases_min
 source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'Aliases')
 
 # -----------------------------------------------------------------------------
@@ -33,7 +34,8 @@ load-group() {
 } && complete -W "$(groups "${USER:-$(id -un)}" | cut -d: -f2-)" load-group
 
 which()   { builtin type -P "$@" ; }
-sprunge() { local l=${2-bash}; echo $(curl -sSF "sprunge=<${1:--}" http://sprunge.us)${l:+?$l}${3:+#n-$3}; }
+sprunge() { local l=${2-bash};
+	echo "$(curl -sSF "sprunge=<${1:--}" http://sprunge.us)${l:+?$l}${3:+#n-$3}"; }
 
 # Take a look at realpath --relative-to=DIR and ln -r|--relative
 relpath() { python3 -c "import os,sys;print(os.path.relpath(*sys.argv[1:3]))" "$@"; }
@@ -58,7 +60,7 @@ apt-repository-packages() {
 	(($#)) || { echo "Usage: apt-repository-packages REPOSITORY [ARCH]" >&2; return 1; }
 	local filter=$1
 	local arch=${2:-}
-	while IFS= read repo; do
+	while IFS= read -r repo; do
 		echo "$repo" >&2
 		grep '^Package: ' "$repo" | cut -d' ' -f2 | sort -u
 		echo >&2
@@ -78,13 +80,13 @@ newopen() {
 	for arg in "$@"; do
 		if [[ "$arg" == '--' ]]; then break; fi
 		if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
-			printf "Open FILE (or URI) with its default application\n${usage}"
+			printf "Open FILE (or URI) with its default application\n%s" "$usage"
 			return
 		fi
 	done
 	# TODO: proper arg parse to allow --, -v|--verbose, -q|--quiet
 	if [[ -z "$f" ]]; then
-		printf >&2 "open: missing FILE/URI argument\n${usage}"
+		printf >&2 "open: missing FILE/URI argument\n%s" "$usage"
 		return 1
 	fi
 
@@ -119,7 +121,7 @@ pyprofile() {
 pyprofile-view() {
 	(($#)) || { echo "Usage: pyprofile3-view <COMMAND> [ARGS...]" >&2; return 1; }
 	local python=${PYTHON:-python3}
-	local dotfile=pyprofile.$(timestamp).dot
+	local dotfile; dotfile=pyprofile.$(timestamp).dot
 	"$python" -m cProfile -o pyprofile.pstats "$@" &&
 	gprof2dot -f pstats pyprofile.pstats -o "$dotfile" &&
 	xdg-open "$dotfile"
@@ -127,7 +129,8 @@ pyprofile-view() {
 
 venv() {
 	local vdir=${1:-venv}
-	local python=$(compgen -c python | grep -P '^python\d[.\d]*$' | sort -ruV | head -n1)
+	local python
+	python=$(compgen -c python | grep -P '^python\d[.\d]*$' | sort -ruV | head -n1)
 	local usage="Creates a Python Virtual Environment, activate and upgrade it"
 	usage+="\nUsage: venv ENV_DIR"
 	if [[ "$vdir" =~ ^(|-h|--help)$ ]]; then echo -e "$usage" >&2; return 1; fi
@@ -188,7 +191,7 @@ unzip-strip() (
 	local archive=$1
 	local destdir=${2:-}
 	shift; shift || :
-	local tmpdir=$(mktemp -d)
+	local tmpdir; tmpdir=$(mktemp -d)
 	trap 'rm -rf -- "$tmpdir"' EXIT
 	unzip -qd "$tmpdir" -- "$archive"
 	shopt -s dotglob
@@ -219,7 +222,7 @@ matrix() {
 	# cmatrix -a, asynchronous scroll looks bad in linux TTY and terrible in X11
 	# See https://github.com/abishekvashok/cmatrix/issues/124
 	if [[ "$TERM" == "linux" ]]; then
-		local default=$(mktemp) && trap 'rm -f -- "$default"' RETURN
+		local default; default=$(mktemp) && trap 'rm -f -- "$default"' RETURN
 		setfont -O "$default" matrix.psf
 		cmatrix -sbxu8  # -x seems to be -l minus setfont, indicates custom font
 		setfont "$default"
@@ -243,7 +246,7 @@ mv-link() (  # any particular reason for this to be a subshell??? relpath() won'
 )
 
 compare-images() (
-	local tmpdir=$(mktemp -d) || exit 1
+	local tmpdir; tmpdir=$(mktemp -d) || exit 1
 	trap 'rm -rf -- "$tmpdir"' EXIT
 	for img in "$@"; do
 		convert "$img" pam:"$tmpdir"/"$(basename "$img")"
@@ -267,7 +270,7 @@ _minecraft_saverestore() {
 	rm -rf   -- "$dst".bak             &&  # Delete destination backup, if exists
 	mkdir -p -- "$dst"{,.bak}          &&  # Create destination and its backup
 	cp -pr -t   "$dst".bak -- "$dst"/* &&  # Backup destination content
-	rm -rf   -- "$dst"/*               &&  # Delete destination content
+	rm -rf   -- "${dst:?}"/*           &&  # Delete destination content
 	cp -pr -t   "$dst"     -- "$src"/*     # Copy Source content to Destination
 }
 minecraft-save()    { _minecraft_saverestore save;    }

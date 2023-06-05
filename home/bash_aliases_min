@@ -43,6 +43,7 @@ xdg_create() {
 # Some non-compliant software only use XDG_{CONFIG,DATA,CACHE}_HOME if it exists
 for xdg_path in "$xdg_config" "$xdg_data" "$xdg_cache" "$xdg_state"; do
 	if ! [ -d "$xdg_path" ]; then
+		# shellcheck disable=SC2174
 		mkdir --parents --mode 700 -- "$xdg_path"
 	fi
 done
@@ -98,16 +99,18 @@ unset xdg_create
 
 # >>>>> XDG bashrc <<<<<--------------------------------------------------------
 
+# shellcheck disable=SC2139
 alias wget="wget --hsts-file=${xdg_config}/wget-hsts"
 
 # >>>>> Aliases <<<<<-----------------------------------------------------------
 
 # SP  ' '  0x20 = · U+00B7 Middle Dot
-# TAB '\t' 0x09 = ￫ U+FFEB Halfwidth Rightwards Arrow
+# TAB '\t' 0x09 = ￫ U+FFEB Half width Rightwards Arrow
 # CR  '\r' 0x0D = § U+00A7 Section Sign (⏎ U+23CE also works fine)
 # LF  '\n' 0x0A = ¶ U+00B6 Pilcrow Sign (was "Paragraph Sign")
 alias whitespace="sed 's/ /·/g;s/\t/￫/g;s/\r/§/g;s/$/¶/g'"
 alias diff="diff -u --color"  # who needs colordiff?
+# shellcheck disable=SC2032
 alias ls="ls --color=auto --group-directories-first -1"
 alias ll="ls -l --time-style=long-iso"
 alias la="ll -A"
@@ -122,7 +125,7 @@ alias dfd='df -H -x tmpfs -x squashfs -x devtmpfs'
 alias duh='du -sbh --si'
 alias dud='lsblk --exclude 7'  # 7 = loop devices, most likely snaps
 alias rot13="tr 'A-Za-z' 'N-ZA-Mn-za-m'"
-alias json='python3 -m json.tool'  # 'jq' is a beter alternative, if installed
+alias json='python3 -m json.tool'  # 'jq' is a better alternative, if installed
 alias why='apt rdepends --installed'  # can also be 'aptitude why'
 alias dmesg="dmesg --follow"  # welcome 2021!
 alias windows-serial="strings /sys/firmware/acpi/tables/MSDM"
@@ -138,6 +141,7 @@ alias hc='hc-list'
 # systemd
 alias status='systemctl status'  # no sudo for status
 for cmd in start stop restart reload; do
+	# shellcheck disable=SC2139
 	alias "${cmd}=sudo systemctl ${cmd}"
 done
 unset cmd
@@ -145,7 +149,7 @@ unset cmd
 try()     { "$@" 2>/dev/null || :; }
 where()   { dpkg --search -- "$(type -p "$1" || echo "$1")"; }
 cdl()     { cd "$@" && ll ; }
-md()      { mkdir "$@" && cd "${@: -1}" ; }
+md()      { mkdir "$@" && cd "${@: -1}" || return; }
 
 compile()  { gcc -Wall -Wextra -o "${1%.*}" "$@"; }
 gcc-specs(){ gcc -v -xc /dev/null -E -Wp,-v 2>&1; }
@@ -157,7 +161,7 @@ epoch()     { _datefmt '+%s'                "${1:-}"; }
 
 ubuntu-package() { open "http://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"; }
 f2b() { local j=${1:-sshd}; sudo fail2ban-client status "$j"; }
-make-parallel() { make -j $(nproc --ignore=2) "$@"; }
+make-parallel() { make -j "$(nproc --ignore=2)" "$@"; }
 
 cmdlist() { type -a "$1"; ll "$(type -P "$1")" ; }
 cmdcat()  { cat  "$(type -P "$1")" ; }
@@ -170,6 +174,7 @@ find-newer(){
 		echo "Usage: find-newer DATE_SPEC [PATH]  # '10 days ago'" >&2
 		return 1
 	fi
+	# shellcheck disable=SC2033
 	find "${2:-.}" -type f -newermt "$1" -exec ls -lrt "{}" +;
 }
 
@@ -183,8 +188,8 @@ delete-duplicate-files() {
 
 manc() {
 	# inspired by https://www.howtogeek.com/683134/
-	local reset=$(tput sgr0)
-	local bold=$(tput bold)
+	local reset; reset=$(tput sgr0)
+	local bold;  bold=$(tput bold)
 	# md=Bold: bold blue (4)
 	# us=Italic/Underline: bold bright yellow (8 + 1 + 2 = 11)
 	# so=Standout (search, prompt): black (0) on white (4 + 2 + 1 = 7)
@@ -246,7 +251,7 @@ apt-list-manual() {
 	printf 'ERROR:' >&2
 
 	# numeric version including with point release: 20.04.3
-	local version=$(awk -F'="?| ' '/^VERSION=/{print $2}' /etc/*release)
+	local version; version=$(awk -F'="?| ' '/^VERSION=/{print $2}' /etc/*release)
 	local msg=(
 		"Empty or missing manifest file: ${manifest:-$initial}"
 		"Is this a server? Without a manifest the above list is not accurate."
@@ -297,7 +302,7 @@ backup-simple() {
 	for arg in "$@"; do
 		if [[ "$arg" == '--' ]]; then break; fi
 		if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
-			printf "Simple backup with rsync\n${usage}\n" >&2; return
+			printf "Simple backup with rsync\n%s\n" "$usage" >&2; return
 		fi
 	done
 	while (($#)); do
@@ -310,7 +315,7 @@ backup-simple() {
 	done
 	args+=( "$@" )
 	if (( ${#args[@]} != 2 )) || [[ -z "${args[0]}" ]] || [[ -z "${args[1]}" ]]; then
-		printf "error: invalid or missing arguments\n${usage}\n" >&2
+		printf "error: invalid or missing arguments\n%s\n" "$usage" >&2
 		return 1
 	fi
 	local source=${args[0]}
@@ -343,7 +348,7 @@ backup-simple() {
 	#--inplace                update destination files in-place (conflicts with --sparse)
 	#--progress               show progress during transfer (implies --verbose)
 	#	--info=flist2,name,progress
-	local cmd=(
+	local cmdarr=(
 		rsync -axS --info=progress2 --no-inc-recursive
 		--exclude='lost+found'
 		#--exclude='.Trash*'
@@ -354,8 +359,8 @@ backup-simple() {
 		"${source%\/}"/
 		"${target%\/}"/
 	)
-	printf '%q ' "${cmd[@]}"; printf '\n'
-	"${cmd[@]}"
+	printf '%q ' "${cmdarr[@]}"; printf '\n'
+	"${cmdarr[@]}"
 }
 
 # 1337!
@@ -376,8 +381,8 @@ sudo-function() {
 }
 super-sudo() {
 	(($#)) || { echo "Usage: super-sudo CMD [ARGS...]" >&2; return 1; }
-	local def ftype; ftype=$(type -t $1) ||
-	{ echo "not found: $1" >&2; return 1; }
+	local def ftype; ftype=$(type -t "$1") ||
+		{ echo "not found: $1" >&2; return 1; }
 	if [[ "$ftype" == "function" ]]; then def=$(declare -f "$1")
 	else def=$(declare -p PATH); fi  # file or builtin
 	sudo bash -c "${def};$(printf ' %q' "$@")"
@@ -416,6 +421,7 @@ complete-copy() {
 	local cmd="$1"
 	shift
 	if complete -p "$cmd" &>/dev/null && type "$@" &>/dev/null; then
+		# shellcheck disable=SC2046
 		eval $(complete -p "$cmd") "$@"
 	fi
 }
@@ -423,7 +429,7 @@ complete-copy() {
 # See /usr/share/bash-completion/completions/apt-cache._apt_cache_packages()
 _comp_pkg_names() {
 	local cur; _get_comp_words_by_ref cur
-	COMPREPLY=( $(apt-cache --no-generate pkgnames -- "$cur" 2>/dev/null) )
+	mapfile -t COMPREPLY < <(apt-cache --no-generate pkgnames -- "$cur" 2>/dev/null)
 	return 0
 }
 
@@ -441,7 +447,8 @@ complete-copy dwww-man mand manc
 # Alternative: \${?/#0/} directly into PS1, but lacks surrounding spaces
 _format_exitcode() {
 	local s=$?
-	if (($s)); then printf "${1:-%s }" "$s"; fi
+	# shellcheck disable=SC2059
+	if ((s)); then printf "${1:-%s }" "$s"; fi
 	return $s
 }
 
@@ -468,6 +475,7 @@ if ! exists __git_ps1; then
 		__git_ps1() {
 			local s=$?
 			if exists git; then
+				# shellcheck disable=SC2063
 				git branch 2>/dev/null |
 				grep '^*' |
 				sed 's/* \(.*\)/\1 /'
@@ -499,6 +507,7 @@ declare -A c=(
 # PS2='> '
 
 # Final product
+# shellcheck disable=SC2140
 PS1="${c[RESET]}${c[BOLD]}"\
 "${c[PURPLE]}\t ${c[CYAN]}\$(_shell_level)${c[GREEN]}\u@\h ${c[BLUE]}\w "\
 "${c[RED]}\$(__git_ps1 '%s ')${c[YELLOW]}\$(_format_exitcode)${c[BLUE]}\\$ "\
@@ -519,6 +528,7 @@ paths=(
 	"${HOME}/.bash_aliases_local"
 )
 for path in "${paths[@]}"; do
+	# shellcheck source=./.bash_aliases_local
 	if [[ -r "$path" ]]; then source "$path"; fi
 done
 unset paths path
