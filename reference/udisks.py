@@ -5,12 +5,17 @@
 # - Call UDisks daemon directly via DBus calls
 # - Use UDisks python bindings "wrapper" via PyGObject introspection
 
+import sys
 import typing as t
 
-import gi
-gi.require_version("UDisks", "2.0")
-
-from gi.repository import UDisks
+# Debian/Ubuntu: gir1.2-udisks-2.0
+#    (and python3-gi, installed by default even in minimal headless servers)
+try:
+    import gi
+    gi.require_version("UDisks", "2.0")
+    from gi.repository import UDisks
+except (ValueError, ImportError) as e:
+    sys.exit(f"{e}, try:\n\tsudo apt install gir1.2-udisks-2.0")
 
 
 # -----------------------------------------------------------------------------
@@ -101,10 +106,11 @@ def status():
             storage.drive.props,
             storage.block.props,
         )
-        # For UDisks < 2.1 (no ObjectInfo)
-        "{0.out_name}\t{0.out_description}\t{0.out_drive_icon.props.names}".format(
-            client.get_drive_info(storage.drive),  # gi._gi.ResultTuple
-        )
+        # For UDisks < 2.1 (2013), without ObjectInfo, deprecated in 2.1:
+        if (UDisks.MAJOR_VERSION, UDisks.MINOR_VERSION) < (2, 1):
+            "{0.out_name}\t{0.out_description}\t{0.out_drive_icon.props.names}".format(
+                client.get_drive_info(storage.drive),  # gi._gi.ResultTuple
+            )
 
 
 # -----------------------------------------------------------------------------
