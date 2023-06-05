@@ -19,6 +19,7 @@ import sys
 import time
 
 
+# noinspection PyPep8Naming
 def write_history(path):
     import os
     import readline
@@ -29,7 +30,7 @@ def write_history(path):
     if sys.version_info[0] >= 3:
         makedirs = os.makedirs
     else:
-        def makedirs(name, mode=MODE_ALL , exist_ok=False):
+        def makedirs(name, mode=MODE_ALL, exist_ok=False):
             try:
                 os.makedirs(name, mode)
             except OSError as e:
@@ -45,9 +46,12 @@ def write_history(path):
 # noinspection PyShadowingBuiltins
 FileNotFoundError = IOError if sys.version_info[0] < 3 else FileNotFoundError
 
-history = os.path.join(os.environ.get('XDG_STATE_HOME') or
+# By default, ~/.local/state/python/{python2_,}history
+history = os.environ.get('PYTHONHISTORY') or \
+          os.path.join(os.environ.get('XDG_STATE_HOME') or
                        os.path.expanduser('~/.local/state'),
-                       'python{}_history'.format(sys.version_info[0]))
+                       '{}history'.format("" if sys.version_info[0] >= 3
+                                          else "python2_"))
 try:
     readline.read_history_file(history)
 except FileNotFoundError:
