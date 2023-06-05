@@ -1,0 +1,38 @@
+# Git user-wide "global" config file
+# Copy to ~/.config/git/, possibly along with ./templates/
+# Adapted from https://github.com/MestreLion/scripts/home/git/config
+[user]
+# Change this before enabling!
+#	name = My Name
+#	email = user@example.com
+
+[color]
+	# Most likely the default in modern git versions
+	diff = auto
+	status = auto
+	branch = auto
+	interactive = auto
+	ui = auto
+
+[alias]
+	undo = reset HEAD^
+	lola = log --graph --decorate --oneline  --all
+# Less useful aliases, enable the ones you want...
+#	lol  = log --graph --decorate --oneline
+#	lop  = log --patch-with-stat
+#	st = status --untracked-files=no
+#	at = add -u
+
+[apply]
+	whitespace = fix
+
+[init]
+# Enable if you copied ./templates/, or directly reference the repository path
+#	templatedir = ~/.config/git/templates
+
+[credential]
+	helper = cache --timeout=604800
+
+[core]
+	whitespace = trailing-space,space-before-tab,cr-at-eol
+
