@@ -1,4 +1,4 @@
-# Do NOT add common artifacts here, those belong to .gitignore!
+# Do NOT add common project artifacts here, those belong to .gitignore!
 # Add personal files only, such as IDE settings
 
 # Eclipse and Pydev (.pyproject)
