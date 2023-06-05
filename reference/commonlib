@@ -39,8 +39,9 @@ required()
 
 testroot()
 {
-	# simple root test
-	[[ "$(id -u)" -eq 0 ]] || fatal "You must run this as root"
+	# simple root test. POSIX: [ "$(id -u)" -eq 0 ]
+	(( EUID == 0 )) || fatal "You must run this as root"
+
 }
 
 confirm()
