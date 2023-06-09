@@ -40,6 +40,16 @@ unset xdg_path
 export GNUPGHOME=${xdg_config}/gnupg  # ~/.gnupg
 xdg_create gpg "$GNUPGHOME" && chmod 700 -- "$GNUPGHOME"
 
+# Python
+# History file is currently hardcoded as ~/.python_history
+# Custom location not yet implemented: https://bugs.python.org/issue29779
+# (will likely be PYTHONHISTORY=XDG_STATE_HOME/python/history)
+export PYTHONHISTORY=${PYTHONHISTORY:-${xdg_state}/python/history}
+# ... so we use a custom PYTHONSTARTUP to workaround it
+if [ -f "${xdg_config}/pythonrc.py" ]; then
+	export PYTHONSTARTUP=${xdg_config}/pythonrc.py  # disabled if not set
+fi
+
 # IPython/Jupiter
 # Both already used XDG_CONFIG_HOME for a while, then reverted :-(
 # https://github.com/jupyter/notebook/issues/2374
