@@ -12,6 +12,7 @@ trap '>&2 echo "error: line $LINENO, status $?: $BASH_COMMAND"' ERR
 
 mode=${1:-auto}  # auto (or blank), download, symlink
 url=https://github.com/MestreLion/scripts/raw/main/home
+download=1
 
 #------------------------------------------------------------------------------
 usage()     { echo "Usage: ${0##*/} [auto|download|symlink]" >&2; exit 1; }
@@ -24,10 +25,14 @@ file=$here/bash_aliases_$suffix
 home=$(user_home "")  # intended $HOME even if running via sudo without -H
 xdg=${XDG_CONFIG_HOME:-$home/.config}
 
-case "$mode" in	auto|symlink);; download) download=1;; *) usage;; esac
-if [[ "$mode" == auto && -f "$file" ]]; then download=0; fi
+case "$mode" in
+	auto) if [[ -f "$file" ]]; then download=0; fi;;
+	download);;
+	symlink) download=0;;
+	*) usage;;
+esac
 if ! ((download)) && ! [[ -f "$file" ]]; then
-	echo "$file not found. Clone the repository or use standalone mode" >&2
+	echo "$file not found. Clone the repository or use download mode" >&2
 	exit 1
 fi
 #------------------------------------------------------------------------------
