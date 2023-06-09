@@ -1,16 +1,9 @@
 # Bare-bones quality-of-life aliases and settings, including PS1, for root
-# https://github.com/MestreLion/scripts/home/bash_aliases_root
+# Copy (or symlink) to /root/.bash_aliases, or use ./install-bash_aliases.sh
+# See https://github.com/MestreLion/scripts/home/
 #
-# Save or symlink to /root/.bash_aliases:
-# - If you cloned the repository:
-#	ln -vTfrs -- "$(find / -name bash_aliases_min)" ~root/.bash_aliases
-# - If you just want this single file:
-#	xdg=${XDG_CONFIG_HOME:-$HOME/.config}; file=$xdg/bash/bash_aliases_root
-#	mkdir -vp -m 0700 -- "$xdg"; mkdir -vp -- "${file%/*}"
-#	url=https://raw.githubusercontent.com/MestreLion/scripts/main/home/bash_aliases_root
-#	wget --hsts-file="$xdg"/wget-hsts -O "$file" -- "$url"
-#	ln -vTfrs -- "$file" "$HOME"/.bash_aliases
-#	unset -- xdg file url
+# Copyright (C) 2023 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
 # ------------------------------------------------------------------------------
 
 # For thousand separator in ls and friends
