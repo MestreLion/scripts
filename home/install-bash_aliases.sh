@@ -42,5 +42,6 @@ create() {
 }
 # shellcheck disable=SC2174
 mkdir -vp -m 0700 -- "$xdg"
+if [[ -f "$home"/.wget-hsts ]]; then mv -v -- "$home"/.wget-hsts "$xdg"/wget-hsts; fi
 create "${file##*/}" "$home"/.bash_aliases
 create pythonrc.py   "$xdg"/pythonrc.py
