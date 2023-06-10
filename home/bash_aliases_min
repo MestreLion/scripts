@@ -42,9 +42,9 @@ for xdg_path in "$xdg_config" "$xdg_data" "$xdg_cache" "$xdg_state"; do
 done
 unset xdg_path
 
-# less
+# less. Many changes in v590 (Ubuntu 22.04) and v600 (unreleased as of 2023-06)
 export LESSHISTFILE=${xdg_state}/lesshst  # ~/.lesshist before v600
-export LESSKEY=${xdg_cache}/lesskey
+export LESSKEY=${xdg_config}/lesskey      # ~/.lesskey  before v600
 
 # gnupg
 export GNUPGHOME=${xdg_config}/gnupg  # ~/.gnupg
