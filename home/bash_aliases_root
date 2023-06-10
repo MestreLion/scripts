@@ -36,6 +36,10 @@ for xdg_path in "$xdg_config" "$xdg_data" "$xdg_cache" "$xdg_state"; do
 done
 unset xdg_path
 
+# less
+export LESSHISTFILE=${xdg_state}/lesshst  # ~/.lesshist before v600
+export LESSKEY=${xdg_cache}/lesskey
+
 # gnupg
 export GNUPGHOME=${xdg_config}/gnupg  # ~/.gnupg
 xdg_create gpg "$GNUPGHOME" && chmod 700 -- "$GNUPGHOME"
