@@ -11,7 +11,7 @@ patch bash_aliases_root <<'EOF'
 -# Copy (or symlink) to ~/.bash_aliases, or use ./install-bash_aliases.sh
 +# Bare-bones quality-of-life aliases and settings, including PS1, for root
 +# Copy (or symlink) to /root/.bash_aliases, or use ./install-bash_aliases.sh
- # See https://github.com/MestreLion/scripts/home/
+ # See https://github.com/MestreLion/scripts/tree/main/home/
  #
  # Copyright (C) 2023 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 @@ -12,12 +12,6 @@

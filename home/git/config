@@ -1,6 +1,6 @@
 # Git user-wide "global" config file
 # Copy to ~/.config/git/, possibly along with ./templates/
-# Adapted from https://github.com/MestreLion/scripts/home/git/config
+# Adapted from https://github.com/MestreLion/scripts/tree/main/home/git/config
 [user]
 # Change this before enabling!
 #	name = My Name

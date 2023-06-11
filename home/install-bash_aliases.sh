@@ -2,7 +2,7 @@
 #
 # install-bash_aliases.sh - Installer for bash_aliases_{min,root} and pythonrc.py
 #
-# This file is part of <https://github.com/MestreLion/scripts/home>
+# This file is part of <https://github.com/MestreLion/scripts/tree/main/home>
 # Copyright (C) 2023 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 # License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
 #------------------------------------------------------------------------------

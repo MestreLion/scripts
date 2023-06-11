@@ -1,6 +1,6 @@
 # Minimal quality-of-life aliases and settings, including PS1
 # Copy (or symlink) to ~/.bash_aliases, or use ./install-bash_aliases.sh
-# See https://github.com/MestreLion/scripts/home/
+# See https://github.com/MestreLion/scripts/tree/main/home/
 #
 # Copyright (C) 2023 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 # License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
