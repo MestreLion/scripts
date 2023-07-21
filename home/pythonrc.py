@@ -14,9 +14,13 @@
 
 import atexit
 import os
-import readline
 import sys
 import time
+try:
+    import readline
+except ImportError:
+    # Some systems (Dropbear) lack readline module
+    readline = None
 
 if sys.version_info[0] < 3:
     # noinspection PyShadowingBuiltins
@@ -67,8 +71,9 @@ def register_atexit():
     atexit.register(write_history, history)
 
 
-register_atexit()
+if readline:
+    register_atexit()
 
 if sys.version_info[0] < 3:
     del FileNotFoundError
-del (atexit, os, readline, sys, time, write_history, register_atexit)
+del (atexit, os, sys, time, readline, write_history, register_atexit)
