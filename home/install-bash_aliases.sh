@@ -16,8 +16,14 @@ download=1
 
 #------------------------------------------------------------------------------
 usage()     { echo "Usage: ${0##*/} [auto|download|symlink]" >&2; exit 1; }
-user_home() { getent passwd -- "${1:-$USER}" | cut -d: -f6; }
 is_root()   { (( EUID == 0 )); }  # POSIX: [ "$(id -u)" -eq 0 ]
+user_home() {
+	if type getent &>/dev/null; then
+		getent passwd -- "${1:-$USER}" | cut -d: -f6
+	else
+		awk -F: '$3 == 0 {print $6}' /etc/passwd
+	fi
+}
 #------------------------------------------------------------------------------
 if is_root; then suffix=root; else suffix=min; fi
 here=$(dirname "$(readlink -f "$0")")
