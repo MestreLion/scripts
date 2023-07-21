@@ -50,6 +50,7 @@ fi
 #
 # Only fix files where issues were *introduced* in this commit, but if so fixes
 # the whole file, including pre-existing issues
+true ||  # disable fixing files. comment this to re-enable
 git diff-index --cached "$against" -- |
 cut -f2 |
 while IFS= read -r file ; do
