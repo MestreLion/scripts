@@ -18,8 +18,12 @@ import readline
 import sys
 import time
 
+if sys.version_info[0] < 3:
+    # noinspection PyShadowingBuiltins
+    FileNotFoundError = IOError
 
-# noinspection PyPep8Naming
+
+# noinspection PyPep8Naming, MODE_ALL, MODE_OWNER
 def write_history(path):
     import os
     import readline
@@ -43,26 +47,28 @@ def write_history(path):
         pass
 
 
-# noinspection PyShadowingBuiltins
-FileNotFoundError = IOError if sys.version_info[0] < 3 else FileNotFoundError
+def register_atexit():
+    # By default, ~/.local/state/python/{python2_,}history
+    history = os.environ.get('PYTHONHISTORY') or (
+        os.path.join(
+            os.environ.get('XDG_STATE_HOME') or os.path.expanduser('~/.local/state'),
+            '{}history'.format("" if sys.version_info[0] >= 3 else "python2_")
+        )
+    )
+    try:
+        readline.read_history_file(history)
+    except FileNotFoundError:
+        pass
 
-# By default, ~/.local/state/python/{python2_,}history
-history = os.environ.get('PYTHONHISTORY') or \
-          os.path.join(os.environ.get('XDG_STATE_HOME') or
-                       os.path.expanduser('~/.local/state'),
-                       '{}history'.format("" if sys.version_info[0] >= 3
-                                          else "python2_"))
-try:
-    readline.read_history_file(history)
-except FileNotFoundError:
-    pass
+    # Prevents creation of default history if custom is empty
+    if readline.get_current_history_length() == 0:
+        readline.add_history('# History created at {}'.format(time.asctime()))
 
-# Prevents creation of default history if custom is empty
-if readline.get_current_history_length() == 0:
-    readline.add_history('# History created at {}'.format(time.asctime()))
+    atexit.register(write_history, history)
 
-atexit.register(write_history, history)
+
+register_atexit()
 
 if sys.version_info[0] < 3:
     del FileNotFoundError
-del (atexit, os, readline, sys, time, history, write_history)
+del (atexit, os, readline, sys, time, write_history, register_atexit)
