@@ -1,3 +1,8 @@
 #!/bin/sh
 # icon-name: meld
+# For Ubuntu 22.04, see:
+#	https://askubuntu.com/q/1417245/11015
+#	https://bugs.launchpad.net/nautilus-compare/+bug/1995090
+#	https://code.launchpad.net/nautilus-compare
+#	https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=942772
 meld "$@"
