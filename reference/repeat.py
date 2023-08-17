@@ -26,11 +26,11 @@ class RepeatedTimer(object):
         self.is_running = False
 
 def hello(name):
-    print "Hello %s!" % name
+    print("Hello %s!" % name)
 
 from time import sleep
 
-print "starting..."
+print("starting...")
 rt = RepeatedTimer(1, hello, "World")
 
 try:

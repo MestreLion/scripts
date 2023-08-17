@@ -1,6 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
-import GeoIP
+try:
+    import GeoIP
+except ImportError:
+    sys.exit("GeoIP module not found, try 'pip3 install GeoIP' and ryn again")
+
 
 def main(argv=None):
     if argv is None:
@@ -9,15 +13,16 @@ def main(argv=None):
     try:
         path = argv[0]
     except IndexError:
-        print "Usage: geoip <FILE>"
+        print("Usage: geoip <FILE>")
         return
 
     geo = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
     with open(path) as fp:
         for line in fp:
             ip = line.strip()
-            print "%s\t%s" % (geo.country_code_by_addr(ip),
-                              geo.country_name_by_addr(ip),)
+            print("%s\t%s" % (geo.country_code_by_addr(ip),
+                              geo.country_name_by_addr(ip),))
+
 
 if __name__ == '__main__':
     sys.exit(main())
