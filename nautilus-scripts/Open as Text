@@ -1,4 +1,5 @@
 #!/bin/sh
+# icon-name: text-editor
 lib=$(dirname "$(readlink -f "$0")")/lib
 # $NAUTILUS_SCRIPT_SELECTED_URIS is safe to use unquoted, should not escape
 # shellcheck disable=SC2086

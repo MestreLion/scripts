@@ -1,3 +1,4 @@
 #!/bin/bash
+# icon-name: baobab
 path=${1:-$PWD}
 [[ -d "$path" ]] && baobab -- "$path"
