@@ -1,2 +1,5 @@
 #!/bin/sh
-gedit "$@"
+lib=$(dirname "$(readlink -f "$0")")/lib
+# $NAUTILUS_SCRIPT_SELECTED_URIS is safe to use unquoted, should not escape
+# shellcheck disable=SC2086
+python3 -- "$lib"/open_as.py "text/plain" ${NAUTILUS_SCRIPT_SELECTED_URIS:-"$@"}
