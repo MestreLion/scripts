@@ -142,7 +142,7 @@ while (($#)); do
 	esac
 	shift || break
 done
-args+=("$@")
+args+=( "$@" )
 
 case ${#args[@]} in
 	0) missing ARG;;
