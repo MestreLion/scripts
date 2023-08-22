@@ -55,10 +55,12 @@ bsort=0
 while (( $# )); do
 	case "$1" in
 	--sort) bsort=1;;
+	--) shift; break;;
 	*) files+=( "$1" );;
 	esac
-	shift
+	shift || break
 done
+files+=( "$@" )
 
 result=$(inplace formatjson "$bsort" -- "${files[@]}" 2>&1)
 if [[ "$result" ]]; then

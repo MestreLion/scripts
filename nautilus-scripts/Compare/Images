@@ -30,7 +30,6 @@ case $# in
 		i=0
 		while (( $# )) ; do
 			tempfile="${tempdir}/$((++i)) ${1//\//_}"
-			
 			convert "$1" pam:- | xxd > "$tempfile"
 			shift
 		done

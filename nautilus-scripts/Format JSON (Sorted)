@@ -1,3 +1,0 @@
-#!/bin/bash
-
-"$(dirname "$(readlink -f "$0")")"/'Format JSON' --sort "$@"
