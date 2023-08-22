@@ -21,6 +21,7 @@ alias ca="CA.pl"
 alias apt-add-ppa="apt-manage"  # from repolib: https://github.com/pop-os/repolib
 alias rogue-ssh="roguepc -r ssh rogue &"
 alias debuild-binary="debuild -i -us -uc -b"
+alias website-download="wget --mirror --convert-links --page-requisites --no-parent"  # or jusr -r
 #alias have="exists"
 
 args() { local i=0; while (($#)); do echo "$((++i))=$1"; shift; done; }
