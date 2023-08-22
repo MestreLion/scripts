@@ -1,0 +1,8 @@
+#!/bin/sh
+# icon-name: edit-find
+# 'system-search' would be better, but a bug in Nautilus (gio?) displays the wrong image
+
+# Former gnome-search-tool was removed in Ubuntu 18.04.
+# mate-search-tool is a drop-in replacement
+# TODO: check availability, and apt install mate-utils if needed
+mate-search-tool
