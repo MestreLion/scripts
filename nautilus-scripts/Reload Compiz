@@ -1,3 +1,0 @@
-#!/bin/bash
-if [[ "$TERM" ]]; then echo "Must not execute in a terminal" >&2; exit 1; fi
-compiz --replace
