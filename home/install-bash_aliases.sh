@@ -16,19 +16,20 @@ download=1
 
 #------------------------------------------------------------------------------
 usage()     { echo "Usage: ${0##*/} [auto|download|symlink]" >&2; exit 1; }
-is_root()   { (( EUID == 0 )); }  # POSIX: [ "$(id -u)" -eq 0 ]
+is_root()   { (( EUID == 0 )); }  # EUID set by bash. POSIX: [ "$(id -u)" -eq 0 ]
 user_home() {
 	if type getent &>/dev/null; then
-		getent passwd -- "${1:-$USER}" | cut -d: -f6
+		getent passwd -- "${1:-$(id -un)}" | cut -d: -f6
 	else
-		awk -F: '$3 == 0 {print $6}' /etc/passwd
+		awk -F: -v uid=$EUID '$3 == uid {print $6}' /etc/passwd
 	fi
 }
+
 #------------------------------------------------------------------------------
 if is_root; then suffix=root; else suffix=min; fi
 here=$(dirname "$(readlink -f "$0")")
 file=$here/bash_aliases_$suffix
-home=$(user_home "")  # intended $HOME even if running via sudo without -H
+home=$(user_home)  # intended $HOME even if running via sudo without -H
 xdg=${XDG_CONFIG_HOME:-$home/.config}
 
 case "$mode" in
@@ -41,6 +42,7 @@ if ! ((download)) && ! [[ -f "$file" ]]; then
 	echo "$file not found. Clone the repository or use download mode" >&2
 	exit 1
 fi
+
 #------------------------------------------------------------------------------
 create() {
 	local source=$1
