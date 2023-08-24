@@ -518,7 +518,7 @@ PS1="${c[RESET]}${c[BOLD]}"\
 # A.K.A 'why echo "foo!bar" do not work?' (but "foo!" and "foo! bar!" does)
 set +o histexpand  # same as set +H
 
-# >>>> Local bash_aliases <<<<<-------------------------------------------------
+# >>>>> Local bash_aliases <<<<<------------------------------------------------
 
 BASH_STARTUP=1
 
