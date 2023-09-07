@@ -19,14 +19,14 @@ while IFS= read -r script; do
 	icon=$(grep -Exm1 '#\s*icon-name\s*:\s*\S+\s*' "$script" | cut -d: -f2 | grep -Eo '\S+')
 	if [[ -z "$icon" ]]; then continue; fi
 	set_icon "$script" "$icon"
-done < <(find "$here" -type f -executable)
+done < <(find -L "$here" -type f -executable)
 
 # Subdirs icons: '.icon-name' hidden file in subdir containing (only) ICON_NAME
 while IFS= read -r path; do
 	icon=$(<"$path")
 	if [[ -z "$icon" ]]; then continue; fi
 	set_icon "$(dirname "$path")" "$icon"
-done < <(find "$here" -type f -name '.icon-name')
+done < <(find -L "$here" -type f -name '.icon-name')
 
 #TODO: finish installing!
 #nautilus=${XDG_DATA_HOME:-"$HOME"/.local/share}/nautilus/scripts
