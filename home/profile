@@ -66,7 +66,7 @@ add_path() {
 prepend_path "$SCRIPTS"  add_non_dir
 
 # Add some projects
-append_path "$HOME/work/git-tools:$HOME/work/wine-tools:$HOME/work/xdg-tools"
+append_path "$HOME/work/git-tools:$HOME/work/wine-tools:$HOME/work/xdg-tools:$HOME/work/emu-tools/bin"
 
 export PATH
 
