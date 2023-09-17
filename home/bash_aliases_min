@@ -500,7 +500,6 @@ declare -A c=(
 	 [RESET]="\[$(tput sgr0)\]"  # "\[\e[0m\]"
 )
 
-
 # Bare-bones
 # PS1='\[\e[0m\e[1m\e[35m\]\t \[\e[32m\]\u@\h \[\e[34m\]\w \[\e[33m\]\[\e[34m\]\$ \[\e[0m\]'
 # PS2='> '
@@ -549,4 +548,17 @@ if exists neofetch; then neofetch; fi
 # So cute!
 if exists cowfortune;  then
 	cowfortune | { if exists lolcat; then lolcat; else cat; fi; }
+fi
+
+# Start SSH Agent when connected via SSH, killing it on SSH logout
+# To be fully effective, add 'AddKeysToAgent yes' to ~/.ssh/config.
+# https://unix.stackexchange.com/q/655974/4919
+# https://unix.stackexchange.com/a/506505
+if [[ "${SSH_TTY:-}" && -z "${SSH_AGENT_PID:-}" ]]; then
+	source <(ssh-agent -s)
+	if [[ "$(trap -p EXIT)" ]]; then
+		echo "Trap already set, ssh-agent will not be killed on EXIT" >&2
+	else
+		trap 'if [[ "${SSH_AGENT_PID:-}" ]]; then source <(ssh-agent -k); fi' EXIT
+	fi
 fi
