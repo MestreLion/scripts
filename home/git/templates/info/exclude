@@ -6,4 +6,5 @@
 .settings/
 
 # PyCharm IDE
+# (can also drop a .gitignore there containing '*')
 .idea/
