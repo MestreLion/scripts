@@ -21,7 +21,9 @@ myname=${0##*/}
 block=1Mi
 size=0
 autosudo=1
+force=0
 eta=1
+
 
 fatal()   { [[ "$1" ]] && echo "$myname: error: $@" >&2 ; exit 1; }
 message() { printf "%s\n" "$1"; }
@@ -47,8 +49,8 @@ usage() {
 
 	Options:
 	  -h|--help    - show this page.
-	  -f|--force   - force copy even for mounted partitions
-	  -S|--no-sudo - do not uso 'sudo' even if OUTPUT is not writable by user
+	  -f|--force   - force operation even on mounted partitions
+	  -S|--no-sudo - do not use 'sudo' even if OUTPUT is not writable by user
 
 	  -s|--size SIZE       - number of BYTES (*NOT* blocks!) to copy.
 	                           0 copies the whole input [Default: $size]
@@ -58,7 +60,7 @@ usage() {
 	as K, M, G are allowed. '1K' means 1000; use 'Ki' (and 'Mi', 'Gi', etc)
 	for 1024-based units.
 
-	Copyright (C) 2012 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+	Copyright (C) 2013 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 	License: GPLv3 or later. See <http://www.gnu.org/licenses/gpl.html>
 	USAGE
 	exit 0
