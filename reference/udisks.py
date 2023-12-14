@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # Listing Drives using UDisks
 # https://github.com/storaged-project/udisks/issues/747
 # http://storaged.org/doc/udisks2-api/latest/
@@ -74,10 +76,12 @@ class Storage(t.NamedTuple):
     drive:  UDisks.Drive       # individual properties (model, serial, size, etc)
     block:  UDisks.Block       # drive device (/dev/sdX)
     info:   UDisks.ObjectInfo  # general sort key and handy one-liner description
+    #path:   str = ""           # DBus path for object
 
 
 def sort_key(storage: Storage) -> str:
-    return storage.info.get_sort_key()  # Less general: storage.drive.props.sort_key
+    # Less general: storage.info.get_sort_key(), storage.drive.props.sort_key
+    return storage.block.props.id
 
 
 def status():
@@ -113,9 +117,51 @@ def status():
             )
 
 
+def object_info():
+    client: UDisks.Client = UDisks.Client.new_sync()
+    info: UDisks.ObjectInfo
+    obj: UDisks.Object
+
+
+def device_status(device: str):
+    """device: /dev/sda, /dev/sda1, /dev/loop1, /dev/loop1p2, ..."""
+    path = f"/org/freedesktop/UDisks2/block_devices/{device[5:]}"
+    client: UDisks.Client = UDisks.Client.new_sync()
+    obj: UDisks.Object = client.get_object(path)
+    if obj is None:
+        raise FileNotFoundError(f"Device not found: {device}")
+    info: UDisks.ObjectInfo = client.get_object_info(obj)
+    print(info.get_one_liner())
+
+
+def example():
+    client = UDisks.Client.new_sync(None)
+    manager = client.get_object_manager()
+    objects = manager.get_objects()
+    for o in objects:
+        print('%s:' % o.get_object_path())
+        ifaces = o.get_interfaces()
+        for i in ifaces:
+            print(' IFace %s' % i.get_interface_name())
+        print('')
+
+
 # -----------------------------------------------------------------------------
 print("DBus:")
 UDisksDBus().status()
-print()
-print("Lib:")
+print("\nLib:")
 status()
+# print("\nExample:")
+# example()
+print("\nObjectInfo:")
+object_info()
+print("Done!")
+
+if len(sys.argv) > 1:
+    print()
+    try:
+        device_status(sys.argv[1])
+    except Exception as e:
+        print(e)
+    # print("\nExample:")
+    # example()
