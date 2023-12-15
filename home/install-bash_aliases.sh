@@ -27,7 +27,7 @@ user_home() {
 }
 
 #------------------------------------------------------------------------------
-if is_root; then suffix=root; elif [[ "$server" ]]; then suffix=min; else suffix=min; fi
+if is_root; then suffix=root; elif [[ "$server" ]]; then suffix=server; else suffix=min; fi
 here=$(dirname "$(readlink -f "$0")")
 file=$here/bash_aliases_$suffix
 home=$(user_home)  # intended $HOME even if running via sudo without -H
@@ -49,13 +49,21 @@ create() {
 	local source=$1
 	local dest=$2
 	if ((download)); then
-		wget --hsts-file="$xdg"/wget-hsts -O "$dest" -- "$url/$source"
+		wget "${wget_hsts[@]}" -O "$dest" -- "$url/$source"
 	else
 		ln -vTfrs -- "$here/$source" "$dest"
 	fi
 }
-# shellcheck disable=SC2174
-mkdir -vp -m 0700 -- "$xdg"
-if [[ -f "$home"/.wget-hsts ]]; then mv -v -- "$home"/.wget-hsts "$xdg"/wget-hsts; fi
+
+if [[ "$server" ]]; then
+	wget_hsts=()
+else
+	wget_hsts=(--hsts-file="$xdg"/wget-hsts)
+	# shellcheck disable=SC2174
+	mkdir -vp -m 0700 -- "$xdg"
+	if [[ -f "$home"/.wget-hsts && ! -f "$xdg"/wget-hsts ]]; then
+		mv -v -- "$home"/.wget-hsts "$xdg"/wget-hsts
+	fi
+	create pythonrc.py "$xdg"/pythonrc.py
+fi
 create "${file##*/}" "$home"/.bash_aliases
-create pythonrc.py   "$xdg"/pythonrc.py
