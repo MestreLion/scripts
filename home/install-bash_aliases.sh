@@ -11,11 +11,12 @@ trap '>&2 echo "error: line $LINENO, status $?: $BASH_COMMAND"' ERR
 #------------------------------------------------------------------------------
 
 mode=${1:-auto}  # auto (or blank), download, symlink
+server=${2:-}
 url=https://github.com/MestreLion/scripts/raw/main/home
 download=1
 
 #------------------------------------------------------------------------------
-usage()     { echo "Usage: ${0##*/} [auto|download|symlink]" >&2; exit 1; }
+usage()     { echo "Usage: ${0##*/} [auto|download|symlink] [server]" >&2; exit 1; }
 is_root()   { (( EUID == 0 )); }  # EUID set by bash. POSIX: [ "$(id -u)" -eq 0 ]
 user_home() {
 	if type getent &>/dev/null; then
@@ -26,7 +27,7 @@ user_home() {
 }
 
 #------------------------------------------------------------------------------
-if is_root; then suffix=root; else suffix=min; fi
+if is_root; then suffix=root; elif [[ "$server" ]]; then suffix=min; else suffix=min; fi
 here=$(dirname "$(readlink -f "$0")")
 file=$here/bash_aliases_$suffix
 home=$(user_home)  # intended $HOME even if running via sudo without -H
