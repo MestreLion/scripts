@@ -99,11 +99,11 @@ export MANPAGER='less --RAW-CONTROL-CHARS --LONG-PROMPT +Gg'
 # +Gg: read till EOF then go back, to enable percentage and total line count
 
 # Colorize bold and underline
-# --use-color and -D were added to less in v576 (2021-02-04),
+# --use-color and --color|-D were added to less in v576 (2021-02-04),
 # See manc() for an older solution
 if (( "$(less --version | awk '{print $2; exit}')" >= 576 )); then
-	MANPAGER+=' --use-color --color=d+r --color=u+b'
-	MANROFFOPT='-c'
+	export MANPAGER+=' --use-color --color=d+b --color=u+Y --color=s+kw'
+	export MANROFFOPT='-c'
 fi
 
 # Alternative: use most (sudo apt install most) that auto-colorizes man pages

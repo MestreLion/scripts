@@ -15,6 +15,22 @@
 # Use ~/.profile or ~/.pam_environment to properly set them.
 export BLOCK_SIZE="'1"
 
+# Customized `less` pager for man, to help with colors and percentages
+export MANPAGER='less --RAW-CONTROL-CHARS --LONG-PROMPT +Gg'
+# -r, --raw-control-chars: output "raw" control characters.
+# -R, --RAW-CONTROL-CHARS: same as -r but only for ANSI color escape sequences.
+# -s, --squeeze-blank-lines: Squeeze multiple blank lines.
+# -M, --LONG-PROMPT: prompt even more verbosely than more.
+# +Gg: read till EOF then go back, to enable percentage and total line count
+
+# Colorize bold and underline
+# --use-color and --color|-D were added to less in v576 (2021-02-04),
+# See manc() for an older solution
+if (( "$(less --version | awk '{print $2; exit}')" >= 576 )); then
+	export MANPAGER+=' --use-color --color=d+b --color=u+Y --color=s+kw'
+	export MANROFFOPT='-c'
+fi
+
 # >>>>> Aliases <<<<<-----------------------------------------------------------
 
 # SP  ' '  0x20 = · U+00B7 Middle Dot
