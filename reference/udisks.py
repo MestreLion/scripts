@@ -121,6 +121,49 @@ def object_info():
     client: UDisks.Client = UDisks.Client.new_sync()
     info: UDisks.ObjectInfo
     obj: UDisks.Object
+    #
+    #
+    # for obj in (client.get_object(_.get_object_path()) for _ in
+    #             client.get_object_manager().get_objects()):
+    #     info = client.get_object_info(obj)
+    #     if obj.props.loop or obj.props.manager:
+    #         continue
+    #
+    #     print(info.get_one_liner())
+    #
+    # for obj in client.get_object_manager().get_objects():
+    #     if obj.get_manager() or obj.get_loop():
+    #         print(obj)
+        #
+        # path = obj.get_object_path()
+        # print(path, client.get_object_info(client.get_object(path)).get_one_liner())
+
+    for obj in (client.get_object(_.get_object_path()) for _ in
+                client.get_object_manager().get_objects()):
+        drive: UDisks.Drive = obj.get_drive()  # or obj.props.drive
+        d = dict()
+        d.update()
+        if drive is None:
+            continue
+        storage = Storage(
+            object=obj,
+            drive=drive,
+            info=client.get_object_info(obj),  # new in UDisks 2.1
+            block=client.get_block_for_drive(drive, get_physical=False),
+        )
+
+    #      client.get_object_manager().get_objects())
+    #     if not (obj.props.loop or obj.props.manager)
+    # ]
+    # for info in sorted(items, key=lambda _: _.get_sort_key()):
+    #     print("{}, {}".format(info.get_description(), info.get_name()))
+    #     client.get_object_info(obj) for obj in
+    #
+    # ]
+    # [
+    #     client.get_object(o.get_object_path()) for o in
+    #     client.get_object_manager().get_objects()
+    # ]
 
 
 def device_status(device: str):
@@ -130,8 +173,19 @@ def device_status(device: str):
     obj: UDisks.Object = client.get_object(path)
     if obj is None:
         raise FileNotFoundError(f"Device not found: {device}")
+    drive: UDisks.Drive = client.get_drive_info .get_drive(obj)
     info: UDisks.ObjectInfo = client.get_object_info(obj)
+    # block: UDisks.Block = obj.get_block()
+    # drive: UDisks.Drive = obj.get_partition()
+    #
+    # UDisks.ObjectInfo()
+    # drive: UDisks.Drive = client.get_drive_for_block(block)
+    # for obj in client.get_object_manager().get_objects():
+    #     print(obj.get_object_path())
     print(info.get_one_liner())
+    # print(obj.props)
+    # if drive is not None:
+    #     print(drive.props.id)
 
 
 def example():
