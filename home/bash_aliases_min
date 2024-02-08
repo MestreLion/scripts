@@ -431,11 +431,15 @@ _comp_pkg_names() {
 	mapfile -t COMPREPLY < <(apt-cache --no-generate pkgnames -- "$cur" 2>/dev/null)
 	return 0
 }
-
+# Hardcoding _completion_loader() here, but could be obtained parsing `complete -p -D`
+if ! complete -p man &>/dev/null && declare -F _completion_loader >/dev/null; then
+	_completion_loader man
+fi
 complete -c where cmdlist cmdcat cmdopen        # commands (executables in $PATH)
 complete -F _comp_pkg_names ubuntu-package why  # packages in repositories
 complete-copy ls ll la
-complete-copy dwww-man mand manc
+if exists dwww-man; then complete-copy man dwww-man mand; fi
+complete-copy man manc
 
 # >>>>> PS1 customization <<<<<-------------------------------------------------
 # http://bashrcgenerator.com/
