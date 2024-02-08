@@ -218,6 +218,26 @@ install_packages() {
 		if [[ -z "$ok" ]]; then pkgs+=( "$pkg" ); fi
 	done
 	if (("${#pkgs[@]}")); then
-		sudo apt install "${pkgs[@]}"
+		sudo apt-get install "${pkgs[@]}"
 	fi
 }
+
+# 2-functions version:
+package_installed() {
+	[[ "$(dpkg-query --showformat='${Version}' --show "$1" 2>/dev/null || :)" ]]
+}
+install_packages() {
+	local pkg= pkgs=()
+	for pkg in "$@"; do
+		if ! package_installed "$pkg"; then pkgs+=( "$pkg" ); fi
+	done
+	if (("${#pkgs[@]}")); then
+		sudo apt-get install "${pkgs[@]}"
+		# Alternative:
+		# sudo apt-get install "${pkgs[@]}"
+	fi
+}
+
+
+# External IP: dig TXT +short o-o.myaddr.l.google.com @ns1.google.com
+# https://devconnected.com/how-to-get-your-ip-address-on-linux/
