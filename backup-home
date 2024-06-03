@@ -34,6 +34,7 @@ myname="${0##*/}"
 
 fatal()   { [[ "${1:-}" ]] && echo "$myname: error: $@" >&2 ; exit 1; }
 exists()  { type "$@" >/dev/null 2>&1; }
+escape()  { printf '%q' "$1"; }
 
 if ! exists rdiff-backup; then
 	sudo apt install -y rdiff-backup
@@ -47,7 +48,7 @@ if ! [[ -f "$config" ]]; then
 
 	# Full path to backup destination directory
 	# Can also be set on each run by command line argument
-	target=
+	target=$(escape "$dest")
 
 	# Mountpoint to auto-mount, usually backup destination dir or a parent
 	# Usually requires an entry on /etc/fstab for the device, set to 'noauto'
@@ -97,4 +98,4 @@ if [[ "$mount" ]]; then
 fi
 
 cd "$HOME" &&
-echo rdiff-backup "${options[@]}" -- "$HOME" "$dest"
+rdiff-backup "${options[@]}" -- "$HOME" "$dest"
