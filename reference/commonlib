@@ -241,3 +241,8 @@ install_packages() {
 
 # External IP: dig TXT +short o-o.myaddr.l.google.com @ns1.google.com
 # https://devconnected.com/how-to-get-your-ip-address-on-linux/
+
+# Broadcast IP mask (e.g. 10.10.10.255)
+# broadcast=$(ip -o -f inet addr show | awk '/scope global/ {print $6}')
+
+# USB3: lsusb -v | grep bcdUSB; lsusb --tree

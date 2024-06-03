@@ -40,15 +40,10 @@ if [ -f "$HOME/work/dosbox/dosbox-tools/dosbox-bashrc" ] ; then
 	source "$HOME/work/dosbox/dosbox-tools/dosbox-bashrc"
 fi
 
-# ------------------------------------------------------------------------------
-
-source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'PS1 customization')
-
 # Settings ---------------------------------------------------------------------
 
-# Disable the dreaded history expansion for interactive sessions
-# A.K.A 'why echo "Hello World!" do not work?'
-set +o histexpand # same as set +H
+source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'PS1 customization')
+source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'Settings')
 
 # Create core dump files on segmentation fault. File `core` at current process dir
 #ulimit -c unlimited

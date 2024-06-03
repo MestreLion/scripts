@@ -158,7 +158,9 @@ now()       { _datefmt '--rfc-3339=seconds' "${1:-}" '@'; }
 timestamp() { _datefmt '+%Y%m%d%H%M%S'      "${1:-}" '@'; }
 epoch()     { _datefmt '+%s'                "${1:-}"; }
 
-ubuntu-package() { open "http://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"; }
+ubuntu-package() { xdg-open "https://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"; }
+debian-bug()     { xdg-open "https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=${1/#//}"; }
+
 f2b() { local j=${1:-sshd}; sudo fail2ban-client status "$j"; }
 make-parallel() { make -j "$(nproc --ignore=2)" "$@"; }
 
@@ -520,6 +522,16 @@ PS1="${c[RESET]}${c[BOLD]}"\
 # Disable the dreaded history expansion for interactive sessions
 # A.K.A 'why echo "foo!bar" do not work?' (but "foo!" and "foo! bar!" does)
 set +o histexpand  # same as set +H
+
+# Bash History (by default at ~/.bash_history)
+# ------------
+# append to the history file, don't overwrite it. Already in stock ~/.bashrc
+shopt -s histappend
+# Max lines. Negative or non-numeric for unlimited.
+# Default 500, increased to 2000 by stock ~/.bashrc in Debian/Ubuntu
+# NOTE: Must comment it out in stock ~/.bashrc, as changes take effect immediately
+export HISTFILESIZE=-1
+
 
 # >>>>> Local bash_aliases <<<<<------------------------------------------------
 

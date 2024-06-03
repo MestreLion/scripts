@@ -47,7 +47,7 @@ if ! [[ -f "$config" ]]; then
 
 	# Full path to backup destination directory
 	# Can also be set on each run by command line argument
-	dest=$dest
+	target=
 
 	# Mountpoint to auto-mount, usually backup destination dir or a parent
 	# Usually requires an entry on /etc/fstab for the device, set to 'noauto'
@@ -84,6 +84,7 @@ fi
 
 source "$config" || fatal "could not read config file $config"
 
+dest=${dest:-$target}
 [[ "$dest" ]] || fatal "backup destination directory not set"
 
 for exclude in "${excludes[@]}"; do

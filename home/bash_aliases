@@ -137,7 +137,7 @@ venv() {
 	usage+="\nUsage: venv ENV_DIR"
 	if [[ "$vdir" =~ ^(|-h|--help)$ ]]; then echo -e "$usage" >&2; return 1; fi
 	"$python" -m venv "$vdir" || {
-		echo "Must install dependencies: sudo apt install python3-{pip,venv}" >&2
+		echo "Must install dependencies: sudo apt install python3-venv" >&2
 		return 1
 	}
 	source "$vdir"/bin/activate &&
