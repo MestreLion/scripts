@@ -159,7 +159,7 @@ timestamp() { _datefmt '+%Y%m%d%H%M%S'      "${1:-}" '@'; }
 epoch()     { _datefmt '+%s'                "${1:-}"; }
 
 ubuntu-package() { xdg-open "https://packages.ubuntu.com/search?searchon=names&suite=all&section=all&keywords=$1"; }
-debian-bug()     { xdg-open "https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=${1/#//}"; }
+debian-bug()     { xdg-open "https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=${1/#/}"; }
 
 f2b() { local j=${1:-sshd}; sudo fail2ban-client status "$j"; }
 make-parallel() { make -j "$(nproc --ignore=2)" "$@"; }
