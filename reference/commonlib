@@ -239,6 +239,23 @@ install_packages() {
 }
 
 
+# For extended variants of version_*(), see setuplib from seten project
+version_greater() {
+	# Usage: version_greater <version> <reference>
+	# Return 0 if version is greater or equal than reference,
+	# non-zero otherwise
+	local vmax=$(printf "%s\n" "$1" "$2" | LC_ALL=C sort --version-sort | tail -n1)
+	if [[ "$vmax" != "$1" ]]; then return 1; fi
+}
+version_lesser() {
+	# Usage: version_lesser <version> <reference>
+	# Return 0 if version is lesser or equal than reference,
+	# non-zero otherwise
+	local vmin=$(printf "%s\n" "$1" "$2" | LC_ALL=C sort --version-sort | head -n1)
+	if [[ "$vmin" != "$1" ]]; then return 1; fi
+}
+
+
 # External IP: dig TXT +short o-o.myaddr.l.google.com @ns1.google.com
 # https://devconnected.com/how-to-get-your-ip-address-on-linux/
 
