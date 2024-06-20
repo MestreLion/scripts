@@ -55,6 +55,9 @@ green()   { tput setaf 2; bold "$@"; }
 fatal()   { if (($#)); then { red "$@"; echo; } >&2; fi; exit 1; }
 message() { if (($# && verbose)); then green '* ' "$@"; echo; fi; }
 
+fatal()     { if (($#)); then echo "$@" >&2; usage 1 >&2; fi; }
+usage()     { echo "Usage: ${self} ARGUMENT [OPTION]"; exit ${1:-0}; }
+
 fatal()   { if (($#)); then echo "$self: error: $1" >&2; fi; exit "${2:-1}"; }
 fatal()   { if (($#)); then echo "$self: error: $*" >&2; fi; exit 1; }
 message() { if (($# && verbose)); then printf '%s\n' "$@"; fi; }
@@ -69,6 +72,7 @@ numeric() { [[ "$1" ]] || missing "${3-NUM}" "${2:-}"; local re='^[0-9]+([.][0-9
             [[ "$1" =~ $re ]] || argerr "'${1:-}'${2:+ in $2} is not a number."; }
 integer() { [[ "$1" ]] || missing "${3:-NUM}" "${2:-}"; [[ "$1" != *[!0-9]* ]] ||
             argerr "${2:+${3:-NUM} argument in $2 is }not an integer: $1"; }
+integer() { [[ "$1" =~ ^[0-9]+$ ]]; }
 sizefmt() { [[ "$1" ]] || missing "${3:-SIZE}" "${2:-}";
             numfmt --from=auto -- "$1" || fatal; }
 si()      { numfmt --to=si --suffix 'B' "$@"; }
