@@ -1,0 +1,131 @@
+#!/bin/bash
+#
+# backup-data - back up data partitions using borg-backup
+#
+# Copyright (C) 2024 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+#------------------------------------------------------------------------------
+set -Eeuo pipefail  # Exit on most errors.
+trap '>&2 echo "error: line $LINENO, status $?: $BASH_COMMAND"' ERR
+# See https://fvue.nl/wiki/Bash:_Error_handling for caveats
+#------------------------------------------------------------------------------
+
+# TODO:
+# - Consider -x | --one-file-system
+# - Consider cd to _source_ instead of _repo_
+
+
+# Config file location
+config=${XDG_CONFIG_HOME:-$HOME/.config}/backup-data.conf
+
+# Config arrays
+declare -a options=(
+	--progress
+	--stats
+)
+declare -a excludes=(
+	'lost+found'
+	'.Trash*'
+)
+
+# Default archive name
+default_archive='.::{now}'
+
+#------------------------------------------------------------------------------
+
+self="${0##*/}"
+
+fatal()  { if (($#)); then echo "$@" >&2; usage 1 >&2; fi; }
+usage()  { echo "Usage: ${self} [SOURCE_DIR [REPO_DIR [PASSWORD]]]"; exit ${1:-0}; }
+exists() { type "$@" >/dev/null 2>&1; }
+escape() { printf '%q' "$1"; }
+
+
+#------------------------------------------------------------------------------
+
+if ! exists borg; then
+	sudo apt-get install borg
+fi
+
+if ! [[ -f "$config" ]]; then
+	cat > "$config" <<-EOF
+	# backup-data config file
+	# Sourced by bash, mind the syntax!
+
+	# Full path of directory to backup.
+	# Mandatory, but can also be set on each run by command line argument 1.
+	source=
+
+	# Full path to backup repository (destination directory).
+	# Mandatory, but can also be set by envvar BORG_REPO or command-line argument 2.
+	# Will be the current directory during 'borg create' execution
+	repository=
+
+	# Repository password, if any.
+	# Can also be set by envvar BORG_PASSPHRASE or command-line argument 3.
+	# Leaving this blank in a password-protected repositoy will prevent
+	#   non-interactive use, as borg will prompt for one.
+	password=
+
+	# Archive name. If empty will use '$default_archive' by default.
+	archive=
+
+	# Directory or device to auto-mount, usually containing the backup repository.
+	# May require an entry on /etc/fstab for the device, usually with options set
+	#   as 'defaults,user,noauto'.
+	mount=
+
+	# If the above mount requires sudo or not. 0 = no, 1 = yes.
+	sudo_mount=1
+
+	# 'borg create' extra options.
+	# Must be a Bash array, and the following is already excluded by default:
+	#	${options[@]}
+	# (change '+=' to '=' in the assignment below to remove default options)
+	options=(
+	)
+
+	# Extra paths to exclude from backup. Each entry will be prepended with
+	#   '--exclude ' and included to 'borg create' options.
+	# Since Borg 1.2.3, all paths must be relative to source directory, so
+	#   do NOT use leading slashes!
+	# Must be a bash array, and the following is already excluded by default:
+	#	${excludes[@]}
+	# (change '+=' to '=' in the assignment below to remove default excludes)
+	excludes+=(
+	)
+	EOF
+	echo "warning: config file not found, blank one created at: $config" >&2
+	if [[ -t 1 ]]; then
+		editor "$config"
+	else
+		echo "edit it and try again" >&2
+		exit 1
+	fi
+fi
+
+source "$config" || fatal "could not read config file: $config"
+
+source=${source:-${1:-}}
+export BORG_REPO=${2:-${BORG_REPO:-${repository:-}}}
+export BORG_PASSPHRASE=${3:-${BORG_PASSPHRASE:-${password:-}}}
+
+[[ "$source"    ]] || fatal "source directory not set"
+[[ "$BORG_REPO" ]] || fatal "backup repository path not set"
+
+archive=${archive:-$default_archive}
+mount=${mount:-}
+sudo_mount=${sudo_mount:-1}
+
+for exclude in "${excludes[@]}"; do
+	options+=(--exclude "$exclude")
+done
+
+if [[ "$mount" ]] && ! [[ -d "$mount" ]]; then
+	if ((sudo_mount)); then sudo=sudo; else sudo=env; fi
+	$sudo mount "$mount"
+fi
+
+# borg exits with code 1 on mere warnings (file permissions), 2 for actual errors
+cd "$BORG_REPO" &&
+echo borg create "${options[@]}" "$archive" "${source%/}"/ || (( $? >= 2 ))
