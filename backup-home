@@ -4,6 +4,11 @@
 #
 # Copyright (C) 2019 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 # License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+#------------------------------------------------------------------------------
+
+set -Eeuo pipefail  # Exit on most errors.
+trap '>&2 echo "error: line $LINENO, status $?: $BASH_COMMAND"' ERR
+# See https://fvue.nl/wiki/Bash:_Error_handling for caveats
 
 # Factory default options, configurable by config file
 # See notes on default config file creation

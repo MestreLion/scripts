@@ -16,6 +16,8 @@
 #	rsync -a --info=progress2 --no-inc-recursive "${source%\/}"/ "${target%\/}"/
 #   tar backup:
 #	cd "$source" && sudo tar --one-file-system -cvpzf "$target"/backup.tar.xz
+#   Mirror:
+#	sudo rsync -axS --info=progress2 --no-inc-recursive --delete  "${source%\/}"/ "${target%\/}"/
 # ------------------------------------------------------------------------------
 
 system=$(lsb_release -sir | tr -d '.\n')
