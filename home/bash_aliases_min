@@ -123,6 +123,7 @@ alias dd-nocache="dd-progress oflag=nocache,sync"
 alias dfd='df -H -x tmpfs -x squashfs -x devtmpfs'
 alias duh='du -sbh --si'
 alias dud='lsblk --exclude 7'  # 7 = loop devices, most likely snaps
+alias disk-status='lsblk -e7 -po NAME,SIZE,MODEL,FSTYPE,LABEL,MOUNTPOINT'
 alias rot13="tr 'A-Za-z' 'N-ZA-Mn-za-m'"
 alias json='python3 -m json.tool'  # 'jq' is a better alternative, if installed
 alias why='apt rdepends --installed'  # can also be 'aptitude why'
