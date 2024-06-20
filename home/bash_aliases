@@ -285,8 +285,3 @@ complete -A function sudo-function
 complete -F _comp_pkg_names ubuntu-package why apt-tree  # packages in repositories
 complete-copy ls ll la
 complete-copy dwww-man mand manc package
-
-# -----------------------------------------------------------------------------
-
-# shellcheck source=./bash_aliases_min
-source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'Local bash_aliases')

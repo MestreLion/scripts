@@ -49,8 +49,13 @@ source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'Settings')
 #ulimit -c unlimited
 
 # ------------------------------------------------------------------------------
+# Cleanup and finish
 
+# shellcheck source=./bash_aliases_min
 source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'Cleanup')
+
+# shellcheck source=./bash_aliases_min
+source <(snipfile "$SCRIPTS/home/bash_aliases_min" 'Local bash_aliases')
 
 # So cute!
 exists cowfortune && { cowfortune | { exists lolcat && lolcat || cat ; } } || :
