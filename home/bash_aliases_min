@@ -460,7 +460,7 @@ _format_exitcode() {
 
 _shell_level() {
 	local s=$?
-	local c=$SHLVL; if [[ "${DISPLAY:-}" ]]; then c=$((--c)); fi
+	local c=$((SHLVL - 1))
 	if ((c)); then printf "%${c}s" | tr ' ' '*'; printf ' '; fi
 	return "$s"
 }
