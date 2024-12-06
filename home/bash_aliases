@@ -140,6 +140,7 @@ venv() {
 		echo "Must install dependencies: sudo apt install python3-venv" >&2
 		return 1
 	}
+	echo '*' >> "$vdir"/.gitignore
 	source "$vdir"/bin/activate &&
 	PYTHONWARNINGS="ignore::DeprecationWarning" pip install --upgrade pip setuptools wheel
 }

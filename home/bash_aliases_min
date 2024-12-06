@@ -263,7 +263,7 @@ apt-list-manual() {
 	printf '\t%s\n' "${msg[@]}" >&2
 }
 
-# see references/commonlib for a standalone version
+# see ../reference/commonlib for a standalone version
 install_packages() {
 	# Avoid marking installed packages as manual by only installing missing ones
 	local pkg=
@@ -292,6 +292,7 @@ dump-system-data() {
 	try cat /etc/apt/sources.list{,.d/*.list} > "$target"/apt-sources.txt
 	try crontab -l                            > "$target"/crontab.txt
 	apt-list-manual "$2"                      > "$target"/apt-packages.txt
+	try snap list                             > "$target"/snap.txt
 	try sudo fdisk --list                     > "$target"/fdisk.txt
 }
 
