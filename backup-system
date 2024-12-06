@@ -58,10 +58,11 @@ excludes=(
 	'/tmp/*'
 	'/swapfile'
 
-	# Users' homes
-	'/home/*/.local/share/Trash/*'
-	'/home/*/.cache/*'
-	'/home/*/.thumbnails/*'  # Not in Ubuntu 22.04+
+	# Users' homes (temporarily NOT backed up!)
+	'/home/*'
+#	'/home/*/.local/share/Trash/*'
+#	'/home/*/.cache/*'
+#	'/home/*/.thumbnails/*'  # Not present in Ubuntu 22.04+
 )
 
 # to restore /swapfile:
