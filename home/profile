@@ -101,6 +101,10 @@ export MANPAGER='less --RAW-CONTROL-CHARS --LONG-PROMPT +Gg'
 # Colorize bold and underline
 # --use-color and --color|-D were added to less in v576 (2021-02-04),
 # See manc() for an older solution
+# In --color, '+' means color _and_ original formatting (bold, underline, etc)
+# d+b: Bold => blue
+# u+Y: Underline => bright yellow
+# s+kw: Standout (Reversed) => Black on White
 if (( "$(less --version | awk '{print $2; exit}')" >= 576 )); then
 	export MANPAGER+=' --use-color --color=d+b --color=u+Y --color=s+kw'
 	export MANROFFOPT='-c'
