@@ -26,7 +26,8 @@ excludes=(
 )
 options=(
 	--print-statistics
-	--terminal-verbosity 5
+#	--verbosity 5             # default is 3, completely silent in a normal run
+	--terminal-verbosity 5    # default is --verbosity level.
 	--exclude-other-filesystems
 	--exclude-special-files   # Exclude all device files, fifo files, socket files, and symbolic links.
 	--include-symbolic-links  # Re-include symbolic links

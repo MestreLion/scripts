@@ -10,6 +10,14 @@ trap '>&2 echo "error: line $LINENO, status $?: $BASH_COMMAND"' ERR
 # See https://fvue.nl/wiki/Bash:_Error_handling for caveats
 #------------------------------------------------------------------------------
 
+# HINT: To initialize a borg repository: `borg init "$BORG_REPO" -e repokey`
+# HINT: To aid fix path encoding in data partitions converted from NTFS to EXT4:
+#	convmv -r -f cp1252 -t utf8 "$source" &&
+#	convmv -r -t cp1252 -f utf8 --fixdouble "$source"
+#	-r: recursive
+#	-f cp1252 / -t utf8: encoding FROM and TO
+# 	--fixdouble: fix "UTF-8 encoded in CP1252"
+
 # TODO:
 # - Consider -x | --one-file-system
 # - Consider cd to _source_ instead of _repo_
@@ -79,7 +87,7 @@ if ! [[ -f "$config" ]]; then
 	sudo_mount=1
 
 	# 'borg create' extra options.
-	# Must be a Bash array, and the following is already excluded by default:
+	# Must be a Bash array, and the following is already included by default:
 	#	${options[@]}
 	# (change '+=' to '=' in the assignment below to remove default options)
 	options=(
@@ -106,6 +114,7 @@ fi
 
 source "$config" || fatal "could not read config file: $config"
 
+# FIXME: env var should take priority over config file. Currently it overrides it.
 source=${source:-${1:-}}
 export BORG_REPO=${2:-${BORG_REPO:-${repository:-}}}
 export BORG_PASSPHRASE=${3:-${BORG_PASSPHRASE:-${password:-}}}
@@ -121,6 +130,9 @@ for exclude in "${excludes[@]}"; do
 	options+=(--exclude "$exclude")
 done
 
+# FIXME: maybe test [[ -d "$BORG_REPO" ]] instead of [[ -d "$mount" ]]?
+# Afterall, no mount needed if target dir is already accessible
+# FIXME: Add a flag if a mount was performed, and conditionally unmount it after backup
 if [[ "$mount" ]] && ! [[ -d "$mount" ]]; then
 	if ((sudo_mount)); then sudo=sudo; else sudo=env; fi
 	$sudo mount "$mount"
@@ -128,4 +140,4 @@ fi
 
 # borg exits with code 1 on mere warnings (file permissions), 2 for actual errors
 cd "$BORG_REPO" &&
-echo borg create "${options[@]}" "$archive" "${source%/}"/ || (( $? >= 2 ))
+borg create "${options[@]}" "$archive" "${source%/}"/ || (( $? >= 2 ))

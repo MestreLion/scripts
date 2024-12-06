@@ -9,6 +9,9 @@
 #   echo '@weekly root /path/to/this 2>> /var/log/backup-system.stderr.log' |
 #   sudo tee /etc/cron.d/backup-system
 #
+# When using sudo must use full path to this.
+# If running in an (user) shell: sudo "$(type -p backup-system)"
+#
 # Alternatives:
 #   Simple, single-dir backup:
 #	source=/media/"$USER"/a
@@ -18,6 +21,10 @@
 #	cd "$source" && sudo tar --one-file-system -cvpzf "$target"/backup.tar.xz
 #   Mirror:
 #	sudo rsync -axS --info=progress2 --no-inc-recursive --delete  "${source%\/}"/ "${target%\/}"/
+#
+# To allow user inspection / monitoring:
+# sudo chmod +rx "$target"{,/rdiff-backup-data{,/backup.log}} &&
+# sudo chmod +r  "$target"/rdiff-backup-data/backup.log
 # ------------------------------------------------------------------------------
 
 system=$(lsb_release -sir | tr -d '.\n')
@@ -26,9 +33,16 @@ myself=${0##*/}
 source=/
 target=/backup/${system,,}
 
+# rdiff-backup verbosity levels:
+# 3 - completely silent in a normal run
+# 4 - info on start and end, no actual on-going progress
+# 5 - all info from 4 plus one file per line progress
+# If (log) --verbosity is 5, you can monitor log even if --terminal-verbosity is 3:
+# tail -f "$target"/rdiff-backup-data/backup.log
+
 options=(
 	--verbosity 5             # default is 3, completely silent in a normal run
-	--terminal-verbosity 3    # default is --verbosity level
+	--terminal-verbosity 3    # default is --verbosity level.
 	--include-symbolic-links  # would be excluded by --exclude-special-files
 	--exclude-special-files   # Exclude all device files, fifo files, socket files, and symbolic links.
 	--exclude-other-filesystems
@@ -92,8 +106,8 @@ usage() {
 }
 for arg in "$@"; do [[ "$arg" == "-h" || "$arg" == "--help" ]] && usage; done
 
-source=${1:-/}
-target=${2:-/backup/${system,,}}
+source=${1:-$source}
+target=${2:-$target}
 shift 2 || true
 
 # ------------------------------------------------------------------------------
