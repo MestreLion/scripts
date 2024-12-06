@@ -8,3 +8,6 @@
 # PyCharm IDE
 # (can also drop a .gitignore there containing '*')
 .idea/
+
+# Python runtime
+__pycache__/
