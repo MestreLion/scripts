@@ -42,9 +42,19 @@ for xdg_path in "$xdg_config" "$xdg_data" "$xdg_cache" "$xdg_state"; do
 done
 unset xdg_path
 
-# less. Many changes in v590 (Ubuntu 22.04) and v600 (unreleased as of 2023-06)
-export LESSHISTFILE=${xdg_state}/lesshst  # ~/.lesshist before v600
-export LESSKEY=${xdg_config}/lesskey      # ~/.lesskey  before v600
+# Good reference on XDG Support status of many software:
+# https://wiki.archlinux.org/title/XDG_Base_Directory#Support
+
+# less
+# Many changes in v582, v590 (Ubuntu 22.04) and v608 (2022-09-02, Ubuntu 24.10+)
+# - v582 deprecates LESSKEY for LESSKEYIN, as lesskey is no longer a binary config
+# - v590 uses XDG *if* XDG_* vars set: XDG_DATA_HOME/lesshist, XDG_CONFIG_HOME/lesskey
+# - v608 properly uses XDG dirs if unset, and change to XDG_STATE_HOME/lesshist
+# https://www.greenwoodsoftware.com/less/news.582.html
+# https://www.greenwoodsoftware.com/less/news.590.html
+# https://www.greenwoodsoftware.com/less/news.608.html
+export LESSHISTFILE=${xdg_state}/lesshst  # ~/.lesshist before v608
+export LESSKEYIN=${xdg_config}/lesskey    # ~/.lesskey before  v582
 
 # gnupg
 export GNUPGHOME=${xdg_config}/gnupg  # ~/.gnupg
@@ -72,7 +82,8 @@ export PYLINTHOME=${xdg_state}/pylint   # XDG_CACHE_HOME/pylint
 export PYLINTRC=${xdg_config}/pylintrc  # hardcoded ~/.config/pylintrc
 
 # Pipx
-export PIPX_HOME=${xdg_data}/pipx  # ~/.local/pipx
+# No longer necessary as of 1.2.0 (2023-03-12), now properly uses ${xdg_data}/pipx
+# export PIPX_HOME=${xdg_data}/pipx  # previously ~/.local/pipx
 
 # Wakatime https://wakatime.com/
 export WAKATIME_HOME=${xdg_config}/wakatime  # ~/
@@ -127,7 +138,7 @@ alias disk-status='lsblk -e7 -po NAME,SIZE,MODEL,FSTYPE,LABEL,MOUNTPOINT'
 alias rot13="tr 'A-Za-z' 'N-ZA-Mn-za-m'"
 alias json='python3 -m json.tool'  # 'jq' is a better alternative, if installed
 alias why='apt rdepends --installed'  # can also be 'aptitude why'
-alias dmesg="dmesg --follow"  # welcome 2021!
+alias dmesg="sudo dmesg --follow"  # welcome 2024!
 alias windows-serial="strings /sys/firmware/acpi/tables/MSDM"
 alias ntfs-fix-perms-owner="chmod -R a=r,u+w,a+X"
 alias ntfs-fix-perms-group="chmod -R a=rw,o-w,a+X"
@@ -263,9 +274,10 @@ apt-list-manual() {
 	printf '\t%s\n' "${msg[@]}" >&2
 }
 
-# see ../reference/commonlib for a standalone version
+install_packages_auto() { sudo apt install --mark-auto "$@"; }
 install_packages() {
 	# Avoid marking installed packages as manual by only installing missing ones
+	# see ../reference/commonlib for a standalone version
 	local pkg=
 	local pkgs=()
 	for pkg in "$@"; do
@@ -275,13 +287,8 @@ install_packages() {
 		sudo apt install "${pkgs[@]}"
 	fi
 }
-package_version() {
-	dpkg-query --showformat='${Version}' --show "$1" 2>/dev/null
-}
-package_installed() {
-	local ok
-	ok=$(package_version "$1") && [[ "$ok" ]]
-}
+package_version() { dpkg-query --showformat='${Version}' --show "$1" 2>/dev/null; }
+package_installed() { local ok; ok=$(package_version "$1") && [[ "$ok" ]]; }
 
 dump-system-data() {
 	local target=${1:-./system-data}
@@ -305,7 +312,10 @@ backup-simple() {
 	for arg in "$@"; do
 		if [[ "$arg" == '--' ]]; then break; fi
 		if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
-			printf "Simple backup with rsync\n%s\n" "$usage" >&2; return
+			echo "$usage"
+			echo "Simple backup with rsync."
+			echo "Copy contents of SOURCE_DIR to TARGET_DIR, creating it if needed."
+			return
 		fi
 	done
 	while (($#)); do
@@ -407,6 +417,14 @@ add-system-user() {
 		useropts+=( --gecos "$name" )
 	fi
 	sudo adduser "${useropts[@]}" -- "$user"
+}
+
+watch-files() {
+	# Requires inotify-tools
+	(($#)) || { echo "Usage: watch-files PATH" >&2; return 1; }
+	while IFS= read file; do echo "$file" $(stat -c "%s" "$file") bytes; done < <(
+		inotifywait -m -r "$1" --format "%w%f" -e modify
+	)
 }
 
 # >>>>> Other aliases <<<<<-----------------------------------------------------
