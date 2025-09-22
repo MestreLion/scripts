@@ -22,8 +22,8 @@ myname=${0##*/}
 mydir=$(dirname "$(readlink -f "$0")")
 
 # checksum command must have --binary, --check and --ignore-missing
-# TODO: use xxh*sum when (and if) it adds --ignore-missing
-# https://github.com/Cyan4973/xxHash/issues/811
+# TODO: use/add xxhsum, --binary and --ignore-missing added in v0.8.2 (2023-07-21)
+#       `xxh128sum` (-H128 / -H2)  is ~44% faster than the default `xxhsum` (-H64 / -H1)
 checksum=md5sum
 dirbase=$myname
 verify=${myname}-verify.sh
@@ -195,6 +195,8 @@ fi
 
 message "Create $count test files of $(sizemsg $size) each"
 
+# FIXME: Create, check and move each file individually,
+#        so it does not require more than SIZE space on tmpdir
 tmpdir=$(mktemp --directory) || fatal "could not create temp dir"
 trap 'rm -rf -- "$tmpdir"' EXIT
 freespace "$tmpdir" "$totalsize"
