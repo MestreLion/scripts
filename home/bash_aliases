@@ -104,13 +104,10 @@ newopen() {
 # Profiling:
 # python3 -m cProfile -o profile.profile ./myprog.py ...
 #
+# sudo apt install xdot
 # pip3 install --user gprof2dot
 # gprof2dot -f pstats profile.profile -o profile.dot
-# xdg-open profile.dot  # requires GraphViz
-#
-# pip3 install --user snakeviz
-# snakeviz myprog.profile  # outputs lots of errors, but URL provided works
-
+# xdg-open profile.dot  # requires xdot (pulls GraphViz)
 pyprofile() {
 	(($#)) || { echo "Usage: pyprofile3 <COMMAND> [ARGS...]" >&2; return 1; }
 	# Use PYTHON or the system python3 (`-m` is available since Python 3.7)

@@ -140,7 +140,7 @@ alias disk-status='lsblk -e7 -po NAME,SIZE,MODEL,FSTYPE,LABEL,MOUNTPOINT'
 alias rot13="tr 'A-Za-z' 'N-ZA-Mn-za-m'"
 alias json='python3 -m json.tool'  # 'jq' is a better alternative, if installed
 alias why='apt rdepends --installed'  # can also be 'aptitude why'
-alias dmesg="sudo dmesg --follow"  # welcome 2024!
+alias dmesg="sudo dmesg"  # welcome 2024!
 alias windows-serial="strings /sys/firmware/acpi/tables/MSDM"
 alias ntfs-fix-perms-owner="chmod -R a=r,u+w,a+X"
 alias ntfs-fix-perms-group="chmod -R a=rw,o-w,a+X"
