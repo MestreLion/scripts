@@ -36,6 +36,23 @@ required()
 		fatal "$msg"
 	fi
 }
+require() {
+	local cmd=$1
+	local pkg=${2:-$cmd}
+	local msg='' eol='' cnf=/usr/lib/command-not-found
+	if type "$cmd" >/dev/null 2>&1; then return; fi
+	if [[ -x "$cnf" ]]; then
+		"$cnf" -- "$cmd" || true
+		eol='\n'
+	else
+		echo "Required command '${cmd}' is not installed." >&2
+		if [[ "$pkg" != '-' ]]; then
+			msg="with:\n\tsudo apt install ${pkg}\n"
+		fi
+	fi
+	echo -e "Please install ${cmd} ${msg}and try again.${eol}" >&2
+	exit 1
+}
 
 testroot()
 {
@@ -254,6 +271,15 @@ version_lesser() {
 	local vmin=$(printf "%s\n" "$1" "$2" | LC_ALL=C sort --version-sort | head -n1)
 	if [[ "$vmin" != "$1" ]]; then return 1; fi
 }
+check_version_greater() {
+	# Alternate version of version_greater
+	# Usage: check_version_greater <version> [--] CMD [cmd_args]
+	local vref=$1; shift
+	if [[ $2 == "--" ]]; then shift; fi
+	local vcur=$("$@")
+	local vmax=$(printf "%s\n" "$vcur" "$vref" | LC_ALL=C sort --version-sort | tail -n1)
+	if [[ "$vmax" != "$vcur" ]]; then return 1; fi
+}
 
 
 # External IP: dig TXT +short o-o.myaddr.l.google.com @ns1.google.com
@@ -263,3 +289,8 @@ version_lesser() {
 # broadcast=$(ip -o -f inet addr show | awk '/scope global/ {print $6}')
 
 # USB3: lsusb -v | grep bcdUSB; lsusb --tree
+
+trace()   { local s; set -x +e; "$@"; { s=$?; set +x -e; } 2>&-; return $s; }
+
+exists()  { type "$@" >/dev/null 2>&1; }
+final()   { local e=0; "$@" || e=$?; exit $e; }
