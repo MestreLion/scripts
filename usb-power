@@ -21,13 +21,16 @@ location=
 vendor=
 message=
 verbose=0
+quiet=0
 
 #------------------------------------------------------------------------------
 
 url=https://github.com/mvp/uhubctl.git
 
-myname=${0##*/}
-mydir=$(dirname "$(readlink -f "$0")")
+
+myname=${0##*/}  # Do not follow symlinks
+myself=$(readlink -f "$0")
+mydir=$(dirname "$myself")
 config=${XDG_CONFIG_HOME:-$HOME/.config}/usb-power.conf
 destdir=${XDG_DATA_HOME:-$HOME/.local/share}/uhubctl
 bindir=${XDG_BIN_HOME:-$HOME/.local/bin}
@@ -47,40 +50,52 @@ install_package() {
 }
 
 install_uhubctl() {
+	# No longer used
 	install_package git libusb-1.0-0-dev
 	if ! [[ -d "$destdir" ]]; then git clone "$url" -- "$destdir"; fi
 	cd -- "$destdir"
 	git reset --hard && git pull
 	make
 	make install sbindir="$bindir"
-	exit
+}
+
+install_keyboard_shortcut() {
+	#$ dconf watch /
+	#/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/binding
+	#  '<Control>Calculator'
+	#/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/command
+	#  "$myself --quiet toggle"
+	#/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/name
+	#  'Toggle Keyboard LED Strip'
+
+	#/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings
+	#  ['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']
+	:
 }
 
 udev() {
+	local idVendor idProduct desc name
 	echo "# Added by $myname for USB hub power control via uhubctl" |
-		sudo tee -- "$udev" >/dev/null
-	while IFS=: read -r idVendor idProduct; do
-		echo "SUBSYSTEMS==\"usb\"," \
-			"ATTRS{idVendor}==\"${idVendor}\"," \
-			"ATTRS{idProduct}==\"${idProduct}\", TAG+=\"uaccess\"" |
-		sudo tee -a  -- "$udev" >/dev/null
+		sudo tee -- "$udev"
+	while IFS=: read -r idVendor idProduct desc name; do
+		{
+			echo
+			echo "# ${idVendor}:${idProduct} ${name} [${desc}]"
+			echo "SUBSYSTEM==\"usb\", DRIVER==\"hub|usb\"," \
+				"ATTRS{idVendor}==\"${idVendor}\"," \
+				"ATTRS{idProduct}==\"${idProduct}\", TAG+=\"uaccess\""
+		} | sudo tee -a  -- "$udev"
 	done < <(
-		sudo "$bindir"/uhubctl |
-		awk -F'[,[]' '/^[^ ]/ { sub(/ .*/, "", $2)
-			if ($2 != prev) { print $2; prev = $2 }
-		}'
+		join -t $'\t' <(
+			sudo uhubctl |
+			awk -F'[\][]' '/^[^ ]/{sub(/ /,"\t",$2);if($2!=p){print $2;p=$2}}' |
+			sort -uk1,1
+		) <(
+			lsusb | awk -F'ID ' '{sub(/ /,"\t",$2);print $2}' | sort -uk1,1
+		) | tr '\t' :
 	)
 	sudo udevadm trigger --attr-match=subsystem=usb
-	exit
 }
-
-#------------------------------------------------------------------------------
-
-fatal()   { if (($#)); then echo "$myname: error: $@" >&2; fi; exit 1; }
-message() { if (($# && verbose)); then printf '%s\n' "$@"; fi; }
-argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2; usage 1; }
-invalid() { argerr "invalid ${2:-option}: ${1:-}"; }
-missing() { argerr "missing ${1:+$1 }argument${2:+ from $2}."; }
 
 user_config() {
 	local uconfig=${1:-}
@@ -89,6 +104,44 @@ user_config() {
 		fatal "could not find config file: $uconfig"
 	fi
 	source "$uconfig"
+#	# USB-Power configuration script
+#	# See https://github.com/MestreLion/scripts/usb-power
+#	message="Light toggled"
+#	location=3-2.4.1
+#	port=2
+}
+
+
+cycle() {
+	echo "Not implemented!" >&2
+	return 1
+}
+
+#------------------------------------------------------------------------------
+
+fatal()   { if (($#)); then echo "$myname: error: $@" >&2; fi; exit 1; }
+message() { if (($# && verbose)); then printf '%s ' "$@"; echo; fi; }
+argerr()  { printf "%s: %s\n" "$myname" "${1:-error}" >&2; usage 1; }
+invalid() { argerr "invalid ${2:-option}: ${1:-}"; }
+missing() { argerr "missing ${1:+$1 }argument${2:+ from $2}."; }
+final()   { local e=0; "$@" || e=$?; exit $e; }
+require() {
+	local cmd=$1
+	local pkg=${2:-$cmd}
+	local msg='' eol='' cnf=/usr/lib/command-not-found
+	if type "$cmd" >/dev/null 2>&1; then return; fi
+	echo
+	if [[ -x "$cnf" ]]; then
+		"$cnf" -- "$cmd" || true
+		eol='\n'
+	else
+		echo "Required command '${cmd}' is not installed." >&2
+		if [[ "$pkg" != '-' ]]; then
+			msg="with:\n\tsudo apt install ${pkg}\n"
+		fi
+	fi
+	echo -e "Please install ${cmd} ${msg}and try again.${eol}" >&2
+	exit 1
 }
 
 #------------------------------------------------------------------------------
@@ -121,6 +174,7 @@ usage() {
 	  on       - turn port on
 	  off      - turn port off
 	  cycle    - turn port off for 2 seconds, then back on (default)
+	  toggle   - turn port off if currently on, otherwise turn port on
 	  install  - download uhubctl from $url,
 	               install it at $destdir,
 	               and symlink executable to $bindir
@@ -146,7 +200,8 @@ fi
 args=()
 while (($#)); do
 	case "$1" in
-	-v|--verbose) verbose=1;;
+	-v|--verbose) verbose=1; quiet=0;;
+	-q|--quiet)   verbose=0; quiet=1;;
 	-V|--vendor) shift; vendor=${1:-};;
 	-c|--config) shift; user_uconfig "${1:-}";;
 	-m|--message) shift; message=${1:-};;
@@ -168,13 +223,19 @@ esac
 
 #------------------------------------------------------------------------------
 
-args=()
+require uhubctl
+
+args=(
+	# --exact
+	--nodesc   # -N - do not query device description (helpful for unresponsive devices)
+	--nosysfs  # -S - do not use the Linux sysfs port disable interface.
+)
 
 case "$action" in
-	on|off|cycle) args+=(-a "$action");;
-	install) install_uhubctl;;
-	udev) udev;;
-	config) cycle;;
+	on|off|cycle|toggle) args+=(-a "$action");;
+	install) final install_uhubctl;;
+	udev) final udev;;
+	config) final cycle;;
 	*) invalid "$action" ACTION;;
 esac
 
@@ -188,6 +249,9 @@ if [[ "$message" ]]; then
 		off) icon=brasero-disc-00;;
 		*)   icon=brasero-disc-100;;
 	esac
-	notify-send --app-name "$myname"  --icon "$icon" -- "$message" || :
+	notify-send --transient --app-name "$myname" --icon "$icon" -- "$message"  # || :
 fi
-uhubctl "${args[@]}"
+if ((quiet)); then
+	exec >/dev/null
+fi
+final uhubctl "${args[@]}"
