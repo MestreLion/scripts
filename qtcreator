@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+#
+# qtcreator - qtcreator launcher with custom scale factor
+#
+# Copyright (C) 2025 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+# License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
+#------------------------------------------------------------------------------
+
+name=${0##*/}
+self=$(readlink -f "$0")
+
+cmd=""
+while read -r path; do
+	if [[ "$path" != "$self" ]]; then cmd=$path; break; fi
+done < <(type -aP "$name")
+
+if [[ -z "$cmd" ]]; then
+	echo "Error: could not find '${name}' executable. Is it installed?" >&2
+	exit 1
+fi
+
+QT_SCALE_FACTOR=1.25 "$cmd" "$@"
