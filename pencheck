@@ -21,13 +21,8 @@ verbose=1
 myname=${0##*/}
 mydir=$(dirname "$(readlink -f "$0")")
 
-# checksum command must have --binary, --check and --ignore-missing
-# TODO: use/add xxhsum, --binary and --ignore-missing added in v0.8.2 (2023-07-21)
-#       `xxh128sum` (-H128 / -H2)  is ~44% faster than the default `xxhsum` (-H64 / -H1)
-checksum=md5sum
 dirbase=$myname
 verify=${myname}-verify.sh
-checkfile=${myname}-${checksum}.txt
 
 #------------------------------------------------------------------------------
 
@@ -102,6 +97,9 @@ usage() {
 	                           the test files. [Default: $dirbase]
 	  -b|--block-size SIZE - Use SIZE as block size on write operations
 	                           when applicable. [Default: $bs]
+	  -k|--checksum CMD    - Checksum command. 'xxh128sum' by default if it
+	                           exists, 'md5sum' otherwise. A custom CMD must
+	                           have a compatible CLI.
 
 	Create files with random data in MOUNTDIR/$dirbase, MOUNTDIR usually
 	being the mountpoint directory of a USB Thumb Drive, and verify their
@@ -126,6 +124,16 @@ usage() {
 	exit 0
 }
 
+# checksum command must have --binary, --check and --ignore-missing
+# `xxh*sum` --binary and --ignore-missing added in v0.8.2 (2023-07-21)
+# `xxh128sum` (-H128 / -H2)  is ~44% faster than the default `xxhsum` (-H64 / -H1)
+if exists xxh128sum; then
+	checksum=xxh128sum
+else
+	checksum=md5sum
+fi
+checkfile=${myname}-${checksum}.txt
+
 # Pre-parse for -h|--help, ignoring if after '--'
 for arg in "$@"; do
 	if [[ "$arg" == '--' ]]; then break; fi
@@ -139,10 +147,12 @@ while (($#)); do
 	-c|--count      ) shift; count=${1:-}  ;;
 	-b|--block-size ) shift; bs=${1:-}     ;;
 	-d|--dirbasename) shift; dirbase=${1:-};;
+	-k|--checksum   ) shift; checksum=${1:-};;
 	--size=*        ) size=${1#*=}   ;;
 	--count=*       ) count=${1#*=}  ;;
 	--block-size=*  ) bs=${1#*=}     ;;
 	--dirbasename=* ) dirbase=${1#*=};;
+	--checksum=*    ) checksum=${1#*=};;
 	--) shift; break;;
 	-*) invalid "$1";;
 	* ) args+=( "$1" );;
@@ -161,6 +171,8 @@ mountdir=${args[0]%/}
 
 dirbase=${dirbase%/}  # will also consider '/' as missing, which is sensible
 [[ "$dirbase" ]] || missing 'DIR' '--dirbase'
+
+exists "$checksum" || argerr "CMD for --checksum is not valid: $checksum"
 
 outdir=$mountdir/$dirbase
 
